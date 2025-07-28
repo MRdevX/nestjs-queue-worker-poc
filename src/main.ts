@@ -6,7 +6,7 @@ import {
   VersioningType,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AppModule } from './app.module';
+import { AppModule } from './app/app.module';
 import logger from './logger';
 
 async function bootstrap() {
@@ -42,7 +42,6 @@ async function bootstrap() {
   );
 
   await app.startAllMicroservices();
-  logger.info(`Connected to RabbitMQ at ${s2sConfig.options.urls[0]}`);
 
   await app.listen(appConfig.port, appConfig.host);
   const appUrl = await app.getUrl();

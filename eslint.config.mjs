@@ -1,20 +1,15 @@
-// import { FlatCompat } from '@eslint/eslintrc';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import typescriptEslintParser from '@typescript-eslint/parser';
 import typescriptEslintPlugin from '@typescript-eslint/eslint-plugin';
 import importPlugin from 'eslint-plugin-import';
-import stylisticJsPlugin from '@stylistic/eslint-plugin-js';
+import stylisticJsPlugin from '@stylistic/eslint-plugin';
 import prettierPlugin from 'eslint-plugin-prettier';
 import prettierConfig from 'eslint-config-prettier';
 import globals from 'globals';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// const compat = new FlatCompat({
-//   baseDirectory: __dirname,
-// });
 
 export default [
   {

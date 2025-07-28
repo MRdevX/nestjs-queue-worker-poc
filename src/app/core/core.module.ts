@@ -1,9 +1,9 @@
 import { Module, Global } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import dbConfig from '@root/config/db.config';
-import s2sConfig from '@root/config/s2s.config';
-import appConfig from '@root/config/app.config';
+import dbConfig from '@root/app/config/db.config';
+import s2sConfig from '@root/app/config/s2s.config';
+import appConfig from '@root/app/config/app.config';
 import { entities } from './database/entities';
 
 @Global()
