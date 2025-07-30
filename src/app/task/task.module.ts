@@ -5,10 +5,12 @@ import { TaskLogEntity } from './task-log.entity';
 import { TaskRepository } from './task.repository';
 import { TaskLogRepository } from './task-log.repository';
 import { TaskService } from './task.service';
+import { TaskController } from './task.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([TaskEntity, TaskLogEntity])],
   providers: [TaskService, TaskRepository, TaskLogRepository],
   exports: [TaskService],
+  controllers: [TaskController],
 })
 export class TaskModule {}

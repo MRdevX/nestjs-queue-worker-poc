@@ -1,4 +1,4 @@
-import { Repository, FindManyOptions, FindOptionsWhere } from 'typeorm';
+import { Repository, FindManyOptions } from 'typeorm';
 import { BaseModel } from './base.entity';
 
 export abstract class BaseRepository<T extends BaseModel> {

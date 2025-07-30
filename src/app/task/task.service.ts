@@ -82,10 +82,18 @@ export class TaskService {
     return this.taskRepo.findPendingTasks(limit);
   }
 
-  async getTaskById(taskId: string): Promise<TaskEntity | null> {
+  async getTaskById(
+    taskId: string,
+    options?: { relations?: string[] },
+  ): Promise<TaskEntity | null> {
     if (!taskId) {
       throw new BadRequestException('Task ID is required');
     }
+
+    if (options?.relations) {
+      return this.taskRepo.findByIdWithRelations(taskId, options.relations);
+    }
+
     return this.taskRepo.findById(taskId);
   }
 
