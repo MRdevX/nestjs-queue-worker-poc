@@ -17,7 +17,13 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e:core": "jest --config ./test/jest-e2e.json --testNamePattern=\"Queue Worker System\"",
+    "test:e2e:worker": "jest --config ./test/jest-e2e.json --testNamePattern=\"Worker System\"",
+    "test:e2e:workflow": "jest --config ./test/jest-e2e.json --testNamePattern=\"Workflow and Scheduler\"",
+    "test:e2e:fault": "jest --config ./test/jest-e2e.json --testNamePattern=\"Fault Tolerance\"",
+    "test:e2e:verbose": "jest --config ./test/jest-e2e.json --verbose",
+    "test:e2e:coverage": "jest --config ./test/jest-e2e.json --coverage"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",

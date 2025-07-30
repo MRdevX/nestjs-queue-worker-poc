@@ -10,5 +10,10 @@
     "^@root/(.*)$": "<rootDir>/../src/$1",
     "^@test/(.*)$": "<rootDir>/../test/$1",
     "^@resources/(.*)$": "<rootDir>/../resources/$1"
-  }
+  },
+  "setupFilesAfterEnv": ["<rootDir>/setup.e2e.ts"],
+  "testTimeout": 30000,
+  "maxWorkers": 1,
+  "forceExit": true,
+  "detectOpenHandles": true
 }
