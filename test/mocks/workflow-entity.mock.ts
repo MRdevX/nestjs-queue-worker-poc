@@ -1,11 +1,25 @@
 import { faker } from '@faker-js/faker';
 import { WorkflowEntity } from '@root/app/workflow/workflow.entity';
+import { TaskType } from '@root/app/task/types/task-type.enum';
 import { IBaseEntityMockData } from './base-entity.mock';
 
 export interface IWorkflowEntityMockData extends IBaseEntityMockData {
   name?: string;
   isActive?: boolean;
   tasks?: any[];
+  definition?: {
+    initialTask: {
+      type: TaskType;
+      payload: Record<string, any>;
+    };
+    transitions: Record<
+      string,
+      {
+        type: TaskType;
+        payload: Record<string, any>;
+      }
+    >;
+  };
 }
 
 export class WorkflowEntityMockFactory {
@@ -18,6 +32,13 @@ export class WorkflowEntityMockFactory {
       name: data.name || faker.lorem.words(3),
       isActive: data.isActive ?? faker.datatype.boolean(),
       tasks: data.tasks || [],
+      definition: data.definition || {
+        initialTask: {
+          type: TaskType.HTTP_REQUEST,
+          payload: { url: faker.internet.url() },
+        },
+        transitions: {},
+      },
     };
   }
 
