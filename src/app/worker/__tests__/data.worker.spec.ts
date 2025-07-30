@@ -63,18 +63,26 @@ describe('DataWorker', () => {
       taskService.updateTaskStatus.mockResolvedValue(task as any);
       coordinator.handleTaskCompletion.mockResolvedValue();
 
-      await worker.handleTask({ taskId, taskType: TaskType.DATA_PROCESSING });
+      // Mock Math.random to ensure successful processing
+      const originalRandom = Math.random;
+      Math.random = jest.fn().mockReturnValue(0.5);
 
-      expect(taskService.getTaskById).toHaveBeenCalledWith(taskId);
-      expect(taskService.updateTaskStatus).toHaveBeenCalledWith(
-        taskId,
-        'processing',
-      );
-      expect(taskService.updateTaskStatus).toHaveBeenCalledWith(
-        taskId,
-        'completed',
-      );
-      expect(coordinator.handleTaskCompletion).toHaveBeenCalledWith(taskId);
+      try {
+        await worker.handleTask({ taskId, taskType: TaskType.DATA_PROCESSING });
+
+        expect(taskService.getTaskById).toHaveBeenCalledWith(taskId);
+        expect(taskService.updateTaskStatus).toHaveBeenCalledWith(
+          taskId,
+          'processing',
+        );
+        expect(taskService.updateTaskStatus).toHaveBeenCalledWith(
+          taskId,
+          'completed',
+        );
+        expect(coordinator.handleTaskCompletion).toHaveBeenCalledWith(taskId);
+      } finally {
+        Math.random = originalRandom;
+      }
     });
   });
 
