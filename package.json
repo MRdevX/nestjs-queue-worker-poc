@@ -41,6 +41,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.32.0",
+    "@faker-js/faker": "^9.9.0",
     "@nestjs/cli": "^11.0.8",
     "@nestjs/schematics": "^11.0.5",
     "@nestjs/testing": "^11.1.5",
@@ -84,7 +85,12 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@root/(.*)$": "<rootDir>/../src/$1",
+      "^@test/(.*)$": "<rootDir>/$1",
+      "^@resources/(.*)$": "<rootDir>/../resources/$1"
+    }
   },
   "packageManager": "yarn@4.9.2"
 }
