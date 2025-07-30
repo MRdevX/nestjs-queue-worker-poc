@@ -121,7 +121,6 @@ describe('TaskLogRepository', () => {
       const taskId = 'task-123';
       const level = LogLevel.INFO;
       const message = 'Test message';
-      const beforeCall = new Date();
 
       const mockLogEntry = {
         ...BaseEntityMockFactory.create(),
@@ -136,10 +135,7 @@ describe('TaskLogRepository', () => {
 
       await repository.createLogEntry(taskId, level, message);
 
-      const afterCall = new Date();
       const createCall = typeOrmRepository.create.mock.calls[0][0];
-
-      expect(createCall.timestamp).toBeInstanceOf(Date);
 
       expect(createCall.timestamp).toBeInstanceOf(Date);
     });
