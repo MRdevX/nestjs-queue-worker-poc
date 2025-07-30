@@ -7,15 +7,8 @@ import { TaskLogRepository } from './task-log.repository';
 import { TaskService } from './task.service';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      TaskEntity,
-      TaskLogEntity,
-      TaskRepository,
-      TaskLogRepository,
-    ]),
-  ],
-  providers: [TaskService],
+  imports: [TypeOrmModule.forFeature([TaskEntity, TaskLogEntity])],
+  providers: [TaskService, TaskRepository, TaskLogRepository],
   exports: [TaskService],
 })
 export class TaskModule {}

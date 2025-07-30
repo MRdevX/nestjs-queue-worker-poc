@@ -4,8 +4,8 @@ import { WorkflowEntity } from './workflow.entity';
 import { WorkflowRepository } from './workflow.repository';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([WorkflowEntity, WorkflowRepository])],
-  providers: [],
+  imports: [TypeOrmModule.forFeature([WorkflowEntity])],
+  providers: [WorkflowRepository],
   exports: [],
 })
 export class WorkflowModule {}

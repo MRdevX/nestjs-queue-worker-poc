@@ -1,12 +1,16 @@
 import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { BaseRepository } from '../core/base/base.repositorty';
 import { TaskLogEntity } from './task-log.entity';
 import { LogLevel } from './types/log-level.enum';
 
 @Injectable()
 export class TaskLogRepository extends BaseRepository<TaskLogEntity> {
-  constructor(repository: Repository<TaskLogEntity>) {
+  constructor(
+    @InjectRepository(TaskLogEntity)
+    repository: Repository<TaskLogEntity>,
+  ) {
     super(repository);
   }
 

@@ -1,11 +1,15 @@
 import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { BaseRepository } from '../core/base/base.repositorty';
 import { WorkflowEntity } from './workflow.entity';
 
 @Injectable()
 export class WorkflowRepository extends BaseRepository<WorkflowEntity> {
-  constructor(repository: Repository<WorkflowEntity>) {
+  constructor(
+    @InjectRepository(WorkflowEntity)
+    repository: Repository<WorkflowEntity>,
+  ) {
     super(repository);
   }
 

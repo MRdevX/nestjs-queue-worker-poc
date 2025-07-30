@@ -1,12 +1,16 @@
 import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { BaseRepository } from '../core/base/base.repositorty';
 import { TaskEntity } from './task.entity';
 import { TaskStatus } from './types/task-status.enum';
 
 @Injectable()
 export class TaskRepository extends BaseRepository<TaskEntity> {
-  constructor(repository: Repository<TaskEntity>) {
+  constructor(
+    @InjectRepository(TaskEntity)
+    repository: Repository<TaskEntity>,
+  ) {
     super(repository);
   }
 
