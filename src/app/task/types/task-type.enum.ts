@@ -1,5 +1,5 @@
 export enum TaskType {
-  HTTP = 'HTTP',
-  DATA_PROCESS = 'DATA_PROCESS',
-  COMPENSATION = 'COMPENSATION',
+  HTTP_REQUEST = 'http_request',
+  DATA_PROCESSING = 'data_processing',
+  EMAIL_SEND = 'email_send',
 }
