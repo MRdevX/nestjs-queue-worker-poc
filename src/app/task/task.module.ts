@@ -4,6 +4,7 @@ import { TaskEntity } from './task.entity';
 import { TaskLogEntity } from './task-log.entity';
 import { TaskRepository } from './task.repository';
 import { TaskLogRepository } from './task-log.repository';
+import { TaskService } from './task.service';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { TaskLogRepository } from './task-log.repository';
       TaskLogRepository,
     ]),
   ],
-  providers: [],
-  exports: [],
+  providers: [TaskService],
+  exports: [TaskService],
 })
 export class TaskModule {}

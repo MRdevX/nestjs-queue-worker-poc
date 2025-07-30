@@ -10,19 +10,16 @@ export class TaskLogRepository extends BaseRepository<TaskLogEntity> {
     super(repository);
   }
 
-  async createLogEntry(taskId: string, level: LogLevel, message: string) {
+  async createLogEntry(
+    taskId: string,
+    level: LogLevel,
+    message: string,
+  ): Promise<TaskLogEntity> {
     return this.create({
       task: { id: taskId },
       level,
       message,
       timestamp: new Date(),
-    });
-  }
-
-  async getTaskTimeline(taskId: string): Promise<TaskLogEntity[]> {
-    return this.repository.find({
-      where: { task: { id: taskId } },
-      order: { timestamp: 'DESC' },
     });
   }
 }

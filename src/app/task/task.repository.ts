@@ -18,10 +18,6 @@ export class TaskRepository extends BaseRepository<TaskEntity> {
     });
   }
 
-  async findTasksByStatus(status: TaskStatus): Promise<TaskEntity[]> {
-    return this.findMany({ status });
-  }
-
   async updateTaskStatus(
     taskId: string,
     status: TaskStatus,
@@ -36,12 +32,5 @@ export class TaskRepository extends BaseRepository<TaskEntity> {
 
   async incrementRetryCount(taskId: string): Promise<void> {
     await this.repository.increment({ id: taskId }, 'retries', 1);
-  }
-
-  async findChildrenTasks(parentId: string): Promise<TaskEntity[]> {
-    return this.repository.find({
-      where: { parentTask: { id: parentId } },
-      relations: ['children'],
-    });
   }
 }
