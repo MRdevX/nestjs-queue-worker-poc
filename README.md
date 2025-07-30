@@ -1,115 +1,66 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Queue Worker PoC - NestJS-based Distributed Task Processing System
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A comprehensive proof-of-concept for a scalable, fault-tolerant queue/worker system built with NestJS, PostgreSQL, and RabbitMQ. This system demonstrates enterprise-grade task processing capabilities with workflow orchestration, retry mechanisms, and horizontal scalability.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🎯 PoC Overview
 
-## Description
+This Queue Worker PoC demonstrates a production-ready distributed task processing system that meets all the specified requirements:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- **Queue Manager**: Handles task queuing, assignment, and monitoring
+- **Worker Nodes**: Execute various task types with fault tolerance
+- **Coordinator**: Orchestrates workflows and manages task dependencies
+- **Database**: PostgreSQL for persistent task state and workflow definitions
+- **Message Broker**: RabbitMQ for reliable asynchronous task distribution
 
-## Project setup
+## 🏗️ System Architecture
 
-```bash
-$ yarn install
+### Core Components
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   HTTP API      │    │   Scheduler     │    │   Coordinator   │
+│   (Controllers) │    │   (Cron Jobs)   │    │   (Workflows)   │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │
+          └──────────────────────┼──────────────────────┘
+                                 │
+                    ┌─────────────┴─────────────┐
+                    │     Task Service          │
+                    │   (Task Management)       │
+                    └─────────────┬─────────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    │   Messaging Service       │
+                    │   (RabbitMQ Client)       │
+                    └─────────────┬─────────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    │      RabbitMQ             │
+                    │   (Message Broker)        │
+                    └─────────────┬─────────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    │   Worker Nodes            │
+                    │  (HTTP, Data, Compensation)│
+                    └─────────────┬─────────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    │   PostgreSQL              │
+                    │   (Task State & Logs)     │
+                    └───────────────────────────┘
 ```
 
-## Compile and run the project
+### Key Features
 
-```bash
-# development
-$ yarn run start
+- **🔄 Asynchronous Task Processing**: Tasks are queued and processed asynchronously
+- **🛡️ Fault Tolerance**: Automatic retry mechanisms with exponential backoff
+- **📊 Task Monitoring**: Comprehensive logging and status tracking
+- **⚡ Horizontal Scalability**: Multiple worker instances can be deployed
+- **🔄 Workflow Orchestration**: Complex task dependencies and transitions
+- **⏰ Task Scheduling**: Support for scheduled and recurring tasks
+- **🛠️ Compensation Handling**: Rollback mechanisms for failed workflows
 
-# watch mode
-$ yarn run start:dev
-
-# production mode
-$ yarn run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ yarn run test
-
-# e2e tests
-$ yarn run test:e2e
-
-# test coverage
-$ yarn run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ yarn install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
-
-# Queue Worker POC
-
-A NestJS-based queue worker proof of concept with PostgreSQL and RabbitMQ integration.
-
-## Features
-
-- **NestJS Framework**: Modern Node.js framework for building scalable applications
-- **PostgreSQL Database**: Reliable relational database for data persistence
-- **RabbitMQ**: Message broker for asynchronous task processing
-- **Docker Support**: Containerized development and production environments
-- **TypeScript**: Type-safe development with full IDE support
-
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
@@ -117,9 +68,13 @@ A NestJS-based queue worker proof of concept with PostgreSQL and RabbitMQ integr
 - Node.js 18+ (for local development)
 - Yarn package manager
 
-### Development Mode
+### Development Environment
 
 ```bash
+# Clone and setup
+git clone <repository-url>
+cd queue-worker-poc
+
 # Start development environment
 ./start-dev.sh
 
@@ -127,7 +82,7 @@ A NestJS-based queue worker proof of concept with PostgreSQL and RabbitMQ integr
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-### Production Mode
+### Production Environment
 
 ```bash
 # Start production environment
@@ -137,63 +92,87 @@ docker compose -f docker-compose.dev.yml up --build
 docker compose up --build -d
 ```
 
-## Services
+## 📋 System Components
 
-Once running, the following services will be available:
+### 1. Queue Manager (`/queue-manager`)
 
-- **Application**: http://localhost:3030
-- **RabbitMQ Management**: http://localhost:15672 (guest/guest)
-- **PostgreSQL**: localhost:55000 (dev) / localhost:55001 (prod)
+Manages task queues and provides monitoring capabilities:
 
-## Local Development
+- **Status Monitoring**: Real-time queue health and metrics
+- **Overload Detection**: Automatic detection of system overload
+- **Task Counts**: Pending, failed, and processing task statistics
 
-```bash
-# Install dependencies
-yarn install
+**Endpoints:**
 
-# Start development server
-yarn start:dev
+- `GET /api/queue-manager/status` - Queue health status
+- `GET /api/queue-manager/overloaded` - Overload detection
+- `GET /api/queue-manager/failed-count` - Failed tasks count
+- `GET /api/queue-manager/pending-count` - Pending tasks count
 
-# Run tests
-yarn test
+### 2. Task Management (`/task`)
 
-# Run e2e tests
-yarn test:e2e
-```
+Core task lifecycle management:
 
-## Docker Configuration
+- **Task Creation**: Create tasks with various types and payloads
+- **Status Updates**: Track task execution progress
+- **Retry Logic**: Automatic retry with configurable limits
+- **Task Logging**: Comprehensive audit trail
 
-### Development (`docker-compose.dev.yml`)
+**Endpoints:**
 
-- Uses build stage for development
-- Volume mounts for hot reloading
-- Separate node_modules volume to prevent conflicts
-- Health checks for dependencies
+- `POST /api/task` - Create new task
+- `GET /api/task/:id` - Get task details
+- `POST /api/task/:id/retry` - Retry failed task
+- `POST /api/task/:id/compensate` - Trigger compensation
 
-### Production (`docker-compose.yml`)
+### 3. Worker Nodes
 
-- Uses production stage with optimized build
-- No volume mounts for security
-- Production environment variables
+Specialized workers for different task types:
 
-## Project Structure
+#### HTTP Worker
 
-```
-src/
-├── app/
-│   ├── config/          # Configuration files
-│   ├── core/            # Core modules (database, messaging)
-│   ├── fault/           # Fault handling
-│   ├── queue/           # Queue management
-│   ├── scheduler/       # Task scheduling
-│   ├── task/            # Task management
-│   ├── worker/          # Worker implementations
-│   └── workflow/        # Workflow management
-├── logger.ts            # Logging configuration
-└── main.ts              # Application entry point
-```
+- Handles HTTP API calls and webhook notifications
+- Supports GET, POST, PUT, DELETE methods
+- Configurable timeout and retry policies
 
-## Environment Variables
+#### Data Processing Worker
+
+- Processes data transformation tasks
+- Supports batch operations and data validation
+- Handles large dataset processing
+
+#### Compensation Worker
+
+- Manages rollback operations for failed workflows
+- Implements saga pattern for distributed transactions
+- Ensures data consistency across services
+
+### 4. Scheduler (`/scheduler`)
+
+Task scheduling and recurring job management:
+
+- **Scheduled Tasks**: Execute tasks at specific times
+- **Recurring Tasks**: Cron-based task execution
+- **Automatic Processing**: Background job for due tasks
+
+**Endpoints:**
+
+- `POST /api/scheduler/tasks/scheduled` - Create scheduled task
+- `POST /api/scheduler/tasks/recurring` - Create recurring task
+- `GET /api/scheduler/tasks/scheduled` - List scheduled tasks
+
+### 5. Workflow Coordinator
+
+Orchestrates complex task workflows:
+
+- **Workflow Definition**: JSON-based workflow configuration
+- **Task Transitions**: Automatic progression between tasks
+- **Error Handling**: Compensation and rollback mechanisms
+- **Dependency Management**: Task ordering and prerequisites
+
+## 🔧 Configuration
+
+### Environment Variables
 
 | Variable            | Description       | Default        |
 | ------------------- | ----------------- | -------------- |
@@ -208,25 +187,228 @@ src/
 | `RABBITMQ_USER`     | RabbitMQ username | `guest`        |
 | `RABBITMQ_PASSWORD` | RabbitMQ password | `guest`        |
 
-## Troubleshooting
+### Task Types
 
-### Common Issues
+The system supports three main task types:
 
-1. **Node modules not found**: Ensure you're using the correct Docker target (`build` for dev, `production` for prod)
-2. **Database connection failed**: Check that PostgreSQL container is healthy and environment variables are correct
-3. **Port conflicts**: Verify ports 3030, 55000, 55001, 5672, 15672 are available
+1. **HTTP_REQUEST**: External API calls and webhooks
+2. **DATA_PROCESSING**: Data transformation and batch operations
+3. **COMPENSATION**: Rollback and cleanup operations
 
-### Reset Environment
+### Task Statuses
+
+- **PENDING**: Task is queued and waiting for processing
+- **PROCESSING**: Task is currently being executed
+- **COMPLETED**: Task finished successfully
+- **FAILED**: Task failed and exceeded retry limits
+- **RETRYING**: Task is being retried after failure
+- **CANCELLED**: Task was cancelled manually
+
+## 📊 Monitoring & Observability
+
+### Health Checks
+
+- **Application Health**: `GET /api/health`
+- **Queue Status**: `GET /api/queue-manager/status`
+- **Database Connectivity**: Built-in health checks
+- **RabbitMQ Connectivity**: Message broker health monitoring
+
+### Logging
+
+- **Structured Logging**: Winston-based logging with JSON format
+- **Task Logs**: Per-task execution logs with different levels
+- **Audit Trail**: Complete task lifecycle tracking
+- **Error Tracking**: Detailed error information and stack traces
+
+### Metrics
+
+- **Queue Metrics**: Pending, processing, completed, failed counts
+- **Performance Metrics**: Task execution times and throughput
+- **Error Rates**: Failure rates and retry statistics
+- **System Health**: Overall system health indicators
+
+## 🔄 Fault Tolerance & Reliability
+
+### Retry Mechanisms
+
+- **Exponential Backoff**: Configurable retry delays
+- **Maximum Retries**: Per-task retry limits
+- **Retry Policies**: Different strategies for different task types
+- **Dead Letter Queues**: Failed task handling
+
+### Compensation Handling
+
+- **Saga Pattern**: Distributed transaction management
+- **Rollback Operations**: Automatic cleanup on failures
+- **Data Consistency**: Ensures system integrity
+- **Partial Failure Recovery**: Handles partial workflow failures
+
+### High Availability
+
+- **Horizontal Scaling**: Multiple worker instances
+- **Load Balancing**: RabbitMQ-based task distribution
+- **Database Resilience**: PostgreSQL with connection pooling
+- **Graceful Shutdown**: Proper resource cleanup
+
+## 🚀 Scalability Features
+
+### Horizontal Scaling
+
+- **Worker Scaling**: Deploy multiple worker instances
+- **Queue Partitioning**: Distribute load across queues
+- **Database Scaling**: Read replicas and connection pooling
+- **Message Broker Scaling**: RabbitMQ clustering support
+
+### Performance Optimization
+
+- **Connection Pooling**: Efficient database connections
+- **Message Batching**: Batch processing capabilities
+- **Caching**: Redis integration ready
+- **Async Processing**: Non-blocking task execution
+
+## 🧪 Testing
+
+### Test Coverage
 
 ```bash
-# Clean up all containers and volumes
-docker compose -f docker-compose.dev.yml down -v
-docker compose down -v
+# Unit tests
+yarn test
 
-# Rebuild from scratch
-docker compose -f docker-compose.dev.yml up --build
+# Integration tests
+yarn test:e2e
+
+# Test coverage
+yarn test:cov
 ```
 
-## License
+### Test Structure
 
-This project is licensed under the MIT License.
+- **Unit Tests**: Individual component testing
+- **Integration Tests**: End-to-end workflow testing
+- **Mock Factories**: Comprehensive test data generation
+- **Test Utilities**: Reusable testing helpers
+
+## 🐳 Deployment
+
+### Docker Support
+
+- **Multi-stage Builds**: Optimized production images
+- **Health Checks**: Container health monitoring
+- **Environment Separation**: Dev/prod configurations
+- **Volume Management**: Persistent data storage
+
+### Cloud Deployment
+
+- **Kubernetes Ready**: Container orchestration support
+- **Environment Variables**: Cloud-native configuration
+- **Secrets Management**: Secure credential handling
+- **Auto-scaling**: Horizontal pod autoscaling support
+
+## 📈 Production Considerations
+
+### Security
+
+- **Input Validation**: Comprehensive request validation
+- **Authentication**: JWT-based authentication ready
+- **Authorization**: Role-based access control
+- **Data Encryption**: TLS/SSL encryption support
+
+### Monitoring
+
+- **Application Metrics**: Prometheus metrics export
+- **Distributed Tracing**: OpenTelemetry integration
+- **Alerting**: Failure and performance alerts
+- **Dashboard**: Grafana dashboards for visualization
+
+### Backup & Recovery
+
+- **Database Backups**: Automated PostgreSQL backups
+- **Message Persistence**: RabbitMQ message durability
+- **Disaster Recovery**: Multi-region deployment support
+- **Data Retention**: Configurable log retention policies
+
+## 🔮 Future Enhancements
+
+### Planned Features
+
+- **WebSocket Support**: Real-time task status updates
+- **GraphQL API**: Flexible data querying
+- **Plugin System**: Extensible worker architecture
+- **Machine Learning**: Predictive task scheduling
+
+### Scalability Improvements
+
+- **Event Sourcing**: Complete audit trail
+- **CQRS Pattern**: Command/Query responsibility separation
+- **Microservices**: Service decomposition
+- **API Gateway**: Centralized API management
+
+## 📚 API Documentation
+
+### Task Creation Example
+
+```bash
+# Create HTTP request task
+curl -X POST http://localhost:3030/api/task \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "http_request",
+    "payload": {
+      "method": "POST",
+      "url": "https://api.example.com/webhook",
+      "headers": {"Authorization": "Bearer token"},
+      "body": {"event": "task_completed"}
+    }
+  }'
+```
+
+### Workflow Definition Example
+
+```json
+{
+  "name": "Order Processing Workflow",
+  "definition": {
+    "initialTask": {
+      "type": "http_request",
+      "payload": {
+        "method": "POST",
+        "url": "/api/orders/validate"
+      }
+    },
+    "transitions": {
+      "http_request": {
+        "type": "data_processing",
+        "payload": {
+          "operation": "process_order"
+        }
+      }
+    }
+  }
+}
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass
+6. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+For questions and support:
+
+- Create an issue in the repository
+- Check the documentation
+- Review the test examples
+- Examine the configuration files
+
+---
+
+**This PoC demonstrates a production-ready queue/worker system that can handle high volumes of tasks, support long-running transactions, and ensure data consistency and reliability. The system is designed for cloud deployment with horizontal scalability and fault tolerance.**
