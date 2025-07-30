@@ -1,12 +1,12 @@
 import { firstValueFrom } from 'rxjs';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxy, ClientProxyFactory } from '@nestjs/microservices';
 import { RmqOptions } from '@nestjs/microservices/interfaces';
 import { ITaskMessage } from './types/task-message.interface';
 
 @Injectable()
-export class MessagingService {
+export class MessagingService implements OnModuleDestroy {
   private readonly logger = new Logger(MessagingService.name);
   private readonly client: ClientProxy;
 
@@ -47,8 +47,11 @@ export class MessagingService {
       metadata: options?.metadata,
     };
 
+    this.logger.log(`Publishing task message: ${JSON.stringify(message)}`);
+
     try {
-      await firstValueFrom(this.client.emit('task.created', message));
+      this.logger.log('Sending message...');
+      await firstValueFrom(this.client.send('task.created', message));
 
       this.logger.log(
         `Task published successfully: ${taskType} - ${taskId}${
@@ -60,7 +63,15 @@ export class MessagingService {
         `Failed to publish task: ${taskType} - ${taskId}`,
         error.stack,
       );
-      throw new Error(`Failed to publish task: ${error.message}`);
+      this.logger.error('Error details:', {
+        message: error.message,
+        name: error.name,
+        code: error.code,
+        fullError: error,
+      });
+      throw new Error(
+        `Failed to publish task: ${error.message || 'Unknown error'}`,
+      );
     }
   }
 
@@ -81,5 +92,9 @@ export class MessagingService {
     } catch (error) {
       this.logger.error('Failed to disconnect from RabbitMQ', error.stack);
     }
+  }
+
+  async onModuleDestroy() {
+    await this.close();
   }
 }

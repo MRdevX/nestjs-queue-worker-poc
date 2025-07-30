@@ -1,34 +1,60 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { EventPattern, Payload } from '@nestjs/microservices';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { MessagingService } from '../core/messaging/messaging.service';
 import { TaskService } from '../task/task.service';
 import { CoordinatorService } from '../workflow/coordinator.service';
 import { ITaskMessage } from '../core/messaging/types/task-message.interface';
 import { UtilsService } from '../core/utils/utils.service';
 import { TaskStatus } from '../task/types/task-status.enum';
+import { TaskType } from '../task/types/task-type.enum';
 
 @Injectable()
-export abstract class BaseWorker {
+export abstract class BaseWorker implements OnModuleDestroy {
   protected readonly logger = new Logger(this.constructor.name);
 
   constructor(
     protected readonly taskService: TaskService,
     protected readonly coordinator: CoordinatorService,
     protected readonly messagingService: MessagingService,
-  ) {}
+  ) {
+    this.logger.log(`${this.constructor.name} initialized`);
+  }
 
-  @EventPattern('task.created')
-  async handleTask(@Payload() data: ITaskMessage) {
+  async handleTask(data: ITaskMessage) {
+    this.logger.log(`Received task message: ${JSON.stringify(data)}`);
+
     const { taskId, delay, metadata } = data;
 
     try {
+      // Get the task to check its type
+      const task = await this.taskService.getTaskById(taskId);
+      if (!task) {
+        this.logger.warn(`Task ${taskId} not found, skipping processing`);
+        return;
+      }
+
+      this.logger.log(
+        `Found task: ${taskId}, type: ${task.type}, status: ${task.status}`,
+      );
+
+      // Check if this worker should process this task type
+      if (!this.shouldProcessTaskType(task.type)) {
+        this.logger.debug(
+          `Worker ${this.constructor.name} skipping task ${taskId} of type ${task.type}`,
+        );
+        return;
+      }
+
+      this.logger.log(
+        `Worker ${this.constructor.name} will process task ${taskId} of type ${task.type}`,
+      );
+
       if (delay && delay > 0) {
         this.logger.log(`Delaying task ${taskId} by ${delay}ms`);
         await UtilsService.sleep(delay);
       }
 
       this.logger.log(
-        `Processing task: ${taskId}${metadata ? ` with metadata: ${JSON.stringify(metadata)}` : ''}`,
+        `Processing task: ${taskId} (${task.type})${metadata ? ` with metadata: ${JSON.stringify(metadata)}` : ''}`,
       );
 
       await this.taskService.updateTaskStatus(taskId, TaskStatus.PROCESSING);
@@ -53,4 +79,10 @@ export abstract class BaseWorker {
   }
 
   protected abstract processTask(taskId: string): Promise<void>;
+
+  protected abstract shouldProcessTaskType(taskType: TaskType): boolean;
+
+  async onModuleDestroy() {
+    // If any resources need to be cleaned up, do it here.
+  }
 }

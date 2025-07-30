@@ -1,9 +1,12 @@
 import axios from 'axios';
 import { Injectable } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { BaseWorker } from './base.worker';
 import { CoordinatorService } from '../workflow/coordinator.service';
 import { MessagingService } from '../core/messaging/messaging.service';
 import { TaskService } from '../task/task.service';
+import { TaskType } from '../task/types/task-type.enum';
+import { ITaskMessage } from '../core/messaging/types/task-message.interface';
 
 @Injectable()
 export class HttpWorker extends BaseWorker {
@@ -13,6 +16,11 @@ export class HttpWorker extends BaseWorker {
     messagingService: MessagingService,
   ) {
     super(taskService, coordinator, messagingService);
+  }
+
+  @MessagePattern('task.created')
+  async handleTask(@Payload() data: ITaskMessage) {
+    return super.handleTask(data);
   }
 
   protected async processTask(taskId: string) {
@@ -36,5 +44,9 @@ export class HttpWorker extends BaseWorker {
     if (response.status >= 400) {
       throw new Error(`HTTP ${response.status}`);
     }
+  }
+
+  protected shouldProcessTaskType(taskType: TaskType): boolean {
+    return taskType === TaskType.HTTP_REQUEST;
   }
 }

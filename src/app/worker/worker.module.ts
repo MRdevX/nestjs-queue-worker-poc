@@ -20,7 +20,7 @@ import { WorkflowModule } from '../workflow/workflow.module';
             urls: configService.get('s2s.options.urls'),
             queue: configService.get('s2s.options.queue'),
             queueOptions: {
-              durable: false,
+              durable: true,
             },
           },
         }),

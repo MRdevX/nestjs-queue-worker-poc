@@ -13,6 +13,11 @@ export default registerAs('s2s', () => {
     options: {
       urls: [`amqp://${user}:${password}@${host}:${port}`],
       queue,
+      queueOptions: {
+        durable: true,
+        deadLetterExchange: 'task.dlx',
+        deadLetterRoutingKey: 'failed',
+      },
     },
   };
 });
