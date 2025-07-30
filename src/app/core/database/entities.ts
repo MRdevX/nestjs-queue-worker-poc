@@ -1,4 +1,4 @@
-import { TaskExecutionLog } from '@root/app/task/task-execution-log.entity';
+import { TaskExecutionLog } from '@root/app/task/task-log.entity';
 import { TaskEntity } from '@root/app/task/task.entity';
 import { WorkflowEntity } from '@root/app/workflow/workflow.entity';
 

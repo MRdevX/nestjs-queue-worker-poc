@@ -3,7 +3,7 @@ import { BaseModel } from '../core/base/base.entity';
 import { TaskType } from './types/task-type.enum';
 import { TaskStatus } from './types/task-status.enum';
 import { WorkflowEntity } from '../workflow/workflow.entity';
-import { TaskExecutionLog } from './task-execution-log.entity';
+import { TaskExecutionLog } from './task-log.entity';
 
 @Entity()
 export class TaskEntity extends BaseModel {
