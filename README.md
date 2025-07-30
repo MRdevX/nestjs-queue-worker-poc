@@ -96,3 +96,137 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+# Queue Worker POC
+
+A NestJS-based queue worker proof of concept with PostgreSQL and RabbitMQ integration.
+
+## Features
+
+- **NestJS Framework**: Modern Node.js framework for building scalable applications
+- **PostgreSQL Database**: Reliable relational database for data persistence
+- **RabbitMQ**: Message broker for asynchronous task processing
+- **Docker Support**: Containerized development and production environments
+- **TypeScript**: Type-safe development with full IDE support
+
+## Quick Start
+
+### Prerequisites
+
+- Docker and Docker Compose
+- Node.js 18+ (for local development)
+- Yarn package manager
+
+### Development Mode
+
+```bash
+# Start development environment
+./start-dev.sh
+
+# Or manually:
+docker compose -f docker-compose.dev.yml up --build
+```
+
+### Production Mode
+
+```bash
+# Start production environment
+./start-prod.sh
+
+# Or manually:
+docker compose up --build -d
+```
+
+## Services
+
+Once running, the following services will be available:
+
+- **Application**: http://localhost:3030
+- **RabbitMQ Management**: http://localhost:15672 (guest/guest)
+- **PostgreSQL**: localhost:55000 (dev) / localhost:55001 (prod)
+
+## Local Development
+
+```bash
+# Install dependencies
+yarn install
+
+# Start development server
+yarn start:dev
+
+# Run tests
+yarn test
+
+# Run e2e tests
+yarn test:e2e
+```
+
+## Docker Configuration
+
+### Development (`docker-compose.dev.yml`)
+
+- Uses build stage for development
+- Volume mounts for hot reloading
+- Separate node_modules volume to prevent conflicts
+- Health checks for dependencies
+
+### Production (`docker-compose.yml`)
+
+- Uses production stage with optimized build
+- No volume mounts for security
+- Production environment variables
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── config/          # Configuration files
+│   ├── core/            # Core modules (database, messaging)
+│   ├── fault/           # Fault handling
+│   ├── queue/           # Queue management
+│   ├── scheduler/       # Task scheduling
+│   ├── task/            # Task management
+│   ├── worker/          # Worker implementations
+│   └── workflow/        # Workflow management
+├── logger.ts            # Logging configuration
+└── main.ts              # Application entry point
+```
+
+## Environment Variables
+
+| Variable            | Description       | Default        |
+| ------------------- | ----------------- | -------------- |
+| `NODE_ENV`          | Environment mode  | `development`  |
+| `PORT`              | Application port  | `3030`         |
+| `DB_HOST`           | PostgreSQL host   | `localhost`    |
+| `DB_PORT`           | PostgreSQL port   | `5432`         |
+| `DB_NAME`           | Database name     | `queue_worker` |
+| `DB_USERNAME`       | Database username | `postgres`     |
+| `DB_PASSWORD`       | Database password | `postgres`     |
+| `RABBITMQ_HOST`     | RabbitMQ host     | `localhost`    |
+| `RABBITMQ_USER`     | RabbitMQ username | `guest`        |
+| `RABBITMQ_PASSWORD` | RabbitMQ password | `guest`        |
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Node modules not found**: Ensure you're using the correct Docker target (`build` for dev, `production` for prod)
+2. **Database connection failed**: Check that PostgreSQL container is healthy and environment variables are correct
+3. **Port conflicts**: Verify ports 3030, 55000, 55001, 5672, 15672 are available
+
+### Reset Environment
+
+```bash
+# Clean up all containers and volumes
+docker compose -f docker-compose.dev.yml down -v
+docker compose down -v
+
+# Rebuild from scratch
+docker compose -f docker-compose.dev.yml up --build
+```
+
+## License
+
+This project is licensed under the MIT License.
