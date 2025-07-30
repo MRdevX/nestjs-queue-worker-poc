@@ -60,7 +60,6 @@ export class QueueController {
       throw new Error('Task not found');
     }
 
-    // Only allow cancellation of pending tasks
     if (task.status !== 'pending') {
       throw new Error('Only pending tasks can be cancelled');
     }

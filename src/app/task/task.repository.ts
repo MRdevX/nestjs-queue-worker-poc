@@ -1,4 +1,5 @@
 import { Repository } from 'typeorm';
+import { Not, IsNull } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BaseRepository } from '../core/base/base.repositorty';
@@ -36,5 +37,15 @@ export class TaskRepository extends BaseRepository<TaskEntity> {
 
   async incrementRetryCount(taskId: string): Promise<void> {
     await this.repository.increment({ id: taskId }, 'retries', 1);
+  }
+
+  async findScheduledTasks(): Promise<TaskEntity[]> {
+    return this.repository.find({
+      where: {
+        status: TaskStatus.PENDING,
+        scheduledAt: Not(IsNull()),
+      },
+      order: { scheduledAt: 'ASC' },
+    });
   }
 }

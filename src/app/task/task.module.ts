@@ -11,7 +11,7 @@ import { QueueController } from './queue.controller';
 @Module({
   imports: [TypeOrmModule.forFeature([TaskEntity, TaskLogEntity])],
   providers: [TaskService, TaskRepository, TaskLogRepository],
-  exports: [TaskService],
+  exports: [TaskService, TaskRepository],
   controllers: [TaskController, QueueController],
 })
 export class TaskModule {}

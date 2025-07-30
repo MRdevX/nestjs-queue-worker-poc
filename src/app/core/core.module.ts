@@ -1,6 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import dbConfig from '@root/app/config/db.config';
 import s2sConfig from '@root/app/config/s2s.config';
 import appConfig from '@root/app/config/app.config';
@@ -14,6 +15,7 @@ import { HealthModule } from './health/health.module';
   imports: [
     MessagingModule,
     HealthModule,
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
