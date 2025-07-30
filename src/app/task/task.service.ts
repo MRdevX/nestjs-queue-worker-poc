@@ -91,6 +91,10 @@ export class TaskService {
     return this.taskRepo.findPendingTasks(limit);
   }
 
+  async findMany(where: any): Promise<TaskEntity[]> {
+    return this.taskRepo.findMany(where);
+  }
+
   async getTaskById(
     taskId: string,
     options?: { relations?: string[] },
