@@ -4,7 +4,7 @@ import { BaseModel } from '../core/base/base.entity';
 import { LogLevel } from './types/log-level.enum';
 
 @Entity()
-export class TaskExecutionLog extends BaseModel {
+export class TaskLogEntity extends BaseModel {
   @Column({ type: 'enum', enum: LogLevel })
   level: LogLevel;
 

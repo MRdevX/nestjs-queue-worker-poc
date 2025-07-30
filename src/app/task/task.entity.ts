@@ -3,7 +3,7 @@ import { BaseModel } from '../core/base/base.entity';
 import { TaskType } from './types/task-type.enum';
 import { TaskStatus } from './types/task-status.enum';
 import { WorkflowEntity } from '../workflow/workflow.entity';
-import { TaskExecutionLog } from './task-log.entity';
+import { TaskLogEntity } from './task-log.entity';
 
 @Entity()
 export class TaskEntity extends BaseModel {
@@ -36,8 +36,8 @@ export class TaskEntity extends BaseModel {
   @OneToMany(() => TaskEntity, (task) => task.parentTask)
   children: TaskEntity[];
 
-  @OneToMany(() => TaskExecutionLog, (log) => log.task)
-  logs: TaskExecutionLog[];
+  @OneToMany(() => TaskLogEntity, (log) => log.task)
+  logs: TaskLogEntity[];
 
   @Index()
   @Column({ type: 'timestamp', nullable: true })

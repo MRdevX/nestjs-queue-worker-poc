@@ -1,10 +1,12 @@
 import { Repository } from 'typeorm';
+import { Injectable } from '@nestjs/common';
 import { BaseRepository } from '../core/base/base.repositorty';
-import { TaskExecutionLog } from './task-log.entity';
+import { TaskLogEntity } from './task-log.entity';
 import { LogLevel } from './types/log-level.enum';
 
-export class TaskLogRepository extends BaseRepository<TaskExecutionLog> {
-  constructor(repository: Repository<TaskExecutionLog>) {
+@Injectable()
+export class TaskLogRepository extends BaseRepository<TaskLogEntity> {
+  constructor(repository: Repository<TaskLogEntity>) {
     super(repository);
   }
 
@@ -17,7 +19,7 @@ export class TaskLogRepository extends BaseRepository<TaskExecutionLog> {
     });
   }
 
-  async getTaskTimeline(taskId: string): Promise<TaskExecutionLog[]> {
+  async getTaskTimeline(taskId: string): Promise<TaskLogEntity[]> {
     return this.repository.find({
       where: { task: { id: taskId } },
       order: { timestamp: 'DESC' },
