@@ -104,15 +104,16 @@ describe('TaskController', () => {
       expect(result).toEqual(mockTask);
     });
 
-    it('should return null when task is not found', async () => {
+    it('should throw NotFoundException when task is not found', async () => {
       const taskId = 'non-existent-task';
 
       taskService.getTaskById.mockResolvedValue(null);
 
-      const result = await controller.getTask(taskId);
+      await expect(controller.getTask(taskId)).rejects.toThrow(
+        'Task not found',
+      );
 
       expect(taskService.getTaskById).toHaveBeenCalledWith(taskId);
-      expect(result).toBeNull();
     });
   });
 

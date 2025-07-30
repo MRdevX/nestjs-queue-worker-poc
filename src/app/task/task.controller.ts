@@ -1,4 +1,11 @@
-import { Controller, Post, Body, Get, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  NotFoundException,
+} from '@nestjs/common';
 import { TaskService } from './task.service';
 import { MessagingService } from '../core/messaging/messaging.service';
 import { TaskType } from './types/task-type.enum';
@@ -23,14 +30,18 @@ export class TaskController {
 
   @Get(':id')
   async getTask(@Param('id') id: string) {
-    return this.taskService.getTaskById(id);
+    const task = await this.taskService.getTaskById(id);
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+    return task;
   }
 
   @Post(':id/retry')
   async retryTask(@Param('id') id: string) {
     const task = await this.taskService.getTaskById(id);
     if (!task) {
-      throw new Error('Task not found');
+      throw new NotFoundException('Task not found');
     }
 
     await this.taskService.updateTaskStatus(id, TaskStatus.PENDING);
@@ -39,5 +50,33 @@ export class TaskController {
     });
 
     return { message: 'Task queued for retry' };
+  }
+
+  @Post(':id/compensate')
+  async compensateTask(@Param('id') id: string) {
+    const task = await this.taskService.getTaskById(id);
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    // Create a compensation task
+    const compensationTask = await this.taskService.createTask(
+      TaskType.COMPENSATION,
+      {
+        originalTaskId: id,
+        originalTaskType: task.type,
+        compensationAction: 'rollback',
+      },
+    );
+
+    await this.messagingService.publishTask(
+      compensationTask.type,
+      compensationTask.id,
+      {
+        metadata: { originalTaskId: id, isCompensation: true },
+      },
+    );
+
+    return { message: 'Compensation task created and queued' };
   }
 }

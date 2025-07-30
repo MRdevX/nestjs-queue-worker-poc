@@ -1,4 +1,11 @@
-import { Controller, Get, Post, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { TaskService } from './task.service';
 import { MessagingService } from '../core/messaging/messaging.service';
 import { TaskStatus } from './types/task-status.enum';
@@ -28,21 +35,21 @@ export class QueueController {
     };
   }
 
-  @Get('tasks/pending')
+  @Get('pending')
   async getPendingTasks() {
     return this.taskService.getPendingTasks();
   }
 
-  @Get('tasks/failed')
+  @Get('failed')
   async getFailedTasks() {
     return this.taskService.findMany({ status: TaskStatus.FAILED });
   }
 
-  @Post('tasks/:id/retry')
+  @Post(':id/retry')
   async retryTask(@Param('id') id: string) {
     const task = await this.taskService.getTaskById(id);
     if (!task) {
-      throw new Error('Task not found');
+      throw new NotFoundException('Task not found');
     }
 
     await this.taskService.updateTaskStatus(id, TaskStatus.PENDING);
@@ -53,15 +60,15 @@ export class QueueController {
     return { message: 'Task queued for retry' };
   }
 
-  @Post('tasks/:id/cancel')
+  @Post(':id/cancel')
   async cancelTask(@Param('id') id: string) {
     const task = await this.taskService.getTaskById(id);
     if (!task) {
-      throw new Error('Task not found');
+      throw new NotFoundException('Task not found');
     }
 
     if (task.status !== 'pending') {
-      throw new Error('Only pending tasks can be cancelled');
+      throw new BadRequestException('Only pending tasks can be cancelled');
     }
 
     await this.taskService.updateTaskStatus(id, TaskStatus.CANCELLED);
