@@ -8,6 +8,6 @@ import { TaskModule } from '../task/task.module';
 @Module({
   imports: [TypeOrmModule.forFeature([WorkflowEntity]), TaskModule],
   providers: [WorkflowRepository, CoordinatorService],
-  exports: [],
+  exports: [CoordinatorService],
 })
 export class WorkflowModule {}
