@@ -23,7 +23,9 @@ export class MessagingService {
         urls: s2sConfig.options.urls,
         queue: s2sConfig.options.queue,
         queueOptions: {
-          durable: false,
+          durable: true,
+          deadLetterExchange: 'task.dlx',
+          deadLetterRoutingKey: 'failed',
         },
       },
     } as RmqOptions);

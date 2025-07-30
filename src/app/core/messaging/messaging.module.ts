@@ -1,11 +1,10 @@
-import { Module, Global } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import s2sConfig from '@root/app/config/s2s.config';
 import { MessagingService } from './messaging.service';
+import { TaskModule } from '../../task/task.module';
 
-@Global()
 @Module({
-  imports: [ConfigModule.forFeature(s2sConfig)],
+  imports: [ConfigModule, TaskModule],
   providers: [MessagingService],
   exports: [MessagingService],
 })
