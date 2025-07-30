@@ -9,7 +9,6 @@ import { TaskStatus } from '../../task/types/task-status.enum';
 
 class TestWorker extends BaseWorker {
   protected async processTask(taskId: string): Promise<void> {
-    // Use taskId to avoid linting error
     if (taskId) {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }

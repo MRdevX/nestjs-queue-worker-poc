@@ -10,7 +10,6 @@ describe('DataWorker', () => {
   let worker: DataWorker;
   let taskService: jest.Mocked<TaskService>;
   let coordinator: jest.Mocked<CoordinatorService>;
-  // let messagingService: jest.Mocked<MessagingService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -43,7 +42,6 @@ describe('DataWorker', () => {
     worker = module.get<DataWorker>(DataWorker);
     taskService = module.get(TaskService);
     coordinator = module.get(CoordinatorService);
-    // messagingService = module.get(MessagingService);
   });
 
   afterEach(() => {
@@ -63,7 +61,6 @@ describe('DataWorker', () => {
       taskService.updateTaskStatus.mockResolvedValue(task as any);
       coordinator.handleTaskCompletion.mockResolvedValue();
 
-      // Mock Math.random to ensure successful processing
       const originalRandom = Math.random;
       Math.random = jest.fn().mockReturnValue(0.5);
 

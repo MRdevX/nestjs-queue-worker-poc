@@ -59,7 +59,7 @@ describe('FaultService', () => {
         task.type,
         task.id,
         {
-          delay: 6000, // Math.min(30000, 2000 * 3)
+          delay: 6000,
           metadata: { retryCount: 3, isRetry: true },
         },
       );
@@ -70,7 +70,7 @@ describe('FaultService', () => {
       const task = TaskEntityMockFactory.create({
         id: taskId,
         type: TaskType.HTTP_REQUEST,
-        retries: 20, // Would be 40000ms, but capped at 30000ms
+        retries: 20,
       });
 
       taskService.getTaskById.mockResolvedValue(task as any);
@@ -83,7 +83,7 @@ describe('FaultService', () => {
         task.type,
         task.id,
         {
-          delay: 30000, // Capped at maximum
+          delay: 30000,
           metadata: { retryCount: 20, isRetry: true },
         },
       );
@@ -107,7 +107,7 @@ describe('FaultService', () => {
         task.type,
         task.id,
         {
-          delay: 0, // Math.min(30000, 2000 * 0)
+          delay: 0,
           metadata: { retryCount: 0, isRetry: true },
         },
       );
