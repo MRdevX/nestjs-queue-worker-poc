@@ -11,6 +11,7 @@ import { UtilsService } from './utils/utils.service';
 @Global()
 @Module({
   imports: [
+    MessagingModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
@@ -33,7 +34,6 @@ import { UtilsService } from './utils/utils.service';
       },
       inject: [ConfigService],
     }),
-    MessagingModule,
   ],
   providers: [UtilsService],
   exports: [UtilsService],

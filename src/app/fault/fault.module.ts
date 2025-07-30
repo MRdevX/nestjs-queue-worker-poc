@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
 import { FaultService } from './fault.service';
 import { TaskModule } from '../task/task.module';
-import { MessagingModule } from '../core/messaging/messaging.module';
 
 @Module({
-  imports: [TaskModule, MessagingModule],
+  imports: [TaskModule],
   providers: [FaultService],
   exports: [FaultService],
 })
