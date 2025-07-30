@@ -1,7 +1,7 @@
 import { Repository, FindManyOptions } from 'typeorm';
 import { BaseModel } from './base.entity';
 
-export abstract class BaseCrudService<T extends BaseModel> {
+export abstract class BaseRepository<T extends BaseModel> {
   constructor(protected readonly repository: Repository<T>) {}
 
   async create(data: any): Promise<T> {
