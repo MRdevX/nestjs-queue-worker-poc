@@ -3,8 +3,9 @@ import { CoreModule } from './core/core.module';
 import { TaskModule } from './task/task.module';
 import { WorkflowModule } from './workflow/workflow.module';
 import { WorkerModule } from './worker/worker.module';
+import { FaultModule } from './fault/fault.module';
 
 @Module({
-  imports: [CoreModule, TaskModule, WorkflowModule, WorkerModule],
+  imports: [CoreModule, TaskModule, WorkflowModule, WorkerModule, FaultModule],
 })
 export class AppModule {}
