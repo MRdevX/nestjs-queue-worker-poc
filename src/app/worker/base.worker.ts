@@ -3,6 +3,8 @@ import { EventPattern, Payload } from '@nestjs/microservices';
 import { MessagingService } from '../core/messaging/messaging.service';
 import { TaskService } from '../task/task.service';
 import { CoordinatorService } from '../workflow/coordinator.service';
+import { ITaskMessage } from '../core/messaging/types/task-message.interface';
+import { UtilsService } from '../core/utils/utils.service';
 
 @Injectable()
 export abstract class BaseWorker {
@@ -15,11 +17,18 @@ export abstract class BaseWorker {
   ) {}
 
   @EventPattern('task.created')
-  async handleTask(@Payload() data: { taskType: string; taskId: string }) {
-    const { taskId } = data;
+  async handleTask(@Payload() data: ITaskMessage) {
+    const { taskId, delay, metadata } = data;
 
     try {
-      this.logger.log(`Processing task: ${taskId}`);
+      if (delay && delay > 0) {
+        this.logger.log(`Delaying task ${taskId} by ${delay}ms`);
+        await UtilsService.sleep(delay);
+      }
+
+      this.logger.log(
+        `Processing task: ${taskId}${metadata ? ` with metadata: ${JSON.stringify(metadata)}` : ''}`,
+      );
       await this.processTask(taskId);
       await this.coordinator.handleTaskCompletion(taskId);
       this.logger.log(`Task completed successfully: ${taskId}`);

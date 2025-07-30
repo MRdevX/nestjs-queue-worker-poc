@@ -6,6 +6,7 @@ import s2sConfig from '@root/app/config/s2s.config';
 import appConfig from '@root/app/config/app.config';
 import { entities } from './database/entities';
 import { MessagingModule } from './messaging/messaging.module';
+import { UtilsService } from './utils/utils.service';
 
 @Global()
 @Module({
@@ -34,5 +35,7 @@ import { MessagingModule } from './messaging/messaging.module';
     }),
     MessagingModule,
   ],
+  providers: [UtilsService],
+  exports: [UtilsService],
 })
 export class CoreModule {}

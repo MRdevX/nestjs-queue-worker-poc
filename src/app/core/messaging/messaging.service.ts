@@ -33,13 +33,26 @@ export class MessagingService {
     return this.client;
   }
 
-  async publishTask(taskType: string, taskId: string): Promise<void> {
-    const message: ITaskMessage = { taskType, taskId };
+  async publishTask(
+    taskType: string,
+    taskId: string,
+    options?: { delay?: number; metadata?: Record<string, any> },
+  ): Promise<void> {
+    const message: ITaskMessage = {
+      taskType,
+      taskId,
+      delay: options?.delay,
+      metadata: options?.metadata,
+    };
 
     try {
       await firstValueFrom(this.client.emit('task.created', message));
 
-      this.logger.log(`Task published successfully: ${taskType} - ${taskId}`);
+      this.logger.log(
+        `Task published successfully: ${taskType} - ${taskId}${
+          options?.delay ? ` (delayed by ${options.delay}ms)` : ''
+        }`,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to publish task: ${taskType} - ${taskId}`,
