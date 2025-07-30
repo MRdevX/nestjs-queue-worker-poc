@@ -5,6 +5,7 @@ import dbConfig from '@root/app/config/db.config';
 import s2sConfig from '@root/app/config/s2s.config';
 import appConfig from '@root/app/config/app.config';
 import { entities } from './database/entities';
+import { MessagingModule } from './messaging/messaging.module';
 
 @Global()
 @Module({
@@ -31,6 +32,7 @@ import { entities } from './database/entities';
       },
       inject: [ConfigService],
     }),
+    MessagingModule,
   ],
 })
 export class CoreModule {}
