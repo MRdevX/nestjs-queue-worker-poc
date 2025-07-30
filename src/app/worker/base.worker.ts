@@ -25,7 +25,6 @@ export abstract class BaseWorker implements OnModuleDestroy {
     const { taskId, delay, metadata } = data;
 
     try {
-      // Get the task to check its type
       const task = await this.taskService.getTaskById(taskId);
       if (!task) {
         this.logger.warn(`Task ${taskId} not found, skipping processing`);
@@ -36,7 +35,6 @@ export abstract class BaseWorker implements OnModuleDestroy {
         `Found task: ${taskId}, type: ${task.type}, status: ${task.status}`,
       );
 
-      // Check if this worker should process this task type
       if (!this.shouldProcessTaskType(task.type)) {
         this.logger.debug(
           `Worker ${this.constructor.name} skipping task ${taskId} of type ${task.type}`,
@@ -75,6 +73,14 @@ export abstract class BaseWorker implements OnModuleDestroy {
     } catch (error) {
       this.logger.error(`Task failed: ${taskId}`, error.stack);
       await this.taskService.handleFailure(taskId, error);
+
+      try {
+        await this.coordinator.handleTaskFailure(taskId, error);
+      } catch (coordinatorError) {
+        this.logger.warn(
+          `Coordinator failure handling failed for task ${taskId}: ${coordinatorError.message}`,
+        );
+      }
     }
   }
 
@@ -83,6 +89,6 @@ export abstract class BaseWorker implements OnModuleDestroy {
   protected abstract shouldProcessTaskType(taskType: TaskType): boolean;
 
   async onModuleDestroy() {
-    // If any resources need to be cleaned up, do it here.
+    // any resources need to be cleaned up
   }
 }

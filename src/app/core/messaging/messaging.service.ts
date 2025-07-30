@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ClientProxy, ClientProxyFactory } from '@nestjs/microservices';
 import { RmqOptions } from '@nestjs/microservices/interfaces';
 import { ITaskMessage } from './types/task-message.interface';
+import { TaskType } from '../../task/types/task-type.enum';
 
 @Injectable()
 export class MessagingService implements OnModuleDestroy {
@@ -35,6 +36,19 @@ export class MessagingService implements OnModuleDestroy {
     return this.client;
   }
 
+  private getMessagePattern(taskType: TaskType): string {
+    switch (taskType) {
+      case TaskType.HTTP_REQUEST:
+        return 'http.request';
+      case TaskType.DATA_PROCESSING:
+        return 'data.processing';
+      case TaskType.COMPENSATION:
+        return 'compensation';
+      default:
+        return 'task.created';
+    }
+  }
+
   async publishTask(
     taskType: string,
     taskId: string,
@@ -47,11 +61,15 @@ export class MessagingService implements OnModuleDestroy {
       metadata: options?.metadata,
     };
 
-    this.logger.log(`Publishing task message: ${JSON.stringify(message)}`);
+    const pattern = this.getMessagePattern(taskType as TaskType);
+
+    this.logger.log(
+      `Publishing task message: ${JSON.stringify(message)} to pattern: ${pattern}`,
+    );
 
     try {
       this.logger.log('Sending message...');
-      await firstValueFrom(this.client.send('task.created', message));
+      await firstValueFrom(this.client.send(pattern, message));
 
       this.logger.log(
         `Task published successfully: ${taskType} - ${taskId}${

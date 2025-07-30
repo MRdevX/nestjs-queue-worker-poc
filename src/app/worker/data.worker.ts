@@ -18,7 +18,7 @@ export class DataWorker extends BaseWorker {
     super(taskService, coordinator, messagingService);
   }
 
-  @MessagePattern('task.created')
+  @MessagePattern('data.processing')
   async handleTask(@Payload() data: ITaskMessage) {
     return super.handleTask(data);
   }

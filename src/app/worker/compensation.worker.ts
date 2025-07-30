@@ -1,15 +1,15 @@
-import axios from 'axios';
 import { Injectable } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { BaseWorker } from './base.worker';
+import { TaskService } from '../task/task.service';
 import { CoordinatorService } from '../workflow/coordinator.service';
 import { MessagingService } from '../core/messaging/messaging.service';
-import { TaskService } from '../task/task.service';
+import { UtilsService } from '../core/utils/utils.service';
 import { TaskType } from '../task/types/task-type.enum';
 import { ITaskMessage } from '../core/messaging/types/task-message.interface';
 
 @Injectable()
-export class HttpWorker extends BaseWorker {
+export class CompensationWorker extends BaseWorker {
   constructor(
     taskService: TaskService,
     coordinator: CoordinatorService,
@@ -18,7 +18,7 @@ export class HttpWorker extends BaseWorker {
     super(taskService, coordinator, messagingService);
   }
 
-  @MessagePattern('http.request')
+  @MessagePattern('compensation')
   async handleTask(@Payload() data: ITaskMessage) {
     return super.handleTask(data);
   }
@@ -29,24 +29,18 @@ export class HttpWorker extends BaseWorker {
       throw new Error(`Task with id ${taskId} not found`);
     }
 
-    const { url, method } = task.payload;
+    this.logger.log(
+      `Processing compensation task ${taskId} for original task ${task.payload.originalTaskId}`,
+    );
 
-    if (!url || !method) {
-      throw new Error('URL and method are required for HTTP tasks');
-    }
+    await UtilsService.sleep(1000);
 
-    const response = await axios({
-      method,
-      url,
-      timeout: 10000,
-    });
-
-    if (response.status >= 400) {
-      throw new Error(`HTTP ${response.status}`);
-    }
+    this.logger.log(
+      `Compensation completed for task ${task.payload.originalTaskId}`,
+    );
   }
 
   protected shouldProcessTaskType(taskType: TaskType): boolean {
-    return taskType === TaskType.HTTP_REQUEST;
+    return taskType === TaskType.COMPENSATION;
   }
 }

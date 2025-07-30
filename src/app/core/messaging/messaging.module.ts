@@ -1,11 +1,10 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MessagingService } from './messaging.service';
-import { TaskModule } from '../../task/task.module';
 
 @Global()
 @Module({
-  imports: [ConfigModule, TaskModule],
+  imports: [ConfigModule],
   providers: [MessagingService],
   exports: [MessagingService],
 })

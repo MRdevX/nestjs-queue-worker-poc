@@ -7,11 +7,13 @@ import appConfig from '@root/app/config/app.config';
 import { entities } from './database/entities';
 import { MessagingModule } from './messaging/messaging.module';
 import { UtilsService } from './utils/utils.service';
+import { HealthModule } from './health/health.module';
 
 @Global()
 @Module({
   imports: [
     MessagingModule,
+    HealthModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
