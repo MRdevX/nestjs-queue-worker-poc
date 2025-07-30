@@ -16,8 +16,19 @@ export class DataWorker extends BaseWorker {
   }
 
   protected async processTask(taskId: string) {
-    await this.taskService.getTaskById(taskId);
+    const task = await this.taskService.getTaskById(taskId);
+    if (!task) {
+      throw new Error(`Task with id ${taskId} not found`);
+    }
+
     await UtilsService.sleep(500);
-    if (Math.random() > 0.8) throw new Error('Random processing failure');
+
+    if (task.payload?.forceFailure === true) {
+      throw new Error('Forced failure for testing purposes');
+    }
+
+    if (Math.random() > 0.8) {
+      throw new Error('Random processing failure');
+    }
   }
 }

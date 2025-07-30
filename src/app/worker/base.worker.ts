@@ -5,6 +5,7 @@ import { TaskService } from '../task/task.service';
 import { CoordinatorService } from '../workflow/coordinator.service';
 import { ITaskMessage } from '../core/messaging/types/task-message.interface';
 import { UtilsService } from '../core/utils/utils.service';
+import { TaskStatus } from '../task/types/task-status.enum';
 
 @Injectable()
 export abstract class BaseWorker {
@@ -29,8 +30,21 @@ export abstract class BaseWorker {
       this.logger.log(
         `Processing task: ${taskId}${metadata ? ` with metadata: ${JSON.stringify(metadata)}` : ''}`,
       );
+
+      await this.taskService.updateTaskStatus(taskId, TaskStatus.PROCESSING);
+
       await this.processTask(taskId);
-      await this.coordinator.handleTaskCompletion(taskId);
+
+      await this.taskService.updateTaskStatus(taskId, TaskStatus.COMPLETED);
+
+      try {
+        await this.coordinator.handleTaskCompletion(taskId);
+      } catch (workflowError) {
+        this.logger.warn(
+          `Workflow handling failed for task ${taskId}: ${workflowError.message}`,
+        );
+      }
+
       this.logger.log(`Task completed successfully: ${taskId}`);
     } catch (error) {
       this.logger.error(`Task failed: ${taskId}`, error.stack);

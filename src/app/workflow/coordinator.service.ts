@@ -26,7 +26,7 @@ export class CoordinatorService {
     }
 
     if (!task.workflow) {
-      throw new NotFoundException(`Workflow not found for task ${taskId}`);
+      return;
     }
 
     const transition = task.workflow.definition.transitions[task.type];

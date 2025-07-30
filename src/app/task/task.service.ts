@@ -72,8 +72,17 @@ export class TaskService {
 
     await this.taskRepo.incrementRetryCount(taskId);
 
+    const updatedTask = await this.taskRepo.findById(taskId);
+    if (!updatedTask) {
+      throw new NotFoundException(
+        `Task with id ${taskId} not found after retry increment`,
+      );
+    }
+
     const newStatus =
-      task.retries >= task.maxRetries ? TaskStatus.FAILED : TaskStatus.PENDING;
+      updatedTask.retries >= updatedTask.maxRetries
+        ? TaskStatus.FAILED
+        : TaskStatus.PENDING;
 
     await this.updateTaskStatus(taskId, newStatus, error.message);
   }
@@ -102,5 +111,12 @@ export class TaskService {
       throw new BadRequestException('Task ID is required');
     }
     return this.taskRepo.findByIdWithRelations(taskId, ['workflow']);
+  }
+
+  async getTaskByIdWithLogs(taskId: string): Promise<TaskEntity | null> {
+    if (!taskId) {
+      throw new BadRequestException('Task ID is required');
+    }
+    return this.taskRepo.findByIdWithRelations(taskId, ['logs']);
   }
 }

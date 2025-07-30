@@ -23,6 +23,10 @@ export class HttpWorker extends BaseWorker {
 
     const { url, method } = task.payload;
 
+    if (!url || !method) {
+      throw new Error('URL and method are required for HTTP tasks');
+    }
+
     const response = await axios({
       method,
       url,

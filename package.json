@@ -76,20 +76,20 @@
       "json",
       "ts"
     ],
-    "rootDir": "src",
+    "rootDir": ".",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "src/**/*.(t|j)s"
     ],
-    "coverageDirectory": "../coverage",
+    "coverageDirectory": "./coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
-      "^@root/(.*)$": "<rootDir>/../src/$1",
-      "^@test/(.*)$": "<rootDir>/../test/$1",
-      "^@resources/(.*)$": "<rootDir>/../resources/$1"
+      "^@root/(.*)$": "<rootDir>/src/$1",
+      "^@test/(.*)$": "<rootDir>/test/$1",
+      "^@resources/(.*)$": "<rootDir>/resources/$1"
     }
   },
   "packageManager": "yarn@4.9.2"
