@@ -88,7 +88,7 @@
     "testEnvironment": "node",
     "moduleNameMapper": {
       "^@root/(.*)$": "<rootDir>/../src/$1",
-      "^@test/(.*)$": "<rootDir>/$1",
+      "^@test/(.*)$": "<rootDir>/../test/$1",
       "^@resources/(.*)$": "<rootDir>/../resources/$1"
     }
   },
