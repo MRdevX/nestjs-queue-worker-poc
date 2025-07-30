@@ -1,0 +1,5 @@
+export enum TaskType {
+  HTTP = 'HTTP',
+  DATA_PROCESS = 'DATA_PROCESS',
+  COMPENSATION = 'COMPENSATION',
+}
