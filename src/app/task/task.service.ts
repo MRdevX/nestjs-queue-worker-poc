@@ -88,4 +88,11 @@ export class TaskService {
     }
     return this.taskRepo.findById(taskId);
   }
+
+  async getTaskByIdWithWorkflow(taskId: string): Promise<TaskEntity | null> {
+    if (!taskId) {
+      throw new BadRequestException('Task ID is required');
+    }
+    return this.taskRepo.findByIdWithRelations(taskId, ['workflow']);
+  }
 }

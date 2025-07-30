@@ -1,4 +1,4 @@
-import { Repository, FindManyOptions } from 'typeorm';
+import { Repository, FindManyOptions, FindOptionsWhere } from 'typeorm';
 import { BaseModel } from './base.entity';
 
 export abstract class BaseRepository<T extends BaseModel> {
@@ -12,6 +12,16 @@ export abstract class BaseRepository<T extends BaseModel> {
 
   async findById(id: string): Promise<T | null> {
     return this.repository.findOne({ where: { id } as any });
+  }
+
+  async findByIdWithRelations(
+    id: string,
+    relations: string[] = [],
+  ): Promise<T | null> {
+    return this.repository.findOne({
+      where: { id } as any,
+      relations,
+    });
   }
 
   async findAll(options?: FindManyOptions<T>): Promise<T[]> {

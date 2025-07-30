@@ -1,5 +1,5 @@
 import { Repository } from 'typeorm';
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BaseRepository } from '../core/base/base.repositorty';
 import { WorkflowEntity } from './workflow.entity';
@@ -21,10 +21,10 @@ export class WorkflowRepository extends BaseRepository<WorkflowEntity> {
   }
 
   async findWithTasks(id: string): Promise<WorkflowEntity> {
-    const workflow = await this.repository.findOne({
-      where: { id },
-      relations: ['tasks', 'tasks.children'],
-    });
+    const workflow = await this.findByIdWithRelations(id, [
+      'tasks',
+      'tasks.children',
+    ]);
     if (!workflow) {
       throw new Error(`Workflow with id ${id} not found.`);
     }

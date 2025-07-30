@@ -24,4 +24,8 @@ export class MessagingService {
   getClient(): ClientProxy {
     return this.client;
   }
+
+  async publishTask(taskType: string, taskId: string): Promise<void> {
+    await this.client.emit('task.created', { taskType, taskId }).toPromise();
+  }
 }
