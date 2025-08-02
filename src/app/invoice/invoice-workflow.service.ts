@@ -63,6 +63,7 @@ export class InvoiceWorkflowService {
         customerId,
         invoice,
         pdfProcessorUrl:
+          task.payload.pdfProcessorUrl ||
           process.env.PDF_PROCESSOR_URL ||
           'https://mock-pdf-processor.com/generate',
       },
@@ -98,6 +99,7 @@ export class InvoiceWorkflowService {
         invoice,
         pdfUrl,
         emailServiceUrl:
+          task.payload.emailServiceUrl ||
           process.env.EMAIL_SERVICE_URL ||
           'https://mock-email-service.com/send',
       },

@@ -5,11 +5,13 @@ import { TaskService } from '../../task/task.service';
 import { CoordinatorService } from '../../workflow/coordinator.service';
 import { TaskType } from '../../task/types/task-type.enum';
 import { TaskStatus } from '../../task/types/task-status.enum';
+import { MessagingService } from '../../core/messaging/messaging.service';
 
 describe('FetchOrdersWorker', () => {
   let worker: FetchOrdersWorker;
   let taskService: jest.Mocked<TaskService>;
   let coordinator: jest.Mocked<CoordinatorService>;
+  let messagingService: jest.Mocked<MessagingService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -30,12 +32,19 @@ describe('FetchOrdersWorker', () => {
             handleTaskFailure: jest.fn(),
           },
         },
+        {
+          provide: MessagingService,
+          useValue: {
+            publishTask: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     worker = module.get<FetchOrdersWorker>(FetchOrdersWorker);
     taskService = module.get(TaskService);
     coordinator = module.get(CoordinatorService);
+    messagingService = module.get(MessagingService);
   });
 
   afterEach(() => {

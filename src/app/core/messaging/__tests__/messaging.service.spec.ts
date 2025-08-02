@@ -2,6 +2,7 @@ import { firstValueFrom, of, throwError } from 'rxjs';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxyFactory } from '@nestjs/microservices';
 import { MessagingService } from '../messaging.service';
 import { TaskType } from '../../../task/types/task-type.enum';
 
@@ -16,12 +17,15 @@ const mockFirstValueFrom = firstValueFrom as jest.MockedFunction<
 >;
 
 // Mock ClientProxyFactory
-jest.mock('@nestjs/microservices', () => ({
-  ...jest.requireActual('@nestjs/microservices'),
-  ClientProxyFactory: {
-    create: jest.fn(),
-  },
-}));
+jest.mock('@nestjs/microservices', () => {
+  const actual = jest.requireActual('@nestjs/microservices');
+  return {
+    ...actual,
+    ClientProxyFactory: {
+      create: jest.fn(),
+    },
+  };
+});
 
 describe('MessagingService', () => {
   let service: MessagingService;
@@ -37,8 +41,7 @@ describe('MessagingService', () => {
     } as any;
 
     // Mock ClientProxyFactory.create to return our mock client
-    const { ClientProxyFactory } = jest.requireActual('@nestjs/microservices');
-    ClientProxyFactory.create.mockReturnValue(mockClient);
+    (ClientProxyFactory.create as jest.Mock).mockReturnValue(mockClient);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
