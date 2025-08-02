@@ -6,6 +6,7 @@ import { WorkerModule } from './worker/worker.module';
 import { FaultModule } from './fault/fault.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { QueueManagerModule } from './queue/queue.module';
+import { InvoiceModule } from './invoice/invoice.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { QueueManagerModule } from './queue/queue.module';
     FaultModule,
     SchedulerModule,
     QueueManagerModule,
+    InvoiceModule,
   ],
 })
 export class AppModule {}

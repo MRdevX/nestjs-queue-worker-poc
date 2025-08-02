@@ -1,7 +1,7 @@
+import { firstValueFrom, of, throwError } from 'rxjs';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom, of, throwError } from 'rxjs';
 import { MessagingService } from '../messaging.service';
 import { TaskType } from '../../../task/types/task-type.enum';
 

@@ -44,6 +44,14 @@ export class MessagingService implements OnModuleDestroy {
         return 'data.processing';
       case TaskType.COMPENSATION:
         return 'compensation';
+      case TaskType.FETCH_ORDERS:
+        return 'fetch.orders';
+      case TaskType.CREATE_INVOICE:
+        return 'create.invoice';
+      case TaskType.GENERATE_PDF:
+        return 'generate.pdf';
+      case TaskType.SEND_EMAIL:
+        return 'send.email';
       default:
         return 'task.created';
     }

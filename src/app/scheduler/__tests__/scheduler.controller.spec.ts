@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { TaskEntityMockFactory } from '@test/mocks';
 import { SchedulerController } from '../scheduler.controller';
 import { SchedulerService } from '../scheduler.service';
 import { TaskType } from '../../task/types/task-type.enum';
-import { TaskEntityMockFactory } from '@test/mocks';
 
 describe('SchedulerController', () => {
   let controller: SchedulerController;
