@@ -45,14 +45,6 @@ export class SendEmailWorker extends BaseWorker {
       emailServiceUrl,
     );
 
-    // Update task payload with email result
-    const updatedPayload = {
-      ...task.payload,
-      emailSent: true,
-      emailId: emailResult.emailId,
-      sentAt: new Date().toISOString(),
-    };
-
     this.logger.log(
       `Email sent to customer ${customerId} for invoice ${invoice.id}: ${emailResult.emailId}`,
     );

@@ -37,7 +37,7 @@ describe('MessagingService', () => {
     } as any;
 
     // Mock ClientProxyFactory.create to return our mock client
-    const { ClientProxyFactory } = require('@nestjs/microservices');
+    const { ClientProxyFactory } = jest.requireActual('@nestjs/microservices');
     ClientProxyFactory.create.mockReturnValue(mockClient);
 
     const module: TestingModule = await Test.createTestingModule({

@@ -22,7 +22,9 @@ describe('SchedulerModule Integration', () => {
 
     it('should import TaskModule', () => {
       const imports = Reflect.getMetadata('imports', SchedulerModule);
-      expect(imports).toContain(require('../../task/task.module').TaskModule);
+      expect(imports).toContain(
+        jest.requireActual('../../task/task.module').TaskModule,
+      );
     });
 
     it('should provide SchedulerService', () => {

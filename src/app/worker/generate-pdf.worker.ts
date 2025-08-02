@@ -38,13 +38,6 @@ export class GeneratePdfWorker extends BaseWorker {
     // Generate PDF using external PDF processor
     const pdfUrl = await this.generatePdf(invoice, pdfProcessorUrl);
 
-    // Update task payload with PDF URL
-    const updatedPayload = {
-      ...task.payload,
-      pdfUrl,
-      pdfGenerated: true,
-    };
-
     this.logger.log(`PDF generated for invoice ${invoice.id}: ${pdfUrl}`);
   }
 

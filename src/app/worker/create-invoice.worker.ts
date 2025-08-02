@@ -39,13 +39,6 @@ export class CreateInvoiceWorker extends BaseWorker {
     // Create invoice from orders
     const invoice = await this.createInvoice(customerId, orders, invoiceNumber);
 
-    // Update task payload with created invoice
-    const updatedPayload = {
-      ...task.payload,
-      invoice,
-      invoiceId: invoice.id,
-    };
-
     // In a real implementation, you would update the task with the invoice data
     // For now, we'll just log the invoice creation
     this.logger.log(
