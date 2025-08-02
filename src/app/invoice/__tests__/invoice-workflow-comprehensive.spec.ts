@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { TaskEntityMockFactory } from '@test/mocks';
 import { InvoiceController } from '../invoice.controller';
+import { InvoiceService } from '../invoice.service';
 import { InvoiceWorkflowService } from '../invoice-workflow.service';
 import { TaskService } from '../../task/task.service';
 import { MessagingService } from '../../core/messaging/messaging.service';
@@ -19,6 +21,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [InvoiceController],
       providers: [
+        InvoiceService,
         InvoiceWorkflowService,
         {
           provide: TaskService,
@@ -41,6 +44,20 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           useValue: {
             createScheduledTask: jest.fn(),
             createRecurringTask: jest.fn(),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              const config = {
+                'invoice.pdfProcessor.url':
+                  'https://mock-pdf-processor.com/generate',
+                'invoice.emailService.url':
+                  'https://mock-email-service.com/send',
+              };
+              return config[key];
+            }),
           },
         },
       ],
@@ -548,7 +565,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
             customerId,
             scheduledAt: invalidScheduledAt,
           }),
-        ).rejects.toThrow('Invalid scheduledAt date');
+        ).rejects.toThrow('Invalid date format');
 
         expect(schedulerService.createScheduledTask).not.toHaveBeenCalled();
       });
@@ -934,7 +951,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
     describe('7.1 Concurrent Workflows', () => {
       it('should handle multiple concurrent workflows', async () => {
         const customerId = 'customer-1';
-        
+
         // Create a simple mock task
         const mockTask = {
           id: 'task-1',

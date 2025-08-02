@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { TaskEntityMockFactory } from '@test/mocks';
 import { InvoiceController } from '../invoice.controller';
+import { InvoiceService } from '../invoice.service';
 import { InvoiceWorkflowService } from '../invoice-workflow.service';
 import { TaskService } from '../../task/task.service';
 import { MessagingService } from '../../core/messaging/messaging.service';
@@ -19,6 +21,7 @@ describe('Invoice Workflow Integration', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [InvoiceController],
       providers: [
+        InvoiceService,
         InvoiceWorkflowService,
         {
           provide: TaskService,
@@ -40,6 +43,20 @@ describe('Invoice Workflow Integration', () => {
           useValue: {
             createScheduledTask: jest.fn(),
             createRecurringTask: jest.fn(),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              const config = {
+                'invoice.pdfProcessor.url':
+                  'https://mock-pdf-processor.com/generate',
+                'invoice.emailService.url':
+                  'https://mock-email-service.com/send',
+              };
+              return config[key];
+            }),
           },
         },
       ],

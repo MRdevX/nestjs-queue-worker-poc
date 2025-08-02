@@ -1,7 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { TaskService } from '../task/task.service';
 import { MessagingService } from '../core/messaging/messaging.service';
 import { TaskType } from '../task/types/task-type.enum';
+import {
+  INVOICE_ERROR_MESSAGES,
+  INVOICE_LOG_MESSAGES,
+} from './constants/invoice.constants';
 
 @Injectable()
 export class InvoiceWorkflowService {
@@ -10,18 +15,19 @@ export class InvoiceWorkflowService {
   constructor(
     private readonly taskService: TaskService,
     private readonly messagingService: MessagingService,
+    private readonly configService: ConfigService,
   ) {}
 
   async handleFetchOrdersCompletion(taskId: string) {
     const task = await this.taskService.getTaskById(taskId);
     if (!task) {
-      throw new Error(`Task with id ${taskId} not found`);
+      throw new Error(INVOICE_ERROR_MESSAGES.TASK_NOT_FOUND(taskId));
     }
 
     const { customerId, orders } = task.payload;
 
     if (!orders || orders.length === 0) {
-      this.logger.log(`No deliverable orders found for customer ${customerId}`);
+      this.logger.log(INVOICE_LOG_MESSAGES.NO_DELIVERABLE_ORDERS(customerId));
       return;
     }
 
@@ -40,20 +46,23 @@ export class InvoiceWorkflowService {
       createInvoiceTask.id,
     );
     this.logger.log(
-      `Created invoice task ${createInvoiceTask.id} for customer ${customerId}`,
+      INVOICE_LOG_MESSAGES.INVOICE_TASK_CREATED(
+        createInvoiceTask.id,
+        customerId,
+      ),
     );
   }
 
   async handleCreateInvoiceCompletion(taskId: string) {
     const task = await this.taskService.getTaskById(taskId);
     if (!task) {
-      throw new Error(`Task with id ${taskId} not found`);
+      throw new Error(INVOICE_ERROR_MESSAGES.TASK_NOT_FOUND(taskId));
     }
 
     const { customerId, invoice } = task.payload;
 
     if (!invoice) {
-      throw new Error('Invoice data not found in task payload');
+      throw new Error(INVOICE_ERROR_MESSAGES.INVOICE_DATA_NOT_FOUND);
     }
 
     // Create PDF generation task
@@ -64,8 +73,7 @@ export class InvoiceWorkflowService {
         invoice,
         pdfProcessorUrl:
           task.payload.pdfProcessorUrl ||
-          process.env.PDF_PROCESSOR_URL ||
-          'https://mock-pdf-processor.com/generate',
+          this.configService.get('invoice.pdfProcessor.url'),
       },
       task.workflow?.id,
     );
@@ -75,20 +83,20 @@ export class InvoiceWorkflowService {
       generatePdfTask.id,
     );
     this.logger.log(
-      `Created PDF generation task ${generatePdfTask.id} for invoice ${invoice.id}`,
+      INVOICE_LOG_MESSAGES.PDF_TASK_CREATED(generatePdfTask.id, invoice.id),
     );
   }
 
   async handleGeneratePdfCompletion(taskId: string) {
     const task = await this.taskService.getTaskById(taskId);
     if (!task) {
-      throw new Error(`Task with id ${taskId} not found`);
+      throw new Error(INVOICE_ERROR_MESSAGES.TASK_NOT_FOUND(taskId));
     }
 
     const { customerId, invoice, pdfUrl } = task.payload;
 
     if (!pdfUrl) {
-      throw new Error('PDF URL not found in task payload');
+      throw new Error(INVOICE_ERROR_MESSAGES.PDF_URL_NOT_FOUND);
     }
 
     // Create email sending task
@@ -100,8 +108,7 @@ export class InvoiceWorkflowService {
         pdfUrl,
         emailServiceUrl:
           task.payload.emailServiceUrl ||
-          process.env.EMAIL_SERVICE_URL ||
-          'https://mock-email-service.com/send',
+          this.configService.get('invoice.emailService.url'),
       },
       task.workflow?.id,
     );
@@ -111,20 +118,20 @@ export class InvoiceWorkflowService {
       sendEmailTask.id,
     );
     this.logger.log(
-      `Created email sending task ${sendEmailTask.id} for customer ${customerId}`,
+      INVOICE_LOG_MESSAGES.EMAIL_TASK_CREATED(sendEmailTask.id, customerId),
     );
   }
 
   async handleSendEmailCompletion(taskId: string) {
     const task = await this.taskService.getTaskById(taskId);
     if (!task) {
-      throw new Error(`Task with id ${taskId} not found`);
+      throw new Error(INVOICE_ERROR_MESSAGES.TASK_NOT_FOUND(taskId));
     }
 
     const { customerId, invoice } = task.payload;
 
     this.logger.log(
-      `Invoice workflow completed for customer ${customerId}, invoice ${invoice?.id}`,
+      INVOICE_LOG_MESSAGES.WORKFLOW_COMPLETED(customerId, invoice?.id),
     );
 
     // In a real implementation, you might want to:
@@ -136,10 +143,10 @@ export class InvoiceWorkflowService {
   async handleTaskFailure(taskId: string, error: Error) {
     const task = await this.taskService.getTaskById(taskId);
     if (!task) {
-      throw new Error(`Task with id ${taskId} not found`);
+      throw new Error(INVOICE_ERROR_MESSAGES.TASK_NOT_FOUND(taskId));
     }
 
-    this.logger.error(`Invoice workflow task failed: ${taskId}`, error.stack);
+    this.logger.error(INVOICE_LOG_MESSAGES.TASK_FAILED(taskId), error.stack);
 
     // Create compensation task for failed invoice workflow
     const compensationTask = await this.taskService.createTask(
@@ -158,7 +165,10 @@ export class InvoiceWorkflowService {
       compensationTask.id,
     );
     this.logger.log(
-      `Created compensation task ${compensationTask.id} for failed task ${taskId}`,
+      INVOICE_LOG_MESSAGES.COMPENSATION_TASK_CREATED(
+        compensationTask.id,
+        taskId,
+      ),
     );
   }
 }

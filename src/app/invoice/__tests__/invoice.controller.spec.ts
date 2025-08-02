@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { TaskEntityMockFactory } from '@test/mocks';
 import { InvoiceController } from '../invoice.controller';
+import { InvoiceService } from '../invoice.service';
 import { TaskService } from '../../task/task.service';
 import { MessagingService } from '../../core/messaging/messaging.service';
 import { SchedulerService } from '../../scheduler/scheduler.service';
@@ -9,41 +11,28 @@ import { TaskStatus } from '../../task/types/task-status.enum';
 
 describe('InvoiceController', () => {
   let controller: InvoiceController;
-  let taskService: jest.Mocked<TaskService>;
-  let messagingService: jest.Mocked<MessagingService>;
-  let schedulerService: jest.Mocked<SchedulerService>;
+  let invoiceService: jest.Mocked<InvoiceService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [InvoiceController],
       providers: [
         {
-          provide: TaskService,
+          provide: InvoiceService,
           useValue: {
-            createTask: jest.fn(),
-            findMany: jest.fn(),
-          },
-        },
-        {
-          provide: MessagingService,
-          useValue: {
-            publishTask: jest.fn(),
-          },
-        },
-        {
-          provide: SchedulerService,
-          useValue: {
-            createScheduledTask: jest.fn(),
-            createRecurringTask: jest.fn(),
+            startInvoiceWorkflow: jest.fn(),
+            createScheduledInvoiceWorkflow: jest.fn(),
+            createRecurringInvoiceWorkflow: jest.fn(),
+            createScheduledEmailWorkflow: jest.fn(),
+            getCustomerInvoiceTasks: jest.fn(),
+            getInvoiceWorkflowStatus: jest.fn(),
           },
         },
       ],
     }).compile();
 
     controller = module.get<InvoiceController>(InvoiceController);
-    taskService = module.get(TaskService);
-    messagingService = module.get(MessagingService);
-    schedulerService = module.get(SchedulerService);
+    invoiceService = module.get(InvoiceService);
   });
 
   afterEach(() => {
@@ -59,35 +48,18 @@ describe('InvoiceController', () => {
         workflowId: 'workflow-123',
       };
 
-      const mockTask = TaskEntityMockFactory.create({
-        id: 'task-123',
-        type: TaskType.FETCH_ORDERS,
-        payload: dto,
-      });
+      const expectedResult = {
+        message: 'Invoice workflow started',
+        taskId: 'task-123',
+        workflowId: dto.workflowId,
+      };
 
-      taskService.createTask.mockResolvedValue(mockTask as any);
-      messagingService.publishTask.mockResolvedValue();
+      invoiceService.startInvoiceWorkflow.mockResolvedValue(expectedResult);
 
       const result = await controller.startInvoiceWorkflow(dto);
 
-      expect(taskService.createTask).toHaveBeenCalledWith(
-        TaskType.FETCH_ORDERS,
-        {
-          customerId: dto.customerId,
-          dateFrom: dto.dateFrom,
-          dateTo: dto.dateTo,
-        },
-        dto.workflowId,
-      );
-      expect(messagingService.publishTask).toHaveBeenCalledWith(
-        TaskType.FETCH_ORDERS,
-        mockTask.id,
-      );
-      expect(result).toEqual({
-        message: 'Invoice workflow started',
-        taskId: mockTask.id,
-        workflowId: dto.workflowId,
-      });
+      expect(invoiceService.startInvoiceWorkflow).toHaveBeenCalledWith(dto);
+      expect(result).toEqual(expectedResult);
     });
 
     it('should start invoice workflow without workflow ID', async () => {
@@ -97,26 +69,17 @@ describe('InvoiceController', () => {
         dateTo: '2024-01-31',
       };
 
-      const mockTask = TaskEntityMockFactory.create({
-        id: 'task-123',
-        type: TaskType.FETCH_ORDERS,
-        payload: dto,
-      });
+      const expectedResult = {
+        message: 'Invoice workflow started',
+        taskId: 'task-123',
+        workflowId: undefined,
+      };
 
-      taskService.createTask.mockResolvedValue(mockTask as any);
-      messagingService.publishTask.mockResolvedValue();
+      invoiceService.startInvoiceWorkflow.mockResolvedValue(expectedResult);
 
       const result = await controller.startInvoiceWorkflow(dto);
 
-      expect(taskService.createTask).toHaveBeenCalledWith(
-        TaskType.FETCH_ORDERS,
-        {
-          customerId: dto.customerId,
-          dateFrom: dto.dateFrom,
-          dateTo: dto.dateTo,
-        },
-        undefined,
-      );
+      expect(invoiceService.startInvoiceWorkflow).toHaveBeenCalledWith(dto);
       expect(result.workflowId).toBeUndefined();
     });
   });
@@ -131,32 +94,23 @@ describe('InvoiceController', () => {
         workflowId: 'workflow-123',
       };
 
-      const mockTask = TaskEntityMockFactory.create({
-        id: 'task-123',
-        type: TaskType.FETCH_ORDERS,
-        payload: dto,
-      });
+      const expectedResult = {
+        message: 'Scheduled invoice workflow created',
+        taskId: 'task-123',
+        scheduledAt: new Date(dto.scheduledAt).toISOString(),
+        workflowId: dto.workflowId,
+      };
 
-      schedulerService.createScheduledTask.mockResolvedValue(mockTask as any);
+      invoiceService.createScheduledInvoiceWorkflow.mockResolvedValue(
+        expectedResult,
+      );
 
       const result = await controller.createScheduledInvoiceWorkflow(dto);
 
-      expect(schedulerService.createScheduledTask).toHaveBeenCalledWith(
-        TaskType.FETCH_ORDERS,
-        {
-          customerId: dto.customerId,
-          dateFrom: dto.dateFrom,
-          dateTo: dto.dateTo,
-        },
-        new Date(dto.scheduledAt),
-        dto.workflowId,
-      );
-      expect(result).toEqual({
-        message: 'Scheduled invoice workflow created',
-        taskId: mockTask.id,
-        scheduledAt: new Date(dto.scheduledAt).toISOString(),
-        workflowId: dto.workflowId,
-      });
+      expect(
+        invoiceService.createScheduledInvoiceWorkflow,
+      ).toHaveBeenCalledWith(dto);
+      expect(result).toEqual(expectedResult);
     });
 
     it('should throw error for invalid scheduledAt date', async () => {
@@ -166,11 +120,16 @@ describe('InvoiceController', () => {
         workflowId: 'workflow-123',
       };
 
+      const error = new Error('Invalid scheduledAt date');
+      invoiceService.createScheduledInvoiceWorkflow.mockRejectedValue(error);
+
       await expect(
         controller.createScheduledInvoiceWorkflow(dto),
       ).rejects.toThrow('Invalid scheduledAt date');
 
-      expect(schedulerService.createScheduledTask).not.toHaveBeenCalled();
+      expect(
+        invoiceService.createScheduledInvoiceWorkflow,
+      ).toHaveBeenCalledWith(dto);
     });
   });
 
@@ -184,32 +143,23 @@ describe('InvoiceController', () => {
         workflowId: 'workflow-123',
       };
 
-      const mockTask = TaskEntityMockFactory.create({
-        id: 'task-123',
-        type: TaskType.FETCH_ORDERS,
-        payload: dto,
-      });
+      const expectedResult = {
+        message: 'Recurring invoice workflow created',
+        taskId: 'task-123',
+        cronExpression: dto.cronExpression,
+        workflowId: dto.workflowId,
+      };
 
-      schedulerService.createRecurringTask.mockResolvedValue(mockTask as any);
+      invoiceService.createRecurringInvoiceWorkflow.mockResolvedValue(
+        expectedResult,
+      );
 
       const result = await controller.createRecurringInvoiceWorkflow(dto);
 
-      expect(schedulerService.createRecurringTask).toHaveBeenCalledWith(
-        TaskType.FETCH_ORDERS,
-        {
-          customerId: dto.customerId,
-          dateFrom: dto.dateFrom,
-          dateTo: dto.dateTo,
-        },
-        dto.cronExpression,
-        dto.workflowId,
-      );
-      expect(result).toEqual({
-        message: 'Recurring invoice workflow created',
-        taskId: mockTask.id,
-        cronExpression: dto.cronExpression,
-        workflowId: dto.workflowId,
-      });
+      expect(
+        invoiceService.createRecurringInvoiceWorkflow,
+      ).toHaveBeenCalledWith(dto);
+      expect(result).toEqual(expectedResult);
     });
   });
 
@@ -222,114 +172,64 @@ describe('InvoiceController', () => {
         workflowId: 'workflow-123',
       };
 
-      const mockTask = TaskEntityMockFactory.create({
-        id: 'task-123',
-        type: TaskType.SEND_EMAIL,
-        payload: dto,
-      });
+      const expectedResult = {
+        message: 'Scheduled email workflow created',
+        taskId: 'task-123',
+        scheduledAt: new Date(dto.scheduledAt).toISOString(),
+        workflowId: dto.workflowId,
+      };
 
-      schedulerService.createScheduledTask.mockResolvedValue(mockTask as any);
+      invoiceService.createScheduledEmailWorkflow.mockResolvedValue(
+        expectedResult,
+      );
 
       const result = await controller.createScheduledEmailWorkflow(dto);
 
-      expect(schedulerService.createScheduledTask).toHaveBeenCalledWith(
-        TaskType.SEND_EMAIL,
-        {
-          customerId: dto.customerId,
-          invoiceId: dto.invoiceId,
-        },
-        new Date(dto.scheduledAt),
-        dto.workflowId,
+      expect(invoiceService.createScheduledEmailWorkflow).toHaveBeenCalledWith(
+        dto,
       );
-      expect(result).toEqual({
-        message: 'Scheduled email workflow created',
-        taskId: mockTask.id,
-        scheduledAt: new Date(dto.scheduledAt).toISOString(),
-        workflowId: dto.workflowId,
-      });
+      expect(result).toEqual(expectedResult);
     });
   });
 
   describe('getCustomerInvoiceTasks', () => {
     it('should return customer invoice tasks', async () => {
       const customerId = 'customer-123';
-      const mockTasks = [
-        TaskEntityMockFactory.create({
-          id: 'task-1',
-          type: TaskType.FETCH_ORDERS,
-          status: TaskStatus.COMPLETED,
-          createdAt: new Date('2024-01-15T10:00:00Z'),
-          updatedAt: new Date('2024-01-15T10:05:00Z'),
-        }),
-        TaskEntityMockFactory.create({
-          id: 'task-2',
-          type: TaskType.CREATE_INVOICE,
-          status: TaskStatus.PENDING,
-          createdAt: new Date('2024-01-15T10:06:00Z'),
-        }),
-      ];
-
-      taskService.findMany.mockResolvedValue(mockTasks as any);
-
-      const result = await controller.getCustomerInvoiceTasks(customerId);
-
-      expect(taskService.findMany).toHaveBeenCalledWith({
-        payload: { customerId },
-      });
-      expect(result).toEqual({
+      const expectedResult = {
         customerId,
         tasks: [
           {
             id: 'task-1',
             type: TaskType.FETCH_ORDERS,
             status: TaskStatus.COMPLETED,
-            createdAt: mockTasks[0].createdAt,
-            completedAt: mockTasks[0].updatedAt,
+            createdAt: new Date('2024-01-15T10:00:00Z'),
+            completedAt: new Date('2024-01-15T10:05:00Z'),
           },
           {
             id: 'task-2',
             type: TaskType.CREATE_INVOICE,
             status: TaskStatus.PENDING,
-            createdAt: mockTasks[1].createdAt,
+            createdAt: new Date('2024-01-15T10:06:00Z'),
             completedAt: null,
           },
         ],
-      });
+      };
+
+      invoiceService.getCustomerInvoiceTasks.mockResolvedValue(expectedResult);
+
+      const result = await controller.getCustomerInvoiceTasks(customerId);
+
+      expect(invoiceService.getCustomerInvoiceTasks).toHaveBeenCalledWith(
+        customerId,
+      );
+      expect(result).toEqual(expectedResult);
     });
   });
 
   describe('getInvoiceWorkflowStatus', () => {
     it('should return invoice workflow status', async () => {
       const customerId = 'customer-123';
-      const mockTasks = [
-        TaskEntityMockFactory.create({
-          id: 'task-1',
-          type: TaskType.FETCH_ORDERS,
-          status: TaskStatus.COMPLETED,
-          workflow: { id: 'workflow-123' },
-        }),
-        TaskEntityMockFactory.create({
-          id: 'task-2',
-          type: TaskType.CREATE_INVOICE,
-          status: TaskStatus.PENDING,
-          workflow: { id: 'workflow-123' },
-        }),
-        TaskEntityMockFactory.create({
-          id: 'task-3',
-          type: TaskType.SEND_EMAIL,
-          status: TaskStatus.FAILED,
-          workflow: null, // standalone task
-        }),
-      ];
-
-      taskService.findMany.mockResolvedValue(mockTasks as any);
-
-      const result = await controller.getInvoiceWorkflowStatus(customerId);
-
-      expect(taskService.findMany).toHaveBeenCalledWith({
-        payload: { customerId },
-      });
-      expect(result).toEqual({
+      const expectedResult = {
         customerId,
         totalTasks: 3,
         completedTasks: 1,
@@ -350,7 +250,16 @@ describe('InvoiceController', () => {
             isComplete: true,
           },
         },
-      });
+      };
+
+      invoiceService.getInvoiceWorkflowStatus.mockResolvedValue(expectedResult);
+
+      const result = await controller.getInvoiceWorkflowStatus(customerId);
+
+      expect(invoiceService.getInvoiceWorkflowStatus).toHaveBeenCalledWith(
+        customerId,
+      );
+      expect(result).toEqual(expectedResult);
     });
   });
 });
