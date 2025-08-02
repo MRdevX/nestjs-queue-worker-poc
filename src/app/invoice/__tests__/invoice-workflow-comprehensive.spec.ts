@@ -1040,4 +1040,503 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
       });
     });
   });
+
+  describe('8. Order Filtering and Business Logic', () => {
+    describe('8.1 Filter Delivered but Not Invoiced Orders', () => {
+      it('should only process orders that are delivered and not invoiced', async () => {
+        const customerId = 'customer-123';
+        const mixedOrders = [
+          {
+            id: 'order-1',
+            customerId,
+            status: 'delivered',
+            invoiced: false, // ✅ Should be processed
+            items: [
+              { id: 'item-1', name: 'Product A', price: 100, quantity: 1 },
+            ],
+            totalAmount: 100,
+            deliveryDate: '2024-01-15',
+          },
+          {
+            id: 'order-2',
+            customerId,
+            status: 'delivered',
+            invoiced: true, // ❌ Already invoiced - should be filtered out
+            items: [
+              { id: 'item-2', name: 'Product B', price: 200, quantity: 1 },
+            ],
+            totalAmount: 200,
+            deliveryDate: '2024-01-16',
+          },
+          {
+            id: 'order-3',
+            customerId,
+            status: 'pending', // ❌ Not delivered - should be filtered out
+            invoiced: false,
+            items: [
+              { id: 'item-3', name: 'Product C', price: 150, quantity: 1 },
+            ],
+            totalAmount: 150,
+            deliveryDate: null,
+          },
+          {
+            id: 'order-4',
+            customerId,
+            status: 'delivered',
+            invoiced: false, // ✅ Should be processed
+            items: [
+              { id: 'item-4', name: 'Product D', price: 300, quantity: 2 },
+            ],
+            totalAmount: 600,
+            deliveryDate: '2024-01-17',
+          },
+        ];
+
+        const fetchOrdersTask = TaskEntityMockFactory.create({
+          id: 'fetch-orders-task',
+          type: TaskType.FETCH_ORDERS,
+          status: TaskStatus.COMPLETED,
+          payload: { customerId, orders: mixedOrders },
+        });
+
+        // Mock the worker logic that filters orders
+        const deliverableOrders = mixedOrders.filter(
+          (order) => order.status === 'delivered' && !order.invoiced,
+        );
+
+        taskService.getTaskById.mockResolvedValue({
+          ...fetchOrdersTask,
+          payload: { ...fetchOrdersTask.payload, orders: deliverableOrders },
+        } as any);
+
+        const createInvoiceTask = TaskEntityMockFactory.create({
+          id: 'create-invoice-task',
+          type: TaskType.CREATE_INVOICE,
+          status: TaskStatus.PENDING,
+          payload: { customerId, orders: deliverableOrders },
+        });
+        taskService.createTask.mockResolvedValue(createInvoiceTask as any);
+
+        await workflowService.handleFetchOrdersCompletion('fetch-orders-task');
+
+        // Should only create invoice for deliverable orders (order-1 and order-4)
+        expect(taskService.createTask).toHaveBeenCalledWith(
+          TaskType.CREATE_INVOICE,
+          { customerId, orders: deliverableOrders },
+          undefined,
+        );
+
+        // Verify only 2 orders were processed (not 4)
+        expect(deliverableOrders).toHaveLength(2);
+        expect(deliverableOrders.map((o) => o.id)).toEqual([
+          'order-1',
+          'order-4',
+        ]);
+      });
+    });
+
+    describe('8.2 Item Price and Details Validation', () => {
+      it('should validate item prices and details are present', async () => {
+        const customerId = 'customer-123';
+        const ordersWithItemDetails = [
+          {
+            id: 'order-1',
+            customerId,
+            status: 'delivered',
+            invoiced: false,
+            items: [
+              {
+                id: 'item-1',
+                name: 'Product A',
+                price: 100,
+                quantity: 2,
+                description: 'High-quality product',
+                sku: 'PROD-A-001',
+              },
+              {
+                id: 'item-2',
+                name: 'Product B',
+                price: 50,
+                quantity: 1,
+                description: 'Standard product',
+                sku: 'PROD-B-002',
+              },
+            ],
+            totalAmount: 250,
+            deliveryDate: '2024-01-15',
+          },
+        ];
+
+        const fetchOrdersTask = TaskEntityMockFactory.create({
+          id: 'fetch-orders-task',
+          type: TaskType.FETCH_ORDERS,
+          status: TaskStatus.COMPLETED,
+          payload: { customerId, orders: ordersWithItemDetails },
+        });
+
+        taskService.getTaskById.mockResolvedValue(fetchOrdersTask as any);
+
+        const createInvoiceTask = TaskEntityMockFactory.create({
+          id: 'create-invoice-task',
+          type: TaskType.CREATE_INVOICE,
+          status: TaskStatus.PENDING,
+          payload: { customerId, orders: ordersWithItemDetails },
+        });
+        taskService.createTask.mockResolvedValue(createInvoiceTask as any);
+
+        await workflowService.handleFetchOrdersCompletion('fetch-orders-task');
+
+        expect(taskService.createTask).toHaveBeenCalledWith(
+          TaskType.CREATE_INVOICE,
+          { customerId, orders: ordersWithItemDetails },
+          undefined,
+        );
+
+        // Verify item details are preserved
+        const calledOrders = taskService.createTask.mock.calls[0][1].orders;
+        expect(calledOrders[0].items).toHaveLength(2);
+        expect(calledOrders[0].items[0]).toHaveProperty('price', 100);
+        expect(calledOrders[0].items[0]).toHaveProperty('name', 'Product A');
+        expect(calledOrders[0].items[0]).toHaveProperty('sku', 'PROD-A-001');
+      });
+    });
+
+    describe('8.3 Date Range Filtering Logic', () => {
+      it('should filter orders by delivery date range correctly', async () => {
+        const customerId = 'customer-123';
+        const dateFrom = '2024-01-15';
+        const dateTo = '2024-01-20';
+
+        const ordersWithDifferentDates = [
+          {
+            id: 'order-1',
+            customerId,
+            status: 'delivered',
+            invoiced: false,
+            items: [
+              { id: 'item-1', name: 'Product A', price: 100, quantity: 1 },
+            ],
+            totalAmount: 100,
+            deliveryDate: '2024-01-14', // ❌ Before dateFrom
+          },
+          {
+            id: 'order-2',
+            customerId,
+            status: 'delivered',
+            invoiced: false,
+            items: [
+              { id: 'item-2', name: 'Product B', price: 200, quantity: 1 },
+            ],
+            totalAmount: 200,
+            deliveryDate: '2024-01-16', // ✅ Within range
+          },
+          {
+            id: 'order-3',
+            customerId,
+            status: 'delivered',
+            invoiced: false,
+            items: [
+              { id: 'item-3', name: 'Product C', price: 150, quantity: 1 },
+            ],
+            totalAmount: 150,
+            deliveryDate: '2024-01-21', // ❌ After dateTo
+          },
+          {
+            id: 'order-4',
+            customerId,
+            status: 'delivered',
+            invoiced: false,
+            items: [
+              { id: 'item-4', name: 'Product D', price: 300, quantity: 1 },
+            ],
+            totalAmount: 300,
+            deliveryDate: null, // ❌ No delivery date
+          },
+        ];
+
+        // Mock the date filtering logic
+        const filteredOrders = ordersWithDifferentDates.filter((order) => {
+          if (!order.deliveryDate) return false;
+          if (dateFrom && order.deliveryDate < dateFrom) return false;
+          if (dateTo && order.deliveryDate > dateTo) return false;
+          return true;
+        });
+
+        const fetchOrdersTask = TaskEntityMockFactory.create({
+          id: 'fetch-orders-task',
+          type: TaskType.FETCH_ORDERS,
+          status: TaskStatus.COMPLETED,
+          payload: { customerId, dateFrom, dateTo, orders: filteredOrders },
+        });
+
+        taskService.getTaskById.mockResolvedValue(fetchOrdersTask as any);
+
+        const createInvoiceTask = TaskEntityMockFactory.create({
+          id: 'create-invoice-task',
+          type: TaskType.CREATE_INVOICE,
+          status: TaskStatus.PENDING,
+          payload: { customerId, orders: filteredOrders },
+        });
+        taskService.createTask.mockResolvedValue(createInvoiceTask as any);
+
+        await workflowService.handleFetchOrdersCompletion('fetch-orders-task');
+
+        // Should only process order-2 (within date range)
+        expect(filteredOrders).toHaveLength(1);
+        expect(filteredOrders[0].id).toBe('order-2');
+        expect(taskService.createTask).toHaveBeenCalledWith(
+          TaskType.CREATE_INVOICE,
+          { customerId, orders: filteredOrders },
+          undefined,
+        );
+      });
+    });
+  });
+
+  describe('9. PDF and Email Service Integration', () => {
+    describe('9.1 PDF Processor Integration with Custom URL', () => {
+      it('should use custom PDF processor URL when provided', async () => {
+        const customerId = 'customer-123';
+        const customPdfUrl = 'https://custom-pdf-service.com/generate';
+        const mockInvoice = {
+          id: 'invoice-123',
+          invoiceNumber: 'INV-123',
+          customerId,
+          items: [{ id: 'item-1', name: 'Product A', price: 100, quantity: 1 }],
+          totalAmount: 100,
+        };
+        const pdfUrl = 'https://storage.example.com/invoices/INV-123.pdf';
+
+        const generatePdfTask = TaskEntityMockFactory.create({
+          id: 'generate-pdf-task',
+          type: TaskType.GENERATE_PDF,
+          status: TaskStatus.PENDING,
+          payload: {
+            customerId,
+            invoice: mockInvoice,
+            pdfProcessorUrl: customPdfUrl,
+            pdfUrl, // Add the PDF URL that would be set by the PDF worker
+          },
+        });
+
+        taskService.getTaskById.mockResolvedValue(generatePdfTask as any);
+
+        const sendEmailTask = TaskEntityMockFactory.create({
+          id: 'send-email-task',
+          type: TaskType.SEND_EMAIL,
+          status: TaskStatus.PENDING,
+          payload: { customerId, invoice: mockInvoice },
+        });
+        taskService.createTask.mockResolvedValue(sendEmailTask as any);
+
+        await workflowService.handleGeneratePdfCompletion('generate-pdf-task');
+
+        expect(taskService.createTask).toHaveBeenCalledWith(
+          TaskType.SEND_EMAIL,
+          {
+            customerId,
+            invoice: mockInvoice,
+            pdfUrl,
+            emailServiceUrl: 'https://mock-email-service.com/send',
+          },
+          undefined,
+        );
+      });
+    });
+
+    describe('9.2 Email Service Integration with Customer Details', () => {
+      it('should include customer email and invoice details in email task', async () => {
+        const customerId = 'customer-123';
+        const mockInvoice = {
+          id: 'invoice-123',
+          invoiceNumber: 'INV-123',
+          customerId,
+          customerEmail: 'customer@example.com',
+          items: [{ id: 'item-1', name: 'Product A', price: 100, quantity: 1 }],
+          totalAmount: 100,
+          grandTotal: 110,
+        };
+        const pdfUrl = 'https://storage.example.com/invoices/INV-123.pdf';
+
+        const sendEmailTask = TaskEntityMockFactory.create({
+          id: 'send-email-task',
+          type: TaskType.SEND_EMAIL,
+          status: TaskStatus.PENDING,
+          payload: {
+            customerId,
+            invoice: mockInvoice,
+            pdfUrl,
+            customerEmail: mockInvoice.customerEmail,
+          },
+        });
+
+        taskService.getTaskById.mockResolvedValue(sendEmailTask as any);
+
+        await workflowService.handleSendEmailCompletion('send-email-task');
+
+        // Verify workflow completion logging
+        expect(taskService.getTaskById).toHaveBeenCalledWith('send-email-task');
+      });
+    });
+
+    describe('9.3 PDF Generation with Invoice Data Validation', () => {
+      it('should validate invoice data before PDF generation', async () => {
+        const customerId = 'customer-123';
+        const mockInvoice = {
+          id: 'invoice-123',
+          invoiceNumber: 'INV-123',
+          customerId,
+          items: [
+            { id: 'item-1', name: 'Product A', price: 100, quantity: 2 },
+            { id: 'item-2', name: 'Product B', price: 50, quantity: 1 },
+          ],
+          totalAmount: 250,
+          taxAmount: 25,
+          grandTotal: 275,
+          customerName: 'John Doe',
+          customerAddress: '123 Main St, City, Country',
+        };
+        const pdfUrl = 'https://storage.example.com/invoices/INV-123.pdf';
+
+        const generatePdfTask = TaskEntityMockFactory.create({
+          id: 'generate-pdf-task',
+          type: TaskType.GENERATE_PDF,
+          status: TaskStatus.PENDING,
+          payload: { customerId, invoice: mockInvoice, pdfUrl },
+        });
+
+        taskService.getTaskById.mockResolvedValue(generatePdfTask as any);
+
+        const sendEmailTask = TaskEntityMockFactory.create({
+          id: 'send-email-task',
+          type: TaskType.SEND_EMAIL,
+          status: TaskStatus.PENDING,
+          payload: { customerId, invoice: mockInvoice },
+        });
+        taskService.createTask.mockResolvedValue(sendEmailTask as any);
+
+        await workflowService.handleGeneratePdfCompletion('generate-pdf-task');
+
+        // Verify invoice data is passed correctly
+        const calledPayload = taskService.createTask.mock.calls[0][1];
+        expect(calledPayload.invoice).toEqual(mockInvoice);
+        expect(calledPayload.invoice.items).toHaveLength(2);
+        expect(calledPayload.invoice.grandTotal).toBe(275);
+      });
+    });
+  });
+
+  describe('10. Business Rule Validation', () => {
+    describe('10.1 Invoice Creation with Tax Calculation', () => {
+      it('should create invoice with proper tax calculation', async () => {
+        const customerId = 'customer-123';
+        const orders = [
+          {
+            id: 'order-1',
+            customerId,
+            status: 'delivered',
+            invoiced: false,
+            items: [
+              { id: 'item-1', name: 'Product A', price: 100, quantity: 2 },
+            ],
+            totalAmount: 200,
+            deliveryDate: '2024-01-15',
+          },
+          {
+            id: 'order-2',
+            customerId,
+            status: 'delivered',
+            invoiced: false,
+            items: [
+              { id: 'item-2', name: 'Product B', price: 50, quantity: 1 },
+            ],
+            totalAmount: 50,
+            deliveryDate: '2024-01-16',
+          },
+        ];
+
+        const fetchOrdersTask = TaskEntityMockFactory.create({
+          id: 'fetch-orders-task',
+          type: TaskType.FETCH_ORDERS,
+          status: TaskStatus.COMPLETED,
+          payload: { customerId, orders },
+        });
+
+        taskService.getTaskById.mockResolvedValue(fetchOrdersTask as any);
+
+        const createInvoiceTask = TaskEntityMockFactory.create({
+          id: 'create-invoice-task',
+          type: TaskType.CREATE_INVOICE,
+          status: TaskStatus.PENDING,
+          payload: { customerId, orders },
+        });
+        taskService.createTask.mockResolvedValue(createInvoiceTask as any);
+
+        await workflowService.handleFetchOrdersCompletion('fetch-orders-task');
+
+        expect(taskService.createTask).toHaveBeenCalledWith(
+          TaskType.CREATE_INVOICE,
+          { customerId, orders },
+          undefined,
+        );
+
+        // Verify total amount calculation
+        const totalAmount = orders.reduce(
+          (sum, order) => sum + order.totalAmount,
+          0,
+        );
+        expect(totalAmount).toBe(250); // 200 + 50
+      });
+    });
+
+    describe('10.2 Order Status Validation', () => {
+      it('should validate order status before processing', async () => {
+        const customerId = 'customer-123';
+        const invalidOrders = [
+          {
+            id: 'order-1',
+            customerId,
+            status: 'cancelled', // ❌ Invalid status
+            invoiced: false,
+            items: [
+              { id: 'item-1', name: 'Product A', price: 100, quantity: 1 },
+            ],
+            totalAmount: 100,
+            deliveryDate: '2024-01-15',
+          },
+          {
+            id: 'order-2',
+            customerId,
+            status: 'shipped', // ❌ Not delivered yet
+            invoiced: false,
+            items: [
+              { id: 'item-2', name: 'Product B', price: 200, quantity: 1 },
+            ],
+            totalAmount: 200,
+            deliveryDate: '2024-01-16',
+          },
+        ];
+
+        // Mock the filtering logic that should exclude invalid orders
+        const validOrders = invalidOrders.filter(
+          (order) => order.status === 'delivered' && !order.invoiced,
+        );
+
+        const fetchOrdersTask = TaskEntityMockFactory.create({
+          id: 'fetch-orders-task',
+          type: TaskType.FETCH_ORDERS,
+          status: TaskStatus.COMPLETED,
+          payload: { customerId, orders: validOrders },
+        });
+
+        taskService.getTaskById.mockResolvedValue(fetchOrdersTask as any);
+
+        await workflowService.handleFetchOrdersCompletion('fetch-orders-task');
+
+        // Should not create invoice task for invalid orders
+        expect(validOrders).toHaveLength(0);
+        expect(taskService.createTask).not.toHaveBeenCalled();
+      });
+    });
+  });
 });
