@@ -11,7 +11,6 @@ describe('FetchOrdersWorker', () => {
   let worker: FetchOrdersWorker;
   let taskService: jest.Mocked<TaskService>;
   let coordinator: jest.Mocked<CoordinatorService>;
-  let messagingService: jest.Mocked<MessagingService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -44,7 +43,6 @@ describe('FetchOrdersWorker', () => {
     worker = module.get<FetchOrdersWorker>(FetchOrdersWorker);
     taskService = module.get(TaskService);
     coordinator = module.get(CoordinatorService);
-    messagingService = module.get(MessagingService);
   });
 
   afterEach(() => {

@@ -17,7 +17,6 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
   let sendEmailWorker: SendEmailWorker;
   let taskService: jest.Mocked<TaskService>;
   let coordinator: jest.Mocked<CoordinatorService>;
-  let messagingService: jest.Mocked<MessagingService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -56,7 +55,6 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
     sendEmailWorker = module.get<SendEmailWorker>(SendEmailWorker);
     taskService = module.get(TaskService);
     coordinator = module.get(CoordinatorService);
-    messagingService = module.get(MessagingService);
   });
 
   afterEach(() => {

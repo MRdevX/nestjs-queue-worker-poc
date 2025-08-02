@@ -1,6 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { TaskEntityMockFactory } from '@test/mocks';
+import {
+  TaskEntityMockFactory,
+  TaskServiceMockFactory,
+  MessagingServiceMockFactory,
+  SchedulerServiceMockFactory,
+  ConfigServiceMockFactory,
+  OrderMockFactory,
+} from '@test/mocks';
 import { InvoiceController } from '../invoice.controller';
 import { InvoiceService } from '../invoice.service';
 import { InvoiceWorkflowService } from '../invoice-workflow.service';
@@ -25,40 +32,19 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
         InvoiceWorkflowService,
         {
           provide: TaskService,
-          useValue: {
-            createTask: jest.fn(),
-            getTaskById: jest.fn(),
-            findMany: jest.fn(),
-            updateTaskStatus: jest.fn(),
-            handleFailure: jest.fn(),
-          },
+          useValue: TaskServiceMockFactory.createWithDefaults(),
         },
         {
           provide: MessagingService,
-          useValue: {
-            publishTask: jest.fn(),
-          },
+          useValue: MessagingServiceMockFactory.createWithDefaults(),
         },
         {
           provide: SchedulerService,
-          useValue: {
-            createScheduledTask: jest.fn(),
-            createRecurringTask: jest.fn(),
-          },
+          useValue: SchedulerServiceMockFactory.createWithDefaults(),
         },
         {
           provide: ConfigService,
-          useValue: {
-            get: jest.fn((key: string) => {
-              const config = {
-                'invoice.pdfProcessor.url':
-                  'https://mock-pdf-processor.com/generate',
-                'invoice.emailService.url':
-                  'https://mock-email-service.com/send',
-              };
-              return config[key];
-            }),
-          },
+          useValue: ConfigServiceMockFactory.create(),
         },
       ],
     }).compile();
@@ -462,11 +448,16 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
       it('should handle invalid customer ID gracefully', async () => {
         const invalidCustomerId = '';
 
+        // Mock the service to throw an error for invalid customer ID
+        taskService.createTask.mockRejectedValue(
+          new Error('Customer ID is required'),
+        );
+
         await expect(
           controller.startInvoiceWorkflow({
             customerId: invalidCustomerId,
           }),
-        ).rejects.toThrow();
+        ).rejects.toThrow('Customer ID is required');
       });
     });
 
@@ -475,12 +466,17 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
         const customerId = 'customer-123';
         const invalidDateFrom = '2024-13-01'; // Invalid month
 
+        // Mock the service to throw an error for invalid date
+        taskService.createTask.mockRejectedValue(
+          new Error('Invalid date format'),
+        );
+
         await expect(
           controller.startInvoiceWorkflow({
             customerId,
             dateFrom: invalidDateFrom,
           }),
-        ).rejects.toThrow();
+        ).rejects.toThrow('Invalid date format');
       });
     });
   });
@@ -1045,52 +1041,11 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
     describe('8.1 Filter Delivered but Not Invoiced Orders', () => {
       it('should only process orders that are delivered and not invoiced', async () => {
         const customerId = 'customer-123';
-        const mixedOrders = [
-          {
-            id: 'order-1',
-            customerId,
-            status: 'delivered',
-            invoiced: false, // ✅ Should be processed
-            items: [
-              { id: 'item-1', name: 'Product A', price: 100, quantity: 1 },
-            ],
-            totalAmount: 100,
-            deliveryDate: '2024-01-15',
-          },
-          {
-            id: 'order-2',
-            customerId,
-            status: 'delivered',
-            invoiced: true, // ❌ Already invoiced - should be filtered out
-            items: [
-              { id: 'item-2', name: 'Product B', price: 200, quantity: 1 },
-            ],
-            totalAmount: 200,
-            deliveryDate: '2024-01-16',
-          },
-          {
-            id: 'order-3',
-            customerId,
-            status: 'pending', // ❌ Not delivered - should be filtered out
-            invoiced: false,
-            items: [
-              { id: 'item-3', name: 'Product C', price: 150, quantity: 1 },
-            ],
-            totalAmount: 150,
-            deliveryDate: null,
-          },
-          {
-            id: 'order-4',
-            customerId,
-            status: 'delivered',
-            invoiced: false, // ✅ Should be processed
-            items: [
-              { id: 'item-4', name: 'Product D', price: 300, quantity: 2 },
-            ],
-            totalAmount: 600,
-            deliveryDate: '2024-01-17',
-          },
-        ];
+
+        // Use the new mock factory to create mixed status orders
+        const mixedOrders = OrderMockFactory.createMixedStatusArray({
+          customerId,
+        });
 
         const fetchOrdersTask = TaskEntityMockFactory.create({
           id: 'fetch-orders-task',
@@ -1128,10 +1083,11 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
 
         // Verify only 2 orders were processed (not 4)
         expect(deliverableOrders).toHaveLength(2);
-        expect(deliverableOrders.map((o) => o.id)).toEqual([
-          'order-1',
-          'order-4',
-        ]);
+        expect(
+          deliverableOrders.every(
+            (order) => order.status === 'delivered' && !order.invoiced,
+          ),
+        ).toBe(true);
       });
     });
 

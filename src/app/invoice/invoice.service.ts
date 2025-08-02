@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TaskService } from '../task/task.service';
 import { MessagingService } from '../core/messaging/messaging.service';

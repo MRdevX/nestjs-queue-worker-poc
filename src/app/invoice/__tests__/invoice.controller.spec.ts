@@ -1,11 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
-import { TaskEntityMockFactory } from '@test/mocks';
+import { InvoiceServiceMockFactory } from '@test/mocks';
 import { InvoiceController } from '../invoice.controller';
 import { InvoiceService } from '../invoice.service';
-import { TaskService } from '../../task/task.service';
-import { MessagingService } from '../../core/messaging/messaging.service';
-import { SchedulerService } from '../../scheduler/scheduler.service';
 import { TaskType } from '../../task/types/task-type.enum';
 import { TaskStatus } from '../../task/types/task-status.enum';
 
@@ -19,14 +15,7 @@ describe('InvoiceController', () => {
       providers: [
         {
           provide: InvoiceService,
-          useValue: {
-            startInvoiceWorkflow: jest.fn(),
-            createScheduledInvoiceWorkflow: jest.fn(),
-            createRecurringInvoiceWorkflow: jest.fn(),
-            createScheduledEmailWorkflow: jest.fn(),
-            getCustomerInvoiceTasks: jest.fn(),
-            getInvoiceWorkflowStatus: jest.fn(),
-          },
+          useValue: InvoiceServiceMockFactory.createWithDefaults(),
         },
       ],
     }).compile();
