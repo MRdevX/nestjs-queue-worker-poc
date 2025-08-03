@@ -1,101 +1,176 @@
 #!/bin/bash
 
-echo "🧪 Running Comprehensive Invoice Workflow Tests"
-echo "================================================"
+# Invoice Workflow Testing Script
+# This script provides all the commands needed to test the invoice workflow
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+BASE_URL="http://localhost:3030/api"
+CUSTOMER_ID="customer-123"
+WORKFLOW_ID="workflow-123"
 
-# Function to run tests and display results
-run_test_suite() {
-    local test_name="$1"
-    local test_pattern="$2"
-    
-    echo -e "\n${BLUE}📋 Running $test_name...${NC}"
+echo "🧪 Invoice Workflow Testing Script"
+echo "=================================="
+echo ""
+
+# Function to print section headers
+print_section() {
+    echo ""
+    echo "📋 $1"
     echo "----------------------------------------"
-    
-    # Run the test
-    npm test -- --testPathPattern="$test_pattern" --verbose --silent
-    
-    # Check exit code
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✅ $test_name passed${NC}"
-        return 0
-    else
-        echo -e "${RED}❌ $test_name failed${NC}"
-        return 1
-    fi
 }
 
-# Initialize counters
-total_tests=0
-passed_tests=0
-failed_tests=0
+# Function to execute curl command and show response
+execute_request() {
+    echo "🔗 $1"
+    echo "Command: $2"
+    echo "Response:"
+    eval "$2"
+    echo ""
+}
 
-echo -e "\n${YELLOW}🚀 Starting comprehensive test suite...${NC}"
+# Phase 1: Health Check
+print_section "Phase 1: Health Check"
 
-# 1. Run comprehensive workflow tests
-if run_test_suite "Invoice Workflow Comprehensive Tests" "invoice-workflow-comprehensive"; then
-    ((passed_tests++))
+execute_request "Health Check" "curl -s $BASE_URL/health | jq ."
+execute_request "Queue Status" "curl -s $BASE_URL/queue/status | jq ."
+
+# Phase 2: Immediate Invoice Workflow
+print_section "Phase 2: Immediate Invoice Workflow"
+
+echo "🚀 Starting invoice workflow for customer: $CUSTOMER_ID"
+WORKFLOW_RESPONSE=$(curl -s -X POST $BASE_URL/invoice/workflow/start \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"customerId\": \"$CUSTOMER_ID\",
+    \"dateFrom\": \"2024-01-01\",
+    \"dateTo\": \"2024-01-31\",
+    \"workflowId\": \"$WORKFLOW_ID\"
+  }")
+
+echo "Workflow Response:"
+echo "$WORKFLOW_RESPONSE" | jq .
+
+# Extract task ID from response
+TASK_ID=$(echo "$WORKFLOW_RESPONSE" | jq -r '.taskId')
+echo "📝 Task ID: $TASK_ID"
+
+echo ""
+echo "⏳ Waiting 5 seconds for task processing..."
+sleep 5
+
+execute_request "Workflow Status" "curl -s $BASE_URL/invoice/status/$CUSTOMER_ID | jq ."
+execute_request "Customer Tasks" "curl -s $BASE_URL/invoice/tasks/$CUSTOMER_ID | jq ."
+
+# Phase 3: Scheduled Invoice Workflow
+print_section "Phase 3: Scheduled Invoice Workflow"
+
+SCHEDULED_TIME=$(date -d "+1 hour" -u +"%Y-%m-%dT%H:%M:%SZ")
+echo "⏰ Creating scheduled workflow for: $SCHEDULED_TIME"
+
+SCHEDULED_RESPONSE=$(curl -s -X POST $BASE_URL/invoice/workflow/scheduled \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"customerId\": \"customer-456\",
+    \"scheduledAt\": \"$SCHEDULED_TIME\",
+    \"dateFrom\": \"2024-01-01\",
+    \"dateTo\": \"2024-01-31\",
+    \"workflowId\": \"scheduled-workflow-123\"
+  }")
+
+echo "Scheduled Workflow Response:"
+echo "$SCHEDULED_RESPONSE" | jq .
+
+# Phase 4: Recurring Invoice Workflow
+print_section "Phase 4: Recurring Invoice Workflow"
+
+RECURRING_RESPONSE=$(curl -s -X POST $BASE_URL/invoice/workflow/recurring \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "customer-789",
+    "cronExpression": "0 0 * * *",
+    "dateFrom": "2024-01-01",
+    "dateTo": "2024-01-31",
+    "workflowId": "recurring-workflow-123"
+  }')
+
+echo "Recurring Workflow Response:"
+echo "$RECURRING_RESPONSE" | jq .
+
+# Phase 5: Scheduled Email Workflow
+print_section "Phase 5: Scheduled Email Workflow"
+
+EMAIL_TIME=$(date -d "+2 hours" -u +"%Y-%m-%dT%H:%M:%SZ")
+echo "📧 Creating scheduled email for: $EMAIL_TIME"
+
+EMAIL_RESPONSE=$(curl -s -X POST $BASE_URL/invoice/email/scheduled \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"customerId\": \"$CUSTOMER_ID\",
+    \"invoiceId\": \"invoice-123\",
+    \"scheduledAt\": \"$EMAIL_TIME\",
+    \"workflowId\": \"email-workflow-123\"
+  }")
+
+echo "Scheduled Email Response:"
+echo "$EMAIL_RESPONSE" | jq .
+
+# Phase 6: Error Scenarios
+print_section "Phase 6: Error Scenarios"
+
+echo "❌ Testing invalid customer ID..."
+curl -s -X POST $BASE_URL/invoice/workflow/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "",
+    "dateFrom": "2024-01-01",
+    "dateTo": "2024-01-31"
+  }' | jq .
+
+echo ""
+echo "❌ Testing invalid date format..."
+curl -s -X POST $BASE_URL/invoice/workflow/scheduled \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "customer-123",
+    "scheduledAt": "invalid-date",
+    "workflowId": "test-workflow"
+  }' | jq .
+
+# Phase 7: Queue Management
+print_section "Phase 7: Queue Management"
+
+execute_request "Queue Manager Status" "curl -s $BASE_URL/queue-manager/status | jq ."
+execute_request "Failed Tasks Count" "curl -s $BASE_URL/queue-manager/failed-count | jq ."
+execute_request "Pending Tasks Count" "curl -s $BASE_URL/queue-manager/pending-count | jq ."
+execute_request "Queue Overloaded Check" "curl -s $BASE_URL/queue-manager/overloaded | jq ."
+
+# Phase 8: Task Management
+print_section "Phase 8: Task Management"
+
+if [ ! -z "$TASK_ID" ] && [ "$TASK_ID" != "null" ]; then
+    execute_request "Get Task by ID" "curl -s $BASE_URL/tasks/$TASK_ID | jq ."
 else
-    ((failed_tests++))
+    echo "⚠️ No task ID available for task management testing"
 fi
-((total_tests++))
 
-# 2. Run invoice worker tests
-if run_test_suite "Invoice Workers Comprehensive Tests" "invoice-workers.comprehensive"; then
-    ((passed_tests++))
-else
-    ((failed_tests++))
-fi
-((total_tests++))
-
-# 3. Run existing invoice tests
-if run_test_suite "Existing Invoice Tests" "invoice"; then
-    ((passed_tests++))
-else
-    ((failed_tests++))
-fi
-((total_tests++))
-
-# 4. Run fetch orders worker tests
-if run_test_suite "Fetch Orders Worker Tests" "fetch-orders.worker.spec"; then
-    ((passed_tests++))
-else
-    ((failed_tests++))
-fi
-((total_tests++))
-
-# 5. Run all worker tests to ensure no regressions
-if run_test_suite "All Worker Tests" "worker"; then
-    ((passed_tests++))
-else
-    ((failed_tests++))
-fi
-((total_tests++))
-
-# 6. Run scheduler tests to ensure integration works
-if run_test_suite "Scheduler Integration Tests" "scheduler"; then
-    ((passed_tests++))
-else
-    ((failed_tests++))
-fi
-((total_tests++))
-
-echo -e "\n${YELLOW}📊 Test Summary${NC}"
-echo "=================="
-echo -e "Total Test Suites: ${BLUE}$total_tests${NC}"
-echo -e "Passed: ${GREEN}$passed_tests${NC}"
-echo -e "Failed: ${RED}$failed_tests${NC}"
-
-if [ $failed_tests -eq 0 ]; then
-    echo -e "\n${GREEN}🎉 All tests passed! Invoice workflow implementation is working correctly.${NC}"
-    exit 0
-else
-    echo -e "\n${RED}⚠️  Some tests failed. Please review the output above.${NC}"
-    exit 1
-fi 
+echo ""
+echo "🎯 Testing Complete!"
+echo ""
+echo "📊 Next Steps:"
+echo "1. Check application logs for detailed workflow execution"
+echo "2. Monitor RabbitMQ at http://localhost:15672 (guest/guest)"
+echo "3. Check PostgreSQL database for task records"
+echo "4. Review the INVOICE_TESTING_GUIDE.md for detailed explanations"
+echo ""
+echo "🔍 Monitoring URLs:"
+echo "- Application: http://localhost:3030"
+echo "- RabbitMQ Management: http://localhost:15672"
+echo "- PostgreSQL: localhost:55000"
+echo ""
+echo "📝 Key Log Patterns to Watch:"
+echo "- 🚀 [START_INVOICE_WORKFLOW] - Workflow initiation"
+echo "- 🔄 [FETCH_ORDERS_COMPLETION] - Orders fetched"
+echo "- 🔄 [CREATE_INVOICE_COMPLETION] - Invoice created"
+echo "- 🔄 [GENERATE_PDF_COMPLETION] - PDF generated"
+echo "- 🔄 [SEND_EMAIL_COMPLETION] - Email sent"
+echo "- 💥 [TASK_FAILURE] - Task failures"
+echo "- 🛠️ [TASK_FAILURE] - Compensation tasks" 
