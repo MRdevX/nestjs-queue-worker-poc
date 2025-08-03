@@ -1,35 +1,40 @@
-import { Controller, Get } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  BadRequestException,
+} from '@nestjs/common';
 import { QueueManagerService } from './queue-manager.service';
+import { IEnqueueTaskDto } from './types/queue.types';
 
 @Controller('queue-manager')
 export class QueueManagerController {
   constructor(private readonly queueManagerService: QueueManagerService) {}
 
+  @Post('enqueue')
+  async enqueueTask(@Body() dto: IEnqueueTaskDto) {
+    if (!dto.type || !dto.payload) {
+      throw new BadRequestException('Task type and payload are required');
+    }
+
+    const taskId = await this.queueManagerService.enqueueTask(
+      dto.type,
+      dto.payload,
+      dto.workflowId,
+    );
+    return { taskId, message: 'Task enqueued successfully' };
+  }
+
+  @Post('retry/:taskId')
+  async retryTask(@Param('taskId') taskId: string) {
+    await this.queueManagerService.retryTask(taskId);
+    return { message: 'Task retry initiated' };
+  }
+
   @Get('status')
   async getQueueStatus() {
     return this.queueManagerService.getQueueStatus();
-  }
-
-  @Get('overloaded')
-  async checkOverloaded() {
-    const isOverloaded = await this.queueManagerService.isOverloaded();
-    return {
-      isOverloaded,
-      message: isOverloaded
-        ? 'Queue is overloaded'
-        : 'Queue is operating normally',
-    };
-  }
-
-  @Get('failed-count')
-  async getFailedTasksCount() {
-    const count = await this.queueManagerService.getFailedTasksCount();
-    return { failedTasks: count };
-  }
-
-  @Get('pending-count')
-  async getPendingTasksCount() {
-    const count = await this.queueManagerService.getPendingTasksCount();
-    return { pendingTasks: count };
   }
 }
