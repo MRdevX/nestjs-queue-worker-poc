@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "queue-worker-poc-collection",
     "name": "Queue Worker POC API",
-    "description": "Complete API collection for the Queue Worker POC application. This includes all endpoints for task management, invoice workflows, scheduling, queue management, health checks, and database seeding.",
+    "description": "Complete API collection for the Queue Worker POC application. This includes all endpoints for task management, invoice workflows, scheduling, queue management, fault management, workflow management, health checks, and database seeding.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -472,6 +472,90 @@
             "description": "Get the status of invoice workflows for a customer"
           },
           "response": []
+        },
+        {
+          "name": "Get Invoice Workflows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invoice/workflows",
+              "host": ["{{baseUrl}}"],
+              "path": ["invoice", "workflows"]
+            },
+            "description": "Get all invoice workflows with optional filtering by customer and active status"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Invoice Workflow by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invoice/workflows/{{workflowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["invoice", "workflows", "{{workflowId}}"]
+            },
+            "description": "Get a specific invoice workflow by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Invoice Workflow Status by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invoice/workflows/{{workflowId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["invoice", "workflows", "{{workflowId}}", "status"]
+            },
+            "description": "Get detailed status of a specific invoice workflow"
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Invoice Workflow",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invoice/workflows/{{workflowId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["invoice", "workflows", "{{workflowId}}", "cancel"]
+            },
+            "description": "Cancel an invoice workflow and all its pending tasks"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Invoice Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invoice/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["invoice", "stats"]
+            },
+            "description": "Get comprehensive invoice workflow statistics"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Customers with Invoices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invoice/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["invoice", "customers"]
+            },
+            "description": "Get all customers who have invoice workflows with detailed statistics"
+          },
+          "response": []
         }
       ],
       "description": "Invoice workflow management and monitoring"
@@ -541,6 +625,274 @@
         }
       ],
       "description": "Task scheduling operations"
+    },
+    {
+      "name": "Fault Management",
+      "item": [
+        {
+          "name": "Retry Task",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/faults/retry/{{taskId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["faults", "retry", "{{taskId}}"]
+            },
+            "description": "Retry a failed task with exponential backoff"
+          },
+          "response": []
+        },
+        {
+          "name": "Compensate Task",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/faults/compensate/{{taskId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["faults", "compensate", "{{taskId}}"]
+            },
+            "description": "Create a compensation task for a failed task"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Failed Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/faults/failed-tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["faults", "failed-tasks"]
+            },
+            "description": "Get all failed tasks"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Retryable Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/faults/retryable-tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["faults", "retryable-tasks"]
+            },
+            "description": "Get tasks that can be retried (failed tasks that haven't exceeded max retries)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Compensation Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/faults/compensation-tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["faults", "compensation-tasks"]
+            },
+            "description": "Get all compensation tasks"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Fault Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/faults/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["faults", "stats"]
+            },
+            "description": "Get fault management statistics including error types and retry counts"
+          },
+          "response": []
+        }
+      ],
+      "description": "Fault management and error handling operations"
+    },
+    {
+      "name": "Workflow Management",
+      "item": [
+        {
+          "name": "Create Workflow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Invoice Generation Workflow\",\n  \"definition\": {\n    \"initialTask\": {\n      \"type\": \"fetch_orders\",\n      \"payload\": {\n        \"customerId\": \"{{customerId}}\"\n      }\n    },\n    \"transitions\": {\n      \"fetch_orders\": {\n        \"type\": \"create_invoice\",\n        \"payload\": {\n          \"customerId\": \"{{customerId}}\"\n        }\n      },\n      \"create_invoice\": {\n        \"type\": \"generate_pdf\",\n        \"payload\": {\n          \"customerId\": \"{{customerId}}\"\n        }\n      },\n      \"generate_pdf\": {\n        \"type\": \"send_email\",\n        \"payload\": {\n          \"customerId\": \"{{customerId}}\"\n        }\n      }\n    }\n  },\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workflows",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows"]
+            },
+            "description": "Create a new workflow with task definitions and transitions"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Workflows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows"]
+            },
+            "description": "Get all workflows in the system"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Workflows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "active"]
+            },
+            "description": "Get only active workflows"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Workflow by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}"]
+            },
+            "description": "Get a specific workflow by its ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Workflow with Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}/with-tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}", "with-tasks"]
+            },
+            "description": "Get workflow details including all associated tasks"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Workflow",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Invoice Workflow\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}"]
+            },
+            "description": "Update an existing workflow"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Workflow",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}"]
+            },
+            "description": "Delete a workflow (only if it has no associated tasks)"
+          },
+          "response": []
+        },
+        {
+          "name": "Start Workflow",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}", "start"]
+            },
+            "description": "Start a workflow execution"
+          },
+          "response": []
+        },
+        {
+          "name": "Activate Workflow",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}", "activate"]
+            },
+            "description": "Activate a workflow"
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Workflow",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}", "deactivate"]
+            },
+            "description": "Deactivate a workflow"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Workflow Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}", "status"]
+            },
+            "description": "Get detailed status of a workflow including task progress"
+          },
+          "response": []
+        }
+      ],
+      "description": "Workflow management and orchestration operations"
     },
     {
       "name": "Examples",
@@ -970,6 +1322,159 @@
             "description": "Example: Schedule a weekly email reminder for an invoice"
           },
           "response": []
+        },
+        {
+          "name": "Fault Management Workflow",
+          "item": [
+            {
+              "name": "1. Get Failed Tasks",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/faults/failed-tasks",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["faults", "failed-tasks"]
+                },
+                "description": "Step 1: Get all failed tasks in the system"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Retry Failed Task",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/faults/retry/{{taskId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["faults", "retry", "{{taskId}}"]
+                },
+                "description": "Step 2: Retry a specific failed task"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Get Fault Statistics",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/faults/stats",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["faults", "stats"]
+                },
+                "description": "Step 3: Get fault management statistics"
+              },
+              "response": []
+            }
+          ],
+          "description": "Complete workflow for managing failed tasks and fault handling"
+        },
+        {
+          "name": "Workflow Management Example",
+          "item": [
+            {
+              "name": "1. Create Workflow",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Test Invoice Workflow\",\n  \"definition\": {\n    \"initialTask\": {\n      \"type\": \"fetch_orders\",\n      \"payload\": {\n        \"customerId\": \"{{customerId}}\"\n      }\n    },\n    \"transitions\": {\n      \"fetch_orders\": {\n        \"type\": \"create_invoice\",\n        \"payload\": {\n          \"customerId\": \"{{customerId}}\"\n        }\n      }\n    }\n  },\n  \"isActive\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/workflows",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["workflows"]
+                },
+                "description": "Step 1: Create a new workflow"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Get Workflow Status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/workflows/{{workflowId}}/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["workflows", "{{workflowId}}", "status"]
+                },
+                "description": "Step 2: Check the status of the created workflow"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Start Workflow",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/workflows/{{workflowId}}/start",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["workflows", "{{workflowId}}", "start"]
+                },
+                "description": "Step 3: Start the workflow execution"
+              },
+              "response": []
+            }
+          ],
+          "description": "Complete workflow for creating and managing workflows"
+        },
+        {
+          "name": "Invoice Statistics Workflow",
+          "item": [
+            {
+              "name": "1. Get Invoice Statistics",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/invoice/stats",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["invoice", "stats"]
+                },
+                "description": "Step 1: Get comprehensive invoice workflow statistics"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Get Customers with Invoices",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/invoice/customers",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["invoice", "customers"]
+                },
+                "description": "Step 2: Get all customers with invoice workflows"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Get Invoice Workflows",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/invoice/workflows",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["invoice", "workflows"]
+                },
+                "description": "Step 3: Get all invoice workflows"
+              },
+              "response": []
+            }
+          ],
+          "description": "Complete workflow for monitoring invoice statistics and customer data"
         }
       ],
       "description": "Practical examples for common use cases"

@@ -82,8 +82,10 @@ The environment includes the following variables:
 ### Task Management
 
 - **POST** `/tasks` - Create a new task
-- **GET** `/tasks` - Get all tasks in the database
+- **GET** `/tasks` - Get all tasks in the database (with optional filtering by status, type, workflowId)
 - **GET** `/tasks/{id}` - Get task by ID
+- **GET** `/tasks/{id}/with-logs` - Get task with detailed logs
+- **GET** `/tasks/{id}/with-workflow` - Get task with workflow details
 - **POST** `/tasks/{id}/retry` - Retry a failed task
 - **POST** `/tasks/{id}/cancel` - Cancel a pending task
 - **POST** `/tasks/{id}/compensate` - Create compensation task
@@ -103,12 +105,41 @@ The environment includes the following variables:
 - **POST** `/invoice/email/scheduled` - Schedule email sending
 - **GET** `/invoice/tasks/{customerId}` - Get customer invoice tasks
 - **GET** `/invoice/status/{customerId}` - Get invoice workflow status
+- **GET** `/invoice/workflows` - Get all invoice workflows (with optional filtering)
+- **GET** `/invoice/workflows/{workflowId}` - Get specific invoice workflow by ID
+- **GET** `/invoice/workflows/{workflowId}/status` - Get detailed status of specific invoice workflow
+- **POST** `/invoice/workflows/{workflowId}/cancel` - Cancel invoice workflow and pending tasks
+- **GET** `/invoice/stats` - Get comprehensive invoice workflow statistics
+- **GET** `/invoice/customers` - Get all customers with invoice workflows and statistics
 
 ### Scheduler
 
 - **POST** `/scheduler/tasks/scheduled` - Create scheduled task
 - **POST** `/scheduler/tasks/recurring` - Create recurring task
 - **GET** `/scheduler/tasks/scheduled` - Get scheduled tasks
+
+### Fault Management
+
+- **POST** `/faults/retry/{taskId}` - Retry a failed task with exponential backoff
+- **POST** `/faults/compensate/{taskId}` - Create a compensation task for a failed task
+- **GET** `/faults/failed-tasks` - Get all failed tasks
+- **GET** `/faults/retryable-tasks` - Get tasks that can be retried
+- **GET** `/faults/compensation-tasks` - Get all compensation tasks
+- **GET** `/faults/stats` - Get fault management statistics
+
+### Workflow Management
+
+- **POST** `/workflows` - Create a new workflow with task definitions
+- **GET** `/workflows` - Get all workflows in the system
+- **GET** `/workflows/active` - Get only active workflows
+- **GET** `/workflows/{id}` - Get a specific workflow by ID
+- **GET** `/workflows/{id}/with-tasks` - Get workflow details including all associated tasks
+- **PUT** `/workflows/{id}` - Update an existing workflow
+- **DELETE** `/workflows/{id}` - Delete a workflow (only if no associated tasks)
+- **POST** `/workflows/{id}/start` - Start a workflow execution
+- **POST** `/workflows/{id}/activate` - Activate a workflow
+- **POST** `/workflows/{id}/deactivate` - Deactivate a workflow
+- **GET** `/workflows/{id}/status` - Get detailed status of a workflow including task progress
 
 ## Testing Workflow with Dynamic Database Seeding
 
@@ -243,6 +274,24 @@ The collection includes multiple example workflows in the "Examples" folder:
 1. **Seed with All Task Types** - Creates comprehensive test data for all task types
 2. **Get Tasks by Type** - View the distribution of task types and statuses
 3. **Check Queue Status** - Monitor queue health and task distribution
+
+#### Fault Management Workflow
+
+1. **Get Failed Tasks** - View all failed tasks in the system
+2. **Retry Failed Task** - Retry a specific failed task with exponential backoff
+3. **Get Fault Statistics** - Monitor fault management statistics and error types
+
+#### Workflow Management Example
+
+1. **Create Workflow** - Create a new workflow with task definitions and transitions
+2. **Get Workflow Status** - Check the status of the created workflow
+3. **Start Workflow** - Start the workflow execution
+
+#### Invoice Statistics Workflow
+
+1. **Get Invoice Statistics** - Get comprehensive invoice workflow statistics
+2. **Get Customers with Invoices** - View all customers with invoice workflows
+3. **Get Invoice Workflows** - Monitor all invoice workflows in the system
 
 ### Manual Seeding Operations
 
