@@ -35,12 +35,6 @@ describe('HttpWorker', () => {
             handleTaskFailure: jest.fn(),
           },
         },
-        {
-          provide: MessagingService,
-          useValue: {
-            publishTask: jest.fn(),
-          },
-        },
       ],
     }).compile();
 

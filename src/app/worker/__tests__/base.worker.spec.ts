@@ -43,12 +43,6 @@ describe('BaseWorker', () => {
             handleTaskFailure: jest.fn(),
           },
         },
-        {
-          provide: MessagingService,
-          useValue: {
-            publishTask: jest.fn(),
-          },
-        },
       ],
     }).compile();
 
@@ -273,12 +267,6 @@ describe('BaseWorker', () => {
         taskId,
         processingError,
       );
-    });
-  });
-
-  describe('onModuleDestroy', () => {
-    it('should implement onModuleDestroy method', async () => {
-      await expect(worker.onModuleDestroy()).resolves.toBeUndefined();
     });
   });
 });

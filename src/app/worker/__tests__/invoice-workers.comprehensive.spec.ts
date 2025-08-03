@@ -41,12 +41,6 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
             handleTaskFailure: jest.fn(),
           },
         },
-        {
-          provide: MessagingService,
-          useValue: {
-            publishTask: jest.fn(),
-          },
-        },
       ],
     }).compile();
 

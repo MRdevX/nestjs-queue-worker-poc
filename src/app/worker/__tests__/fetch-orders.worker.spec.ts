@@ -32,12 +32,6 @@ describe('FetchOrdersWorker', () => {
             handleTaskFailure: jest.fn(),
           },
         },
-        {
-          provide: MessagingService,
-          useValue: {
-            publishTask: jest.fn(),
-          },
-        },
       ],
     }).compile();
 

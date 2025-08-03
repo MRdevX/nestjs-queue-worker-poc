@@ -1,5 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { MessagingService } from '../core/messaging/messaging.service';
+import { Injectable, Logger } from '@nestjs/common';
 import { TaskService } from '../task/task.service';
 import { CoordinatorService } from '../workflow/coordinator.service';
 import { ITaskMessage } from '../core/messaging/types/task-message.interface';
@@ -8,13 +7,12 @@ import { TaskStatus } from '../task/types/task-status.enum';
 import { TaskType } from '../task/types/task-type.enum';
 
 @Injectable()
-export abstract class BaseWorker implements OnModuleDestroy {
+export abstract class BaseWorker {
   protected readonly logger = new Logger(this.constructor.name);
 
   constructor(
     protected readonly taskService: TaskService,
     protected readonly coordinator: CoordinatorService,
-    protected readonly messagingService: MessagingService,
   ) {
     this.logger.log(`${this.constructor.name} initialized`);
   }
@@ -87,6 +85,4 @@ export abstract class BaseWorker implements OnModuleDestroy {
   protected abstract processTask(taskId: string): Promise<void>;
 
   protected abstract shouldProcessTaskType(taskType: TaskType): boolean;
-
-  async onModuleDestroy() {}
 }
