@@ -4,7 +4,6 @@ import { TaskService } from '../task/task.service';
 import { MessagingService } from '../core/messaging/messaging.service';
 import { SchedulerService } from '../scheduler/scheduler.service';
 import { UtilsService } from '../core/utils/utils.service';
-import { TaskUtilsService } from '../task/task.utils.service';
 import { TaskType } from '../task/types/task-type.enum';
 import { TaskStatus } from '../task/types/task-status.enum';
 import {
@@ -265,7 +264,14 @@ export class InvoiceService {
 
     const response = {
       customerId,
-      tasks: tasks.map((task) => TaskUtilsService.formatTask(task)),
+      tasks: tasks.map((task) => ({
+        id: task.id,
+        type: task.type,
+        status: task.status,
+        createdAt: task.createdAt,
+        completedAt:
+          task.status === TaskStatus.COMPLETED ? task.updatedAt : null,
+      })),
     };
 
     this.logger.log(
@@ -322,7 +328,7 @@ export class InvoiceService {
     tasks: any[],
     customerId: string,
   ): InvoiceWorkflowStatusResponseDto {
-    const statusCounts = TaskUtilsService.countTasksByStatus(tasks);
+    const statusCounts = this.countTasksByStatus(tasks);
     const status: InvoiceWorkflowStatusResponseDto = {
       customerId,
       totalTasks: statusCounts.total,
@@ -344,6 +350,35 @@ export class InvoiceService {
     }
 
     return status;
+  }
+
+  private countTasksByStatus(tasks: any[]) {
+    const counts = {
+      total: tasks.length,
+      completed: 0,
+      failed: 0,
+      pending: 0,
+      processing: 0,
+    };
+
+    for (const task of tasks) {
+      switch (task.status) {
+        case TaskStatus.COMPLETED:
+          counts.completed++;
+          break;
+        case TaskStatus.FAILED:
+          counts.failed++;
+          break;
+        case TaskStatus.PENDING:
+          counts.pending++;
+          break;
+        case TaskStatus.PROCESSING:
+          counts.processing++;
+          break;
+      }
+    }
+
+    return counts;
   }
 
   private calculateWorkflowGroupStatus(workflowTasks: any[]): {
@@ -479,7 +514,7 @@ export class InvoiceService {
       throw new Error(`Workflow ${workflowId} not found`);
     }
 
-    const statusCounts = TaskUtilsService.countTasksByStatus(tasks);
+    const statusCounts = this.countTasksByStatus(tasks);
     const customerId = tasks[0].payload?.customerId;
 
     const status = {

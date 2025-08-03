@@ -30,14 +30,4 @@ export class WorkflowRepository extends BaseRepository<WorkflowEntity> {
     }
     return workflow;
   }
-
-  async findWorkflowsByCustomer(customerId: string): Promise<WorkflowEntity[]> {
-    return this.repository
-      .createQueryBuilder('workflow')
-      .leftJoinAndSelect('workflow.tasks', 'task')
-      .where('task.payload::jsonb @> :customerPayload', {
-        customerPayload: JSON.stringify({ customerId }),
-      })
-      .getMany();
-  }
 }

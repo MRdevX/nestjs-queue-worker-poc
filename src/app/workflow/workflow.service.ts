@@ -121,10 +121,6 @@ export class WorkflowService {
     };
   }
 
-  async getWorkflowsByCustomer(customerId: string): Promise<WorkflowEntity[]> {
-    return this.workflowRepository.findWorkflowsByCustomer(customerId);
-  }
-
   async updateWorkflowStatus(
     id: string,
     status: WorkflowStatus,
