@@ -28,10 +28,6 @@ export abstract class BaseRepository<T extends BaseModel> {
     return this.repository.find(options);
   }
 
-  async findOne(where: any): Promise<T | null> {
-    return this.repository.findOne({ where });
-  }
-
   async findMany(where: any): Promise<T[]> {
     return this.repository.find({ where });
   }
@@ -44,19 +40,5 @@ export abstract class BaseRepository<T extends BaseModel> {
   async delete(id: string): Promise<boolean> {
     const result = await this.repository.softDelete(id);
     return (result.affected || 0) > 0;
-  }
-
-  async hardDelete(id: string): Promise<boolean> {
-    const result = await this.repository.delete(id);
-    return (result.affected || 0) > 0;
-  }
-
-  async count(where?: any): Promise<number> {
-    return this.repository.count({ where });
-  }
-
-  async exists(where: any): Promise<boolean> {
-    const count = await this.repository.count({ where });
-    return count > 0;
   }
 }

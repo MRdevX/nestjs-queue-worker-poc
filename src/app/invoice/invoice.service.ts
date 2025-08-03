@@ -693,8 +693,8 @@ export class InvoiceService {
       successRate:
         customer.totalWorkflows > 0
           ? Math.round(
-              (customer.completedWorkflows / customer.totalWorkflows) * 100,
-            )
+            (customer.completedWorkflows / customer.totalWorkflows) * 100,
+          )
           : 0,
     }));
 

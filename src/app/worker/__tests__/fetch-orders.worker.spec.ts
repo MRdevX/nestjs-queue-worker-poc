@@ -5,7 +5,6 @@ import { TaskService } from '../../task/task.service';
 import { CoordinatorService } from '../../workflow/coordinator.service';
 import { TaskType } from '../../task/types/task-type.enum';
 import { TaskStatus } from '../../task/types/task-status.enum';
-import { MessagingService } from '../../core/messaging/messaging.service';
 
 describe('FetchOrdersWorker', () => {
   let worker: FetchOrdersWorker;

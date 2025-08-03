@@ -4,7 +4,6 @@ import { TaskEntityMockFactory } from '@test/mocks';
 import { HttpWorker } from '../http.worker';
 import { TaskService } from '../../task/task.service';
 import { CoordinatorService } from '../../workflow/coordinator.service';
-import { MessagingService } from '../../core/messaging/messaging.service';
 import { TaskType } from '../../task/types/task-type.enum';
 
 jest.mock('axios');

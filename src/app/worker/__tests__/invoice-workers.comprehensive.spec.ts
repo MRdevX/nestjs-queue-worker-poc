@@ -6,7 +6,6 @@ import { GeneratePdfWorker } from '../generate-pdf.worker';
 import { SendEmailWorker } from '../send-email.worker';
 import { TaskService } from '../../task/task.service';
 import { CoordinatorService } from '../../workflow/coordinator.service';
-import { MessagingService } from '../../core/messaging/messaging.service';
 import { TaskType } from '../../task/types/task-type.enum';
 import { TaskStatus } from '../../task/types/task-status.enum';
 

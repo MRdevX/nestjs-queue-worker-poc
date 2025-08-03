@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { WorkflowRepository } from './workflow.repository';
 import { TaskService } from '../task/task.service';
 import { TaskStatus } from '../task/types/task-status.enum';
@@ -51,6 +51,7 @@ export class WorkflowService {
   async getWorkflowWithTasks(id: string): Promise<WorkflowEntity | null> {
     try {
       return await this.workflowRepository.findWithTasks(id);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       return null;
     }

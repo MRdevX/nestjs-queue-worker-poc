@@ -26,10 +26,6 @@ export class MessagingService implements OnModuleDestroy {
     } as RmqOptions);
   }
 
-  getClient(): ClientProxy {
-    return this.client;
-  }
-
   private getEventPattern(taskType: TaskType): string {
     const patterns = {
       [TaskType.HTTP_REQUEST]: 'http.request',
@@ -83,26 +79,12 @@ export class MessagingService implements OnModuleDestroy {
     }
   }
 
-  async connect(): Promise<void> {
-    try {
-      await this.client.connect();
-      this.logger.log('Connected to RabbitMQ');
-    } catch (error) {
-      this.logger.error('Failed to connect to RabbitMQ:', error.stack);
-      throw new Error(`Failed to connect to RabbitMQ: ${error.message}`);
-    }
-  }
-
-  async close(): Promise<void> {
+  async onModuleDestroy() {
     try {
       await this.client.close();
       this.logger.log('Disconnected from RabbitMQ');
     } catch (error) {
       this.logger.error('Failed to disconnect from RabbitMQ:', error.stack);
     }
-  }
-
-  async onModuleDestroy() {
-    await this.close();
   }
 }
