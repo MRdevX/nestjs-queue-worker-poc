@@ -5,6 +5,7 @@ import { TaskEntityMockFactory } from '@test/mocks';
 import { CoordinatorService } from '../coordinator.service';
 import { TaskService } from '../../task/task.service';
 import { MessagingService } from '../../core/messaging/messaging.service';
+import { WorkflowService } from '../workflow.service';
 import { TaskType } from '../../task/types/task-type.enum';
 import { TaskStatus } from '../../task/types/task-status.enum';
 
@@ -28,6 +29,12 @@ describe('CoordinatorService', () => {
           provide: MessagingService,
           useValue: {
             publishTask: jest.fn(),
+          },
+        },
+        {
+          provide: WorkflowService,
+          useValue: {
+            updateWorkflowStatus: jest.fn(),
           },
         },
       ],

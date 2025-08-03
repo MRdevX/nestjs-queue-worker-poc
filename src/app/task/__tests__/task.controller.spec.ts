@@ -95,15 +95,19 @@ describe('TaskController', () => {
         createTaskDto.type,
         createTaskDto.payload,
       );
-      expect(messagingService.emitEvent).toHaveBeenCalledWith('data.process', {
-        taskId: mockTask.id,
-        taskType: mockTask.type,
-        ...createTaskDto.payload,
-      });
+      expect(messagingService.emitEvent).toHaveBeenCalledWith(
+        'data.processing',
+        {
+          taskId: mockTask.id,
+          taskType: mockTask.type,
+          ...createTaskDto.payload,
+        },
+      );
       expect(result).toEqual({
         message: 'Task created and queued successfully',
         taskId: mockTask.id,
         type: mockTask.type,
+        status: mockTask.status,
       });
     });
   });

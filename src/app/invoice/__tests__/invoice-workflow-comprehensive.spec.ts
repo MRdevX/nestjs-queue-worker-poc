@@ -962,7 +962,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           undefined,
         );
         expect(messagingService.emitEvent).toHaveBeenCalledWith(
-          'order.fetch',
+          'fetch.orders',
           expect.objectContaining({
             taskId: 'task-1',
             taskType: TaskType.FETCH_ORDERS,
