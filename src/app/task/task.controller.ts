@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   NotFoundException,
+  Query,
 } from '@nestjs/common';
 import { TaskService } from './task.service';
 import { MessagingService } from '../core/messaging/messaging.service';
@@ -56,6 +57,26 @@ export class TaskController {
     }
   }
 
+  @Get()
+  async getAllTasks(
+    @Query('status') status?: TaskStatus,
+    @Query('type') type?: TaskType,
+    @Query('workflowId') workflowId?: string,
+  ) {
+    const where: any = {};
+
+    if (status) where.status = status;
+    if (type) where.type = type;
+    if (workflowId) where.workflow = { id: workflowId };
+
+    const tasks = await this.taskService.findMany(where);
+
+    return {
+      tasks,
+      total: tasks.length,
+    };
+  }
+
   private getEventPattern(taskType: TaskType): string {
     switch (taskType) {
       case TaskType.FETCH_ORDERS:
@@ -78,6 +99,24 @@ export class TaskController {
   @Get(':id')
   async getTask(@Param('id') id: string) {
     const task = await this.taskService.getTaskById(id);
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+    return task;
+  }
+
+  @Get(':id/with-logs')
+  async getTaskWithLogs(@Param('id') id: string) {
+    const task = await this.taskService.getTaskByIdWithLogs(id);
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+    return task;
+  }
+
+  @Get(':id/with-workflow')
+  async getTaskWithWorkflow(@Param('id') id: string) {
+    const task = await this.taskService.getTaskByIdWithWorkflow(id);
     if (!task) {
       throw new NotFoundException('Task not found');
     }

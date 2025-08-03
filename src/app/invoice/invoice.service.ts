@@ -370,4 +370,306 @@ export class InvoiceService {
       ),
     };
   }
+
+  async getInvoiceWorkflows(
+    customerId?: string,
+    active?: boolean,
+  ): Promise<any> {
+    this.logger.log(
+      `📋 [GET_INVOICE_WORKFLOWS] Fetching invoice workflows - Customer: ${customerId || 'all'}, Active: ${active}`,
+    );
+
+    const tasks = await this.taskService.findMany({
+      type: TaskType.FETCH_ORDERS,
+    });
+
+    const workflows = new Map();
+
+    for (const task of tasks) {
+      if (customerId && task.payload?.customerId !== customerId) {
+        continue;
+      }
+
+      const workflowId = task.workflow?.id || 'standalone';
+      if (!workflows.has(workflowId)) {
+        workflows.set(workflowId, {
+          id: workflowId,
+          name: task.workflow?.name || 'Standalone Invoice Workflow',
+          customerId: task.payload?.customerId,
+          createdAt: task.createdAt,
+          isActive: task.workflow?.isActive ?? true,
+          tasks: [],
+        });
+      }
+
+      workflows.get(workflowId).tasks.push({
+        id: task.id,
+        type: task.type,
+        status: task.status,
+        createdAt: task.createdAt,
+        completedAt:
+          task.status === TaskStatus.COMPLETED ? task.updatedAt : null,
+      });
+    }
+
+    let result = Array.from(workflows.values());
+
+    if (active !== undefined) {
+      result = result.filter((w) => w.isActive === active);
+    }
+
+    this.logger.log(
+      `✅ [GET_INVOICE_WORKFLOWS] Found ${result.length} invoice workflows`,
+    );
+
+    return {
+      workflows: result,
+      total: result.length,
+    };
+  }
+
+  async getInvoiceWorkflow(workflowId: string): Promise<any> {
+    this.logger.log(
+      `📋 [GET_INVOICE_WORKFLOW] Fetching invoice workflow: ${workflowId}`,
+    );
+
+    const tasks = await this.taskService.findMany({
+      workflow: { id: workflowId },
+    });
+
+    if (tasks.length === 0) {
+      throw new Error(`Workflow ${workflowId} not found`);
+    }
+
+    const workflow = {
+      id: workflowId,
+      name: tasks[0].workflow?.name || 'Invoice Workflow',
+      customerId: tasks[0].payload?.customerId,
+      createdAt: tasks[0].createdAt,
+      isActive: tasks[0].workflow?.isActive ?? true,
+      tasks: tasks.map((task) => ({
+        id: task.id,
+        type: task.type,
+        status: task.status,
+        createdAt: task.createdAt,
+        completedAt:
+          task.status === TaskStatus.COMPLETED ? task.updatedAt : null,
+        error: task.error,
+        payload: task.payload,
+      })),
+    };
+
+    this.logger.log(
+      `✅ [GET_INVOICE_WORKFLOW] Found workflow with ${workflow.tasks.length} tasks`,
+    );
+
+    return workflow;
+  }
+
+  async getInvoiceWorkflowStatusById(workflowId: string): Promise<any> {
+    this.logger.log(
+      `📊 [GET_INVOICE_WORKFLOW_STATUS_BY_ID] Fetching status for workflow: ${workflowId}`,
+    );
+
+    const tasks = await this.taskService.findMany({
+      workflow: { id: workflowId },
+    });
+
+    if (tasks.length === 0) {
+      throw new Error(`Workflow ${workflowId} not found`);
+    }
+
+    const statusCounts = TaskUtilsService.countTasksByStatus(tasks);
+    const customerId = tasks[0].payload?.customerId;
+
+    const status = {
+      workflowId,
+      customerId,
+      workflowName: tasks[0].workflow?.name || 'Invoice Workflow',
+      isActive: tasks[0].workflow?.isActive ?? true,
+      totalTasks: statusCounts.total,
+      completedTasks: statusCounts.completed,
+      failedTasks: statusCounts.failed,
+      pendingTasks: statusCounts.pending,
+      processingTasks: statusCounts.processing,
+      isComplete: UtilsService.allItemsMeet(
+        tasks,
+        (t) =>
+          t.status === TaskStatus.COMPLETED || t.status === TaskStatus.FAILED,
+      ),
+      progress:
+        statusCounts.total > 0
+          ? Math.round((statusCounts.completed / statusCounts.total) * 100)
+          : 0,
+      tasks: tasks.map((task) => ({
+        id: task.id,
+        type: task.type,
+        status: task.status,
+        createdAt: task.createdAt,
+        completedAt:
+          task.status === TaskStatus.COMPLETED ? task.updatedAt : null,
+        error: task.error,
+      })),
+    };
+
+    this.logger.log(
+      `✅ [GET_INVOICE_WORKFLOW_STATUS_BY_ID] Status calculated - Total: ${status.totalTasks}, Completed: ${status.completedTasks}, Progress: ${status.progress}%`,
+    );
+
+    return status;
+  }
+
+  async cancelInvoiceWorkflow(workflowId: string): Promise<any> {
+    this.logger.log(
+      `❌ [CANCEL_INVOICE_WORKFLOW] Cancelling workflow: ${workflowId}`,
+    );
+
+    const tasks = await this.taskService.findMany({
+      workflow: { id: workflowId },
+      status: TaskStatus.PENDING,
+    });
+
+    let cancelledCount = 0;
+    for (const task of tasks) {
+      try {
+        await this.taskService.cancelTask(task.id);
+        cancelledCount++;
+      } catch (error) {
+        this.logger.error(`Failed to cancel task ${task.id}:`, error);
+      }
+    }
+
+    this.logger.log(
+      `✅ [CANCEL_INVOICE_WORKFLOW] Cancelled ${cancelledCount} pending tasks in workflow ${workflowId}`,
+    );
+
+    return {
+      message: 'Invoice workflow cancelled successfully',
+      workflowId,
+      cancelledTasks: cancelledCount,
+    };
+  }
+
+  async getInvoiceStats(): Promise<any> {
+    this.logger.log('📊 [GET_INVOICE_STATS] Calculating invoice statistics');
+
+    const allTasks = await this.taskService.findMany({
+      type: TaskType.FETCH_ORDERS,
+    });
+
+    const stats = {
+      totalWorkflows: new Set(
+        allTasks.map((t) => t.workflow?.id || 'standalone'),
+      ).size,
+      totalTasks: allTasks.length,
+      completedTasks: allTasks.filter((t) => t.status === TaskStatus.COMPLETED)
+        .length,
+      failedTasks: allTasks.filter((t) => t.status === TaskStatus.FAILED)
+        .length,
+      pendingTasks: allTasks.filter((t) => t.status === TaskStatus.PENDING)
+        .length,
+      processingTasks: allTasks.filter(
+        (t) => t.status === TaskStatus.PROCESSING,
+      ).length,
+      uniqueCustomers: new Set(
+        allTasks.map((t) => t.payload?.customerId).filter(Boolean),
+      ).size,
+      averageCompletionTime: 0,
+      successRate: 0,
+    };
+
+    const completedTasks = allTasks.filter(
+      (t) => t.status === TaskStatus.COMPLETED,
+    );
+
+    if (completedTasks.length > 0) {
+      const totalTime = completedTasks.reduce((sum, task) => {
+        return sum + (task.updatedAt.getTime() - task.createdAt.getTime());
+      }, 0);
+      stats.averageCompletionTime = Math.round(
+        totalTime / completedTasks.length,
+      );
+    }
+
+    if (stats.totalTasks > 0) {
+      stats.successRate = Math.round(
+        (stats.completedTasks / stats.totalTasks) * 100,
+      );
+    }
+
+    this.logger.log(
+      `✅ [GET_INVOICE_STATS] Statistics calculated - Success Rate: ${stats.successRate}%, Average Time: ${stats.averageCompletionTime}ms`,
+    );
+
+    return stats;
+  }
+
+  async getCustomersWithInvoices(): Promise<any> {
+    this.logger.log(
+      '👥 [GET_CUSTOMERS_WITH_INVOICES] Fetching customers with invoices',
+    );
+
+    const tasks = await this.taskService.findMany({
+      type: TaskType.FETCH_ORDERS,
+    });
+
+    const customerMap = new Map();
+
+    for (const task of tasks) {
+      const customerId = task.payload?.customerId;
+      if (!customerId) continue;
+
+      if (!customerMap.has(customerId)) {
+        customerMap.set(customerId, {
+          customerId,
+          totalWorkflows: 0,
+          completedWorkflows: 0,
+          failedWorkflows: 0,
+          lastActivity: task.createdAt,
+          workflows: [],
+        });
+      }
+
+      const customer = customerMap.get(customerId);
+      customer.totalWorkflows++;
+
+      if (task.status === TaskStatus.COMPLETED) {
+        customer.completedWorkflows++;
+      } else if (task.status === TaskStatus.FAILED) {
+        customer.failedWorkflows++;
+      }
+
+      if (task.createdAt > customer.lastActivity) {
+        customer.lastActivity = task.createdAt;
+      }
+
+      customer.workflows.push({
+        workflowId: task.workflow?.id || 'standalone',
+        taskId: task.id,
+        status: task.status,
+        createdAt: task.createdAt,
+        completedAt:
+          task.status === TaskStatus.COMPLETED ? task.updatedAt : null,
+      });
+    }
+
+    const customers = Array.from(customerMap.values()).map((customer) => ({
+      ...customer,
+      successRate:
+        customer.totalWorkflows > 0
+          ? Math.round(
+              (customer.completedWorkflows / customer.totalWorkflows) * 100,
+            )
+          : 0,
+    }));
+
+    this.logger.log(
+      `✅ [GET_CUSTOMERS_WITH_INVOICES] Found ${customers.length} customers with invoices`,
+    );
+
+    return {
+      customers,
+      total: customers.length,
+    };
+  }
 }

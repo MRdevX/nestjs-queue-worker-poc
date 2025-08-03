@@ -6,7 +6,11 @@ import {
   HttpStatus,
   Body,
 } from '@nestjs/common';
-import { DatabaseSeeder, ISeederConfig, ISeederResult } from './database.seeder';
+import {
+  DatabaseSeeder,
+  ISeederConfig,
+  ISeederResult,
+} from './database.seeder';
 
 @Controller('seeder')
 export class SeederController {

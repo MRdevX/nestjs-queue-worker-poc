@@ -65,7 +65,6 @@ export class FetchOrdersWorker extends BaseWorker {
     dateFrom?: string,
     dateTo?: string,
   ) {
-    // Mock data representing orders from external API
     const mockOrders = [
       {
         id: 'order-1',

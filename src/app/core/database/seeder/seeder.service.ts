@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnModuleInit } from '@nestjs/common';
-import { DatabaseSeeder, ISeederConfig, ISeederResult } from './database.seeder';
+import {
+  DatabaseSeeder,
+  ISeederConfig,
+  ISeederResult,
+} from './database.seeder';
 
 @Injectable()
 export class SeederService implements OnModuleInit {
