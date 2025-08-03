@@ -72,7 +72,7 @@ export class MessagingService implements OnModuleDestroy {
     } catch (error) {
       this.logger.error(`Failed to send message to ${pattern}:`, error.stack);
       throw new Error(
-        `Message send failed: ${error.message || 'Unknown error'}`,
+        `Failed to publish task: ${error.message || 'Unknown error'}`,
       );
     }
   }
@@ -105,7 +105,7 @@ export class MessagingService implements OnModuleDestroy {
       this.logger.log('Connected to RabbitMQ');
     } catch (error) {
       this.logger.error('Failed to connect to RabbitMQ:', error.stack);
-      throw new Error(`Connection failed: ${error.message}`);
+      throw new Error(`Failed to connect to RabbitMQ: ${error.message}`);
     }
   }
 

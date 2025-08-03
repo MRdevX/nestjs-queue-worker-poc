@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import { Repository } from 'typeorm';
 import { faker } from '@faker-js/faker';
 import { Injectable, Logger } from '@nestjs/common';

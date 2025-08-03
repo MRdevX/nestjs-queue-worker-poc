@@ -30,6 +30,7 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           useValue: {
             getTaskById: jest.fn(),
             updateTaskStatus: jest.fn(),
+            updateTaskPayload: jest.fn(),
             handleFailure: jest.fn(),
           },
         },
@@ -181,11 +182,9 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
         const dateFrom = '2024-01-16';
         const dateTo = '2024-01-31';
 
-        const orders = await (fetchOrdersWorker as any).fetchOrdersFromNinox(
-          customerId,
-          dateFrom,
-          dateTo,
-        );
+        const orders = await (
+          fetchOrdersWorker as any
+        ).fetchOrdersFromExternalApi(customerId, dateFrom, dateTo);
 
         expect(orders).toHaveLength(1);
         expect(orders[0].deliveryDate).toBe('2024-01-16');
@@ -195,10 +194,9 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
         const customerId = 'customer-123';
         const dateFrom = '2024-01-01';
 
-        const orders = await (fetchOrdersWorker as any).fetchOrdersFromNinox(
-          customerId,
-          dateFrom,
-        );
+        const orders = await (
+          fetchOrdersWorker as any
+        ).fetchOrdersFromExternalApi(customerId, dateFrom);
 
         const ordersWithNullDelivery = orders.filter(
           (order) => order.deliveryDate === null,

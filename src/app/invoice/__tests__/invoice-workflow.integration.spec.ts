@@ -36,6 +36,7 @@ describe('Invoice Workflow Integration', () => {
           provide: MessagingService,
           useValue: {
             publishTask: jest.fn(),
+            emitEvent: jest.fn(),
           },
         },
         {
@@ -93,7 +94,7 @@ describe('Invoice Workflow Integration', () => {
       });
 
       taskService.createTask.mockResolvedValue(fetchOrdersTask as any);
-      messagingService.publishTask.mockResolvedValue();
+      messagingService.emitEvent.mockResolvedValue();
 
       const startResult = await controller.startInvoiceWorkflow({
         customerId,

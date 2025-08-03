@@ -1,73 +1,71 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
+import { BaseWorker } from './base.worker';
 import { TaskService } from '../task/task.service';
 import { CoordinatorService } from '../workflow/coordinator.service';
 import { MessagingService } from '../core/messaging/messaging.service';
-import { TaskStatus } from '../task/types/task-status.enum';
+import { TaskType } from '../task/types/task-type.enum';
+import { ITaskMessage } from '../core/messaging/types/task-message.interface';
 
 @Injectable()
-export class FetchOrdersWorker {
-  private readonly logger = new Logger(FetchOrdersWorker.name);
-
+export class FetchOrdersWorker extends BaseWorker {
   constructor(
-    private readonly taskService: TaskService,
-    private readonly coordinator: CoordinatorService,
-    private readonly messagingService: MessagingService,
-  ) {}
-
-  @EventPattern('order.fetch')
-  async handleFetchOrders(@Payload() data: any) {
-    this.logger.log(`Received fetch orders event: ${JSON.stringify(data)}`);
-
-    const { taskId, customerId, dateFrom, dateTo } = data;
-    if (!taskId || !customerId) {
-      throw new Error('Task ID and customer ID are required');
-    }
-
-    try {
-      const task = await this.taskService.getTaskById(taskId);
-      if (!task) {
-        throw new Error(`Task ${taskId} not found`);
-      }
-
-      await this.taskService.updateTaskStatus(taskId, TaskStatus.PROCESSING);
-
-      this.logger.log(`Fetching orders for customer: ${customerId}`);
-
-      const orders = await this.fetchOrdersFromNinox(
-        customerId,
-        dateFrom,
-        dateTo,
-      );
-
-      const deliverableOrders = orders.filter(
-        (order) => order.status === 'delivered' && !order.invoiced,
-      );
-
-      this.logger.log(
-        `Fetched ${deliverableOrders.length} deliverable orders for customer ${customerId}`,
-      );
-
-      await this.taskService.updateTaskStatus(taskId, TaskStatus.COMPLETED);
-      await this.taskService.updateTaskPayload(taskId, {
-        ...task.payload,
-        orders: deliverableOrders,
-      });
-
-      await this.coordinator.handleTaskCompletion(taskId);
-    } catch (error) {
-      this.logger.error(`Failed to fetch orders: ${taskId}`, error.stack);
-      await this.taskService.handleFailure(taskId, error);
-      await this.coordinator.handleTaskFailure(taskId, error);
-      throw error;
-    }
+    taskService: TaskService,
+    coordinator: CoordinatorService,
+    messagingService: MessagingService,
+  ) {
+    super(taskService, coordinator, messagingService);
   }
 
-  private async fetchOrdersFromNinox(
+  @EventPattern('fetch.orders')
+  async handleTask(@Payload() data: ITaskMessage) {
+    return super.handleTask(data);
+  }
+
+  protected async processTask(taskId: string) {
+    const task = await this.taskService.getTaskById(taskId);
+    if (!task) {
+      throw new Error(`Task with id ${taskId} not found`);
+    }
+
+    const { customerId, dateFrom, dateTo } = task.payload;
+
+    if (!customerId) {
+      throw new Error('Customer ID is required');
+    }
+
+    this.logger.log(`Fetching orders for customer: ${customerId}`);
+
+    const orders = await this.fetchOrdersFromExternalApi(
+      customerId,
+      dateFrom,
+      dateTo,
+    );
+
+    const deliverableOrders = orders.filter(
+      (order) => order.status === 'delivered' && !order.invoiced,
+    );
+
+    this.logger.log(
+      `Fetched ${deliverableOrders.length} deliverable orders for customer ${customerId}`,
+    );
+
+    await this.taskService.updateTaskPayload(taskId, {
+      ...task.payload,
+      orders: deliverableOrders,
+    });
+  }
+
+  protected shouldProcessTaskType(taskType: TaskType): boolean {
+    return taskType === TaskType.FETCH_ORDERS;
+  }
+
+  private async fetchOrdersFromExternalApi(
     customerId: string,
     dateFrom?: string,
     dateTo?: string,
   ) {
+    // Mock data representing orders from external API
     const mockOrders = [
       {
         id: 'order-1',

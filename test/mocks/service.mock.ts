@@ -44,6 +44,8 @@ export class MessagingServiceMockFactory {
   static create() {
     return {
       publishTask: jest.fn(),
+      sendMessage: jest.fn(),
+      emitEvent: jest.fn(),
       getClient: jest.fn(),
       connect: jest.fn(),
       close: jest.fn(),
@@ -54,6 +56,8 @@ export class MessagingServiceMockFactory {
     const mock = this.create();
 
     mock.publishTask.mockResolvedValue(undefined);
+    mock.sendMessage.mockResolvedValue(undefined);
+    mock.emitEvent.mockResolvedValue(undefined);
     mock.getClient.mockReturnValue({});
     mock.connect.mockResolvedValue(undefined);
     mock.close.mockResolvedValue(undefined);

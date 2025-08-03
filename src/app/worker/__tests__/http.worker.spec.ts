@@ -24,6 +24,7 @@ describe('HttpWorker', () => {
           useValue: {
             getTaskById: jest.fn(),
             updateTaskStatus: jest.fn(),
+            updateTaskPayload: jest.fn(),
             handleFailure: jest.fn(),
           },
         },

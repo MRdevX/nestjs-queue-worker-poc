@@ -78,7 +78,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
         });
 
         taskService.createTask.mockResolvedValue(fetchOrdersTask as any);
-        messagingService.publishTask.mockResolvedValue();
+        messagingService.emitEvent.mockResolvedValue();
 
         const startResult = await controller.startInvoiceWorkflow({
           customerId,
@@ -953,9 +953,12 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           { customerId, dateFrom: undefined, dateTo: undefined },
           undefined,
         );
-        expect(messagingService.publishTask).toHaveBeenCalledWith(
-          TaskType.FETCH_ORDERS,
-          'task-1',
+        expect(messagingService.emitEvent).toHaveBeenCalledWith(
+          'order.fetch',
+          expect.objectContaining({
+            taskId: 'task-1',
+            taskType: TaskType.FETCH_ORDERS,
+          }),
         );
       });
     });

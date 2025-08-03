@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Injectable } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { EventPattern, Payload } from '@nestjs/microservices';
 import { BaseWorker } from './base.worker';
 import { TaskService } from '../task/task.service';
 import { CoordinatorService } from '../workflow/coordinator.service';
@@ -18,7 +18,7 @@ export class SendEmailWorker extends BaseWorker {
     super(taskService, coordinator, messagingService);
   }
 
-  @MessagePattern('send.email')
+  @EventPattern('send.email')
   async handleTask(@Payload() data: ITaskMessage) {
     return super.handleTask(data);
   }

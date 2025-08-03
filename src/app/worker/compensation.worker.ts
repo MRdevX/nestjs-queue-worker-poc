@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { EventPattern, Payload } from '@nestjs/microservices';
 import { BaseWorker } from './base.worker';
 import { TaskService } from '../task/task.service';
 import { CoordinatorService } from '../workflow/coordinator.service';
@@ -18,7 +18,7 @@ export class CompensationWorker extends BaseWorker {
     super(taskService, coordinator, messagingService);
   }
 
-  @MessagePattern('compensation')
+  @EventPattern('compensation')
   async handleTask(@Payload() data: ITaskMessage) {
     return super.handleTask(data);
   }

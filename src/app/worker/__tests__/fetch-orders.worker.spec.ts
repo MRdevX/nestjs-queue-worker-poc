@@ -21,6 +21,7 @@ describe('FetchOrdersWorker', () => {
           useValue: {
             getTaskById: jest.fn(),
             updateTaskStatus: jest.fn(),
+            updateTaskPayload: jest.fn(),
             handleFailure: jest.fn(),
           },
         },
@@ -152,10 +153,12 @@ describe('FetchOrdersWorker', () => {
     });
   });
 
-  describe('fetchOrdersFromNinox', () => {
+  describe('fetchOrdersFromExternalApi', () => {
     it('should fetch orders for customer', async () => {
       const customerId = 'customer-123';
-      const orders = await (worker as any).fetchOrdersFromNinox(customerId);
+      const orders = await (worker as any).fetchOrdersFromExternalApi(
+        customerId,
+      );
 
       expect(orders).toHaveLength(3);
       expect(orders[0].customerId).toBe(customerId);
@@ -168,7 +171,7 @@ describe('FetchOrdersWorker', () => {
       const dateFrom = '2024-01-16';
       const dateTo = '2024-01-31';
 
-      const orders = await (worker as any).fetchOrdersFromNinox(
+      const orders = await (worker as any).fetchOrdersFromExternalApi(
         customerId,
         dateFrom,
         dateTo,
@@ -182,7 +185,7 @@ describe('FetchOrdersWorker', () => {
       const customerId = 'customer-123';
       const dateFrom = '2024-01-16';
 
-      const orders = await (worker as any).fetchOrdersFromNinox(
+      const orders = await (worker as any).fetchOrdersFromExternalApi(
         customerId,
         dateFrom,
       );
@@ -195,7 +198,7 @@ describe('FetchOrdersWorker', () => {
       const customerId = 'customer-123';
       const dateTo = '2024-01-15';
 
-      const orders = await (worker as any).fetchOrdersFromNinox(
+      const orders = await (worker as any).fetchOrdersFromExternalApi(
         customerId,
         undefined,
         dateTo,
