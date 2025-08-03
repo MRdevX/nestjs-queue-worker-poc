@@ -8,7 +8,7 @@ This document provides a detailed architectural overview of the Queue Worker PoC
 
 ### High-Level Architecture
 
-The system follows a microservices-inspired architecture with clear separation of concerns:
+The system follows a microservices-inspired architecture with clear separation of concerns and optimized worker patterns:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -33,6 +33,10 @@ The system follows a microservices-inspired architecture with clear separation o
 │                    Messaging Layer                              │
 │  ┌─────────────────────────────────────────────────────────────┐ │
 │  │              Messaging Service (RabbitMQ)                   │ │
+│  │  ┌─────────────────┐ ┌─────────────────┐                    │ │
+│  │  │ MessagePattern  │ │  EventPattern   │                    │ │
+│  │  │ (Quick Tasks)   │ │(Long-running)   │                    │ │
+│  │  └─────────────────┘ └─────────────────┘                    │ │
 │  └─────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
                                 │
@@ -42,6 +46,13 @@ The system follows a microservices-inspired architecture with clear separation o
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │
 │  │    HTTP     │ │    Data     │ │Compensation │ │   Base      │ │
 │  │   Worker    │ │   Worker    │ │   Worker    │ │   Worker    │ │
+│  │(MessagePattern)│(EventPattern)│(EventPattern)│             │ │
+│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │
+│  │   Fetch     │ │   Create    │ │  Generate   │ │   Send      │ │
+│  │   Orders    │ │   Invoice   │ │    PDF      │ │   Email     │ │
+│  │   Worker    │ │   Worker    │ │   Worker    │ │   Worker    │ │
+│  │(EventPattern)│(EventPattern)│(EventPattern)│(EventPattern)│ │
 │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
                                 │
@@ -66,7 +77,7 @@ The system follows a microservices-inspired architecture with clear separation o
 ```typescript
 interface TaskEntity {
   id: string;
-  type: TaskType; // HTTP_REQUEST | DATA_PROCESSING | COMPENSATION
+  type: TaskType; // HTTP_REQUEST | DATA_PROCESSING | COMPENSATION | FETCH_ORDERS | CREATE_INVOICE | GENERATE_PDF | SEND_EMAIL
   payload: Record<string, any>;
   status: TaskStatus; // PENDING | PROCESSING | COMPLETED | FAILED | RETRYING | CANCELLED
   retries: number;
@@ -110,30 +121,65 @@ abstract class BaseWorker {
   protected abstract processTask(taskId: string): Promise<void>;
   protected abstract shouldProcessTaskType(taskType: TaskType): boolean;
 }
+
+// Pattern Usage:
+// - @MessagePattern: For quick tasks requiring immediate response
+// - @EventPattern: For long-running tasks with fire-and-forget semantics
 ```
 
 #### Worker Types
 
-**HTTP Worker**
+**HTTP Worker** (MessagePattern - Quick Tasks)
 
-- Handles external API calls
+- Handles external API calls with immediate response requirements
 - Supports all HTTP methods (GET, POST, PUT, DELETE)
 - Configurable timeouts and retry policies
 - Handles authentication and headers
+- Uses MessagePattern for request-response communication
 
-**Data Processing Worker**
+**Data Processing Worker** (EventPattern - Long-running Tasks)
 
 - Processes data transformation tasks
-- Supports batch operations
+- Supports batch operations with extended processing times
 - Handles data validation and cleaning
 - Manages large dataset processing
+- Uses EventPattern for fire-and-forget communication
 
-**Compensation Worker**
+**Compensation Worker** (EventPattern - Long-running Tasks)
 
 - Implements saga pattern for distributed transactions
-- Handles rollback operations
+- Handles rollback operations with cleanup delays
 - Ensures data consistency
 - Manages partial failure recovery
+- Uses EventPattern for asynchronous processing
+
+**Fetch Orders Worker** (EventPattern - Long-running Tasks)
+
+- Fetches customer orders from external APIs
+- Handles date range filtering and data processing
+- Manages external service timeouts
+- Uses EventPattern for asynchronous processing
+
+**Create Invoice Worker** (EventPattern - Long-running Tasks)
+
+- Processes business logic for invoice creation
+- Handles tax calculations and business rules
+- Manages complex data transformations
+- Uses EventPattern for asynchronous processing
+
+**Generate PDF Worker** (EventPattern - Long-running Tasks)
+
+- Generates PDF documents via external services
+- Handles large document processing
+- Manages external service timeouts
+- Uses EventPattern for asynchronous processing
+
+**Send Email Worker** (EventPattern - Long-running Tasks)
+
+- Sends emails via external email services
+- Handles email template processing
+- Manages external service timeouts
+- Uses EventPattern for asynchronous processing
 
 ### 3. Messaging System
 
@@ -156,9 +202,18 @@ interface RabbitMQConfig {
 
 #### Message Patterns
 
-- **http.request**: HTTP API call tasks
+**Quick Tasks (MessagePattern - Request-Response)**
+
+- **http.request**: HTTP API call tasks with immediate response requirements
+
+**Long-running Tasks (EventPattern - Fire-and-Forget)**
+
 - **data.processing**: Data transformation tasks
 - **compensation**: Rollback and cleanup tasks
+- **fetch.orders**: External API calls to fetch customer orders
+- **create.invoice**: Business logic for invoice creation
+- **generate.pdf**: PDF generation via external services
+- **send.email**: Email sending via external services
 - **task.created**: Default fallback pattern
 
 #### Message Structure
@@ -377,6 +432,14 @@ const delay = Math.min(30000, 2000 * task.retries);
 - **Concurrent Workers**: Support for 10+ worker instances
 - **Database Operations**: Optimized queries and indexing
 - **Message Processing**: Efficient RabbitMQ message handling
+- **Pattern Optimization**: EventPattern for long-running tasks reduces queue blocking
+
+### Pattern Performance Benefits
+
+- **MessagePattern**: Optimized for quick tasks with immediate response requirements
+- **EventPattern**: Optimized for long-running tasks with fire-and-forget semantics
+- **Queue Efficiency**: Reduced blocking through appropriate pattern selection
+- **Scalability**: Better resource utilization through pattern-specific optimizations
 
 ### Latency
 
@@ -396,11 +459,14 @@ const delay = Math.min(30000, 2000 * task.retries);
 
 This Queue Worker PoC demonstrates a production-ready distributed task processing system that meets all the specified requirements. The architecture provides:
 
-- **Scalability**: Horizontal scaling capabilities
-- **Reliability**: Fault tolerance and error handling
-- **Maintainability**: Clear separation of concerns
-- **Observability**: Comprehensive monitoring and logging
-- **Security**: Input validation and secure configuration
-- **Performance**: Optimized for high throughput
+- **Scalability**: Horizontal scaling capabilities with optimized worker patterns
+- **Reliability**: Fault tolerance and error handling with appropriate retry mechanisms
+- **Maintainability**: Clear separation of concerns and pattern-based architecture
+- **Observability**: Comprehensive monitoring and logging for all task types
+- **Security**: Input validation and secure configuration management
+- **Performance**: Optimized for high throughput with pattern-specific optimizations
+- **Pattern Optimization**: Intelligent use of EventPattern and MessagePattern for optimal performance
+
+The system intelligently uses EventPattern for long-running tasks (data processing, compensation, invoice workflows) and MessagePattern for quick tasks (HTTP requests), ensuring optimal queue performance and resource utilization.
 
 The system is designed to handle high volumes of tasks, support long-running transactions, and ensure data consistency and reliability in a cloud environment.

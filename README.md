@@ -7,10 +7,11 @@ A comprehensive proof-of-concept for a scalable, fault-tolerant queue/worker sys
 This Queue Worker PoC demonstrates a distributed task processing system with:
 
 - **Queue Manager**: Handles task queuing, assignment, and monitoring
-- **Worker Nodes**: Execute various task types with fault tolerance
+- **Worker Nodes**: Execute various task types with fault tolerance and optimized patterns
 - **Coordinator**: Orchestrates workflows and manages task dependencies
 - **Database**: PostgreSQL for persistent task state and workflow definitions
 - **Message Broker**: RabbitMQ for reliable asynchronous task distribution
+- **Pattern Optimization**: Uses EventPattern for long-running tasks and MessagePattern for quick tasks
 
 For detailed architecture information, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -76,24 +77,30 @@ docker compose up --build -d
 
 ### Environment Variables
 
-| Variable            | Description       | Default        |
-| ------------------- | ----------------- | -------------- |
-| `NODE_ENV`          | Environment mode  | `development`  |
-| `PORT`              | Application port  | `3030`         |
-| `DB_HOST`           | PostgreSQL host   | `localhost`    |
-| `DB_PORT`           | PostgreSQL port   | `5432`         |
-| `DB_NAME`           | Database name     | `queue_worker` |
-| `DB_USERNAME`       | Database username | `postgres`     |
-| `DB_PASSWORD`       | Database password | `postgres`     |
-| `RABBITMQ_HOST`     | RabbitMQ host     | `localhost`    |
-| `RABBITMQ_USER`     | RabbitMQ username | `guest`        |
-| `RABBITMQ_PASSWORD` | RabbitMQ password | `guest`        |
+| Variable            | Description       | Default                  |
+| ------------------- | ----------------- | ------------------------ |
+| `NODE_ENV`          | Environment mode  | `development`            |
+| `PORT`              | Application port  | `3030`                   |
+| `DB_HOST`           | PostgreSQL host   | `localhost`              |
+| `DB_PORT`           | PostgreSQL port   | `5432`                   |
+| `DB_NAME`           | Database name     | `queue_worker`           |
+| `DB_USERNAME`       | Database username | `postgres`               |
+| `DB_PASSWORD`       | Database password | `postgres`               |
+| `RABBITMQ_HOST`     | RabbitMQ host     | `localhost`              |
+| `RABBITMQ_USER`     | RabbitMQ username | `guest`                  |
+| `RABBITMQ_PASSWORD` | RabbitMQ password | `guest`                  |
+| `PDF_PROCESSOR_URL` | PDF service URL   | `mock-pdf-processor.com` |
+| `EMAIL_SERVICE_URL` | Email service URL | `mock-email-service.com` |
 
 ### Task Types
 
-- **HTTP_REQUEST**: External API calls and webhooks
-- **DATA_PROCESSING**: Data transformation and batch operations
-- **COMPENSATION**: Rollback and cleanup operations
+- **HTTP_REQUEST**: External API calls and webhooks (quick tasks with immediate response)
+- **DATA_PROCESSING**: Data transformation and batch operations (long-running tasks)
+- **COMPENSATION**: Rollback and cleanup operations (long-running tasks)
+- **FETCH_ORDERS**: External API calls to fetch customer orders (long-running tasks)
+- **CREATE_INVOICE**: Business logic for invoice creation (long-running tasks)
+- **GENERATE_PDF**: PDF generation via external services (long-running tasks)
+- **SEND_EMAIL**: Email sending via external services (long-running tasks)
 
 ### Task Statuses
 
@@ -106,7 +113,7 @@ docker compose up --build -d
 
 ## 📚 Usage Examples
 
-### Create HTTP Request Task
+### Create HTTP Request Task (Quick Task - MessagePattern)
 
 ```bash
 curl -X POST http://localhost:3030/api/task \
@@ -118,6 +125,21 @@ curl -X POST http://localhost:3030/api/task \
       "url": "https://api.example.com/webhook",
       "headers": {"Authorization": "Bearer token"},
       "body": {"event": "task_completed"}
+    }
+  }'
+```
+
+### Create Data Processing Task (Long-running Task - EventPattern)
+
+```bash
+curl -X POST http://localhost:3030/api/task \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "data_processing",
+    "payload": {
+      "dataset": "customer_data_2024",
+      "operation": "transform",
+      "forceFailure": false
     }
   }'
 ```
