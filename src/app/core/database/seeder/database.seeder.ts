@@ -1,12 +1,12 @@
 import { Repository } from 'typeorm';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { TaskEntity } from '../../task/task.entity';
-import { TaskLogEntity } from '../../task/task-log.entity';
-import { WorkflowEntity } from '../../workflow/workflow.entity';
-import { TaskType } from '../../task/types/task-type.enum';
-import { TaskStatus } from '../../task/types/task-status.enum';
-import { LogLevel } from '../../task/types/log-level.enum';
+import { TaskEntity } from '@root/app/task/task.entity';
+import { TaskLogEntity } from '@root/app/task/task-log.entity';
+import { WorkflowEntity } from '@root/app/workflow/workflow.entity';
+import { TaskType } from '@root/app/task/types/task-type.enum';
+import { TaskStatus } from '@root/app/task/types/task-status.enum';
+import { LogLevel } from '@root/app/task/types/log-level.enum';
 
 @Injectable()
 export class DatabaseSeeder {
@@ -282,37 +282,34 @@ export class DatabaseSeeder {
     this.logger.log('📋 Seeding task logs...');
 
     const tasks = await this.taskRepository.find();
-    const logEntries = [];
+    const logEntries: TaskLogEntity[] = [];
 
     for (const task of tasks) {
       // Create log entries for each task
-      logEntries.push(
-        this.taskLogRepository.create({
-          task: { id: task.id },
-          level: LogLevel.INFO,
-          message: `Task ${task.type} created`,
-          timestamp: task.createdAt,
-        }),
-      );
+      const createLogEntry = this.taskLogRepository.create({
+        task: { id: task.id },
+        level: LogLevel.INFO,
+        message: `Task ${task.type} created`,
+        timestamp: task.createdAt,
+      });
+      logEntries.push(createLogEntry);
 
       if (task.status === TaskStatus.COMPLETED) {
-        logEntries.push(
-          this.taskLogRepository.create({
-            task: { id: task.id },
-            level: LogLevel.INFO,
-            message: `Task ${task.type} completed successfully`,
-            timestamp: task.updatedAt,
-          }),
-        );
+        const completedLogEntry = this.taskLogRepository.create({
+          task: { id: task.id },
+          level: LogLevel.INFO,
+          message: `Task ${task.type} completed successfully`,
+          timestamp: task.updatedAt,
+        });
+        logEntries.push(completedLogEntry);
       } else if (task.status === TaskStatus.FAILED) {
-        logEntries.push(
-          this.taskLogRepository.create({
-            task: { id: task.id },
-            level: LogLevel.ERROR,
-            message: `Task ${task.type} failed: ${task.error}`,
-            timestamp: task.updatedAt,
-          }),
-        );
+        const failedLogEntry = this.taskLogRepository.create({
+          task: { id: task.id },
+          level: LogLevel.ERROR,
+          message: `Task ${task.type} failed: ${task.error}`,
+          timestamp: task.updatedAt,
+        });
+        logEntries.push(failedLogEntry);
       }
     }
 

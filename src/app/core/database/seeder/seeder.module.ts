@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { TaskEntity } from '@root/app/task/task.entity';
+import { TaskLogEntity } from '@root/app/task/task-log.entity';
+import { WorkflowEntity } from '@root/app/workflow/workflow.entity';
 import { DatabaseSeeder } from './database.seeder';
 import { SeederController } from './seeder.controller';
 import { SeederService } from './seeder.service';
-import { TaskEntity } from '../../task/task.entity';
-import { TaskLogEntity } from '../../task/task-log.entity';
-import { WorkflowEntity } from '../../workflow/workflow.entity';
 
 @Module({
   imports: [
