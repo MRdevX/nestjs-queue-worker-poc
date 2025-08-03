@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Get,
-  Param,
-  Delete,
-  Query,
-} from '@nestjs/common';
+import { Controller, Post, Body, Get, Param } from '@nestjs/common';
 import { InvoiceService } from './invoice.service';
 import {
   StartInvoiceWorkflowDto,
@@ -53,38 +45,5 @@ export class InvoiceController {
   @Get('status/:customerId')
   async getInvoiceWorkflowStatus(@Param('customerId') customerId: string) {
     return this.invoiceService.getInvoiceWorkflowStatus(customerId);
-  }
-
-  @Get('workflows')
-  async getInvoiceWorkflows(
-    @Query('customerId') customerId?: string,
-    @Query('active') active?: boolean,
-  ) {
-    return this.invoiceService.getInvoiceWorkflows(customerId, active);
-  }
-
-  @Get('workflows/:workflowId')
-  async getInvoiceWorkflow(@Param('workflowId') workflowId: string) {
-    return this.invoiceService.getInvoiceWorkflow(workflowId);
-  }
-
-  @Get('workflows/:workflowId/status')
-  async getInvoiceWorkflowStatusById(@Param('workflowId') workflowId: string) {
-    return this.invoiceService.getInvoiceWorkflowStatusById(workflowId);
-  }
-
-  @Delete('workflows/:workflowId')
-  async cancelInvoiceWorkflow(@Param('workflowId') workflowId: string) {
-    return this.invoiceService.cancelInvoiceWorkflow(workflowId);
-  }
-
-  @Get('stats')
-  async getInvoiceStats() {
-    return this.invoiceService.getInvoiceStats();
-  }
-
-  @Get('customers')
-  async getCustomersWithInvoices() {
-    return this.invoiceService.getCustomersWithInvoices();
   }
 }

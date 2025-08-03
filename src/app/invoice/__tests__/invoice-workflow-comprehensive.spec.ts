@@ -6,8 +6,6 @@ import {
   TaskServiceMockFactory,
   MessagingServiceMockFactory,
   SchedulerServiceMockFactory,
-  ConfigServiceMockFactory,
-  OrderMockFactory,
 } from '@test/mocks';
 import { InvoiceController } from '../invoice.controller';
 import { InvoiceService } from '../invoice.service';
@@ -45,7 +43,17 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
         },
         {
           provide: ConfigService,
-          useValue: ConfigServiceMockFactory.create(),
+          useValue: {
+            get: jest.fn((key: string) => {
+              const config = {
+                'invoice.pdfProcessor.url':
+                  'https://mock-pdf-processor.com/generate',
+                'invoice.emailService.url':
+                  'https://mock-email-service.com/send',
+              };
+              return config[key];
+            }),
+          },
         },
       ],
     }).compile();
@@ -1027,9 +1035,52 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
       it('should only process orders that are delivered and not invoiced', async () => {
         const customerId = 'customer-123';
 
-        const mixedOrders = OrderMockFactory.createMixedStatusArray({
-          customerId,
-        });
+        const mixedOrders = [
+          {
+            id: 'order-1',
+            customerId,
+            status: 'delivered',
+            invoiced: false,
+            items: [
+              { id: 'item-1', name: 'Product A', price: 100, quantity: 1 },
+            ],
+            totalAmount: 100,
+            deliveryDate: '2024-01-15',
+          },
+          {
+            id: 'order-2',
+            customerId,
+            status: 'delivered',
+            invoiced: false,
+            items: [
+              { id: 'item-2', name: 'Product B', price: 200, quantity: 1 },
+            ],
+            totalAmount: 200,
+            deliveryDate: '2024-01-16',
+          },
+          {
+            id: 'order-3',
+            customerId,
+            status: 'cancelled',
+            invoiced: false,
+            items: [
+              { id: 'item-3', name: 'Product C', price: 150, quantity: 1 },
+            ],
+            totalAmount: 150,
+            deliveryDate: '2024-01-17',
+          },
+          {
+            id: 'order-4',
+            customerId,
+            status: 'delivered',
+            invoiced: true,
+            items: [
+              { id: 'item-4', name: 'Product D', price: 300, quantity: 1 },
+            ],
+            totalAmount: 300,
+            deliveryDate: '2024-01-18',
+          },
+        ];
 
         const fetchOrdersTask = TaskEntityMockFactory.create({
           id: 'fetch-orders-task',
