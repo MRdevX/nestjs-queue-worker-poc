@@ -9,12 +9,14 @@ import { entities } from './database/entities';
 import { MessagingModule } from './messaging/messaging.module';
 import { UtilsService } from './utils/utils.service';
 import { HealthModule } from './health/health.module';
+import { SeederModule } from './database/seeder/seeder.module';
 
 @Global()
 @Module({
   imports: [
     MessagingModule,
     HealthModule,
+    SeederModule,
     ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "queue-worker-poc-collection",
     "name": "Queue Worker POC API",
-    "description": "Complete API collection for the Queue Worker POC application. This includes all endpoints for task management, invoice workflows, scheduling, queue management, and health checks.",
+    "description": "Complete API collection for the Queue Worker POC application. This includes all endpoints for task management, invoice workflows, scheduling, queue management, health checks, and database seeding.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -25,6 +25,54 @@
         }
       ],
       "description": "Health monitoring endpoints"
+    },
+    {
+      "name": "Database Seeder",
+      "item": [
+        {
+          "name": "Seed Database",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/seeder/seed",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "seed"]
+            },
+            "description": "Seed the database with initial test data including workflows, tasks, and task logs"
+          },
+          "response": []
+        },
+        {
+          "name": "Clear Database",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/seeder/clear",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "clear"]
+            },
+            "description": "Clear all seeded data from the database"
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Database",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/seeder/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "reset"]
+            },
+            "description": "Clear the database and reseed with initial test data"
+          },
+          "response": []
+        }
+      ],
+      "description": "Database seeding operations for testing"
     },
     {
       "name": "Task Management",
@@ -63,6 +111,20 @@
               "path": ["tasks", "{{taskId}}"]
             },
             "description": "Retrieve a specific task by its ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks"]
+            },
+            "description": "Get all tasks in the database"
           },
           "response": []
         },
@@ -368,6 +430,77 @@
     {
       "name": "Examples",
       "item": [
+        {
+          "name": "Database Seeding Workflow",
+          "item": [
+            {
+              "name": "1. Seed Database",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/seeder/seed",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["seeder", "seed"]
+                },
+                "description": "Step 1: Seed the database with initial test data"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Verify Seeded Data",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["tasks"]
+                },
+                "description": "Step 2: Verify that the database was seeded with tasks"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Start Invoice Workflow",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"dateFrom\": \"2024-01-01\",\n  \"dateTo\": \"2024-01-31\",\n  \"workflowId\": \"{{workflowId}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/invoice/workflow/start",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["invoice", "workflow", "start"]
+                },
+                "description": "Step 3: Start an invoice workflow using the seeded data"
+              },
+              "response": []
+            },
+            {
+              "name": "4. Check Workflow Status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/invoice/status/{{customerId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["invoice", "status", "{{customerId}}"]
+                },
+                "description": "Step 4: Check the status of the invoice workflow"
+              },
+              "response": []
+            }
+          ],
+          "description": "Complete workflow example using database seeding"
+        },
         {
           "name": "Create HTTP Request Task",
           "request": {

@@ -19,10 +19,80 @@ This guide will walk you through testing all invoice workflow functionalities ma
    - RabbitMQ Management UI: `http://localhost:15672` (guest/guest)
    - Application API: `http://localhost:3030`
 
+## Quick Start with Database Seeding
+
+### Option 1: Automated Testing Script (Recommended)
+
+Use the comprehensive testing script that includes database seeding:
+
+```bash
+# Make the script executable (if not already done)
+chmod +x test-invoice-workflow-with-seeding.sh
+
+# Run the complete testing suite
+./test-invoice-workflow-with-seeding.sh
+```
+
+This script will:
+
+- ✅ Seed the database with test data
+- ✅ Test all invoice workflow scenarios
+- ✅ Verify error handling
+- ✅ Check database state
+- ✅ Provide cleanup options
+
+### Option 2: Manual Database Seeding
+
+If you prefer manual control, you can seed the database using the API:
+
+```bash
+# Seed the database with initial test data
+curl -X POST http://localhost:3030/api/seeder/seed
+
+# Verify seeding worked
+curl http://localhost:3030/api/tasks
+
+# Clear the database if needed
+curl -X DELETE http://localhost:3030/api/seeder/clear
+
+# Reset the database (clear + seed)
+curl -X POST http://localhost:3030/api/seeder/reset
+```
+
+### Option 3: Auto-Seeding on Startup
+
+You can enable automatic database seeding on application startup by setting an environment variable:
+
+```bash
+# Add to your .env file or docker-compose environment
+AUTO_SEED_DATABASE=true
+```
+
+## Seeded Test Data
+
+The database seeder creates the following test data:
+
+### Workflows
+
+- **Invoice Generation Workflow**: Complete workflow for customer-123
+- **Scheduled Invoice Workflow**: Workflow for customer-456
+
+### Sample Tasks
+
+- **Completed Tasks**: Full invoice workflow for customer-123 (fetch_orders → create_invoice → generate_pdf → send_email)
+- **Failed Task**: Simulated failure for customer-failed
+- **Pending Task**: Task waiting to be processed for customer-pending
+
+### Task Logs
+
+- Log entries for all tasks with appropriate log levels (INFO, ERROR)
+- Timestamps matching task creation and completion
+
 ## Testing Tools
 
 ### 1. API Testing
 
+- **Automated Script**: `test-invoice-workflow-with-seeding.sh`
 - **Postman Collection**: Use the provided `Queue-Worker-POC.postman_collection.json`
 - **cURL**: For command-line testing
 - **Browser**: For GET requests
@@ -35,9 +105,34 @@ This guide will walk you through testing all invoice workflow functionalities ma
 
 ## Step-by-Step Testing Guide
 
-### Phase 1: Basic Health Check
+### Phase 1: Database Seeding and Verification
 
-#### 1.1 Verify Application Health
+#### 1.1 Seed the Database
+
+```bash
+curl -X POST http://localhost:3030/api/seeder/seed
+```
+
+**Expected Response:**
+
+```json
+{
+  "message": "Database seeded successfully",
+  "timestamp": "2024-01-15T10:00:00.000Z"
+}
+```
+
+#### 1.2 Verify Seeded Data
+
+```bash
+curl http://localhost:3030/api/tasks
+```
+
+**Expected Response:** Array of tasks including completed, failed, and pending tasks.
+
+### Phase 2: Basic Health Check
+
+#### 2.1 Verify Application Health
 
 ```bash
 curl http://localhost:3030/api/health
@@ -52,7 +147,7 @@ curl http://localhost:3030/api/health
 }
 ```
 
-#### 1.2 Check Queue Status
+#### 2.2 Check Queue Status
 
 ```bash
 curl http://localhost:3030/api/queue/status
@@ -62,18 +157,18 @@ curl http://localhost:3030/api/queue/status
 
 ```json
 {
-  "pending": 0,
+  "pending": 1,
   "processing": 0,
-  "completed": 0,
-  "failed": 0,
-  "total": 0,
+  "completed": 4,
+  "failed": 1,
+  "total": 6,
   "isHealthy": true
 }
 ```
 
-### Phase 2: Immediate Invoice Workflow
+### Phase 3: Immediate Invoice Workflow
 
-#### 2.1 Start Invoice Workflow
+#### 3.1 Start Invoice Workflow
 
 ```bash
 curl -X POST http://localhost:3030/api/invoice/workflow/start \
@@ -102,7 +197,7 @@ curl -X POST http://localhost:3030/api/invoice/workflow/start \
 2. **Database**: Check `tasks` table for new FETCH_ORDERS task
 3. **RabbitMQ**: Check queue for new message
 
-#### 2.2 Monitor Task Processing
+#### 3.2 Monitor Task Processing
 
 **Check Database:**
 
@@ -129,7 +224,7 @@ Look for worker processing logs:
 - `🔄 [GENERATE_PDF_COMPLETION]` - When PDF generation completes
 - `🔄 [SEND_EMAIL_COMPLETION]` - When email sending completes
 
-#### 2.3 Check Workflow Status
+#### 3.3 Check Workflow Status
 
 ```bash
 curl http://localhost:3030/api/invoice/status/customer-123
@@ -140,23 +235,23 @@ curl http://localhost:3030/api/invoice/status/customer-123
 ```json
 {
   "customerId": "customer-123",
-  "totalTasks": 4,
-  "completedTasks": 4,
+  "totalTasks": 8,
+  "completedTasks": 7,
   "failedTasks": 0,
-  "pendingTasks": 0,
+  "pendingTasks": 1,
   "processingTasks": 0,
   "workflows": {
     "workflow-123": {
       "totalTasks": 4,
-      "completedTasks": 4,
+      "completedTasks": 3,
       "failedTasks": 0,
-      "isComplete": true
+      "isComplete": false
     }
   }
 }
 ```
 
-#### 2.4 Get Customer Tasks
+#### 3.4 Get Customer Tasks
 
 ```bash
 curl http://localhost:3030/api/invoice/tasks/customer-123
@@ -187,9 +282,9 @@ curl http://localhost:3030/api/invoice/tasks/customer-123
 }
 ```
 
-### Phase 3: Scheduled Invoice Workflow
+### Phase 4: Scheduled Invoice Workflow
 
-#### 3.1 Create Scheduled Invoice Workflow
+#### 4.1 Create Scheduled Invoice Workflow
 
 ```bash
 curl -X POST http://localhost:3030/api/invoice/workflow/scheduled \
@@ -219,7 +314,7 @@ curl -X POST http://localhost:3030/api/invoice/workflow/scheduled \
 1. **Database**: Check `tasks` table for task with `scheduled_at` field
 2. **Application Logs**: Look for `⏰ [SCHEDULED_INVOICE_WORKFLOW]` logs
 
-#### 3.2 Monitor Scheduled Task Execution
+#### 4.2 Monitor Scheduled Task Execution
 
 ```sql
 -- Check scheduled tasks
@@ -229,9 +324,9 @@ WHERE scheduled_at IS NOT NULL
 ORDER BY scheduled_at;
 ```
 
-### Phase 4: Recurring Invoice Workflow
+### Phase 5: Recurring Invoice Workflow
 
-#### 4.1 Create Recurring Invoice Workflow
+#### 5.1 Create Recurring Invoice Workflow
 
 ```bash
 curl -X POST http://localhost:3030/api/invoice/workflow/recurring \
@@ -261,9 +356,9 @@ curl -X POST http://localhost:3030/api/invoice/workflow/recurring \
 1. **Database**: Check for recurring task configuration
 2. **Application Logs**: Look for `🔄 [RECURRING_INVOICE_WORKFLOW]` logs
 
-### Phase 5: Scheduled Email Workflow
+### Phase 6: Scheduled Email Workflow
 
-#### 5.1 Create Scheduled Email Workflow
+#### 6.1 Create Scheduled Email Workflow
 
 ```bash
 curl -X POST http://localhost:3030/api/invoice/email/scheduled \
@@ -287,9 +382,9 @@ curl -X POST http://localhost:3030/api/invoice/email/scheduled \
 }
 ```
 
-### Phase 6: Error Scenarios
+### Phase 7: Error Scenarios
 
-#### 6.1 Test Invalid Customer ID
+#### 7.1 Test Invalid Customer ID
 
 ```bash
 curl -X POST http://localhost:3030/api/invoice/workflow/start \
@@ -303,7 +398,7 @@ curl -X POST http://localhost:3030/api/invoice/workflow/start \
 
 **Expected Response:** 400 Bad Request
 
-#### 6.2 Test Invalid Date Format
+#### 7.2 Test Invalid Date Format
 
 ```bash
 curl -X POST http://localhost:3030/api/invoice/workflow/scheduled \
@@ -317,7 +412,7 @@ curl -X POST http://localhost:3030/api/invoice/workflow/scheduled \
 
 **Expected Response:** 400 Bad Request
 
-#### 6.3 Test Task Failure and Compensation
+#### 7.3 Test Task Failure and Compensation
 
 1. Start a workflow
 2. Manually fail a task in the database:
@@ -329,50 +424,70 @@ curl -X POST http://localhost:3030/api/invoice/workflow/scheduled \
 3. Check for compensation task creation
 4. Monitor logs for `💥 [TASK_FAILURE]` messages
 
-### Phase 7: Queue Management
+### Phase 8: Queue Management
 
-#### 7.1 Check Queue Manager Status
+#### 8.1 Check Queue Manager Status
 
 ```bash
 curl http://localhost:3030/api/queue-manager/status
 ```
 
-#### 7.2 Check Failed Tasks Count
+#### 8.2 Check Failed Tasks Count
 
 ```bash
 curl http://localhost:3030/api/queue-manager/failed-count
 ```
 
-#### 7.3 Check Pending Tasks Count
+#### 8.3 Check Pending Tasks Count
 
 ```bash
 curl http://localhost:3030/api/queue-manager/pending-count
 ```
 
-#### 7.4 Check if Queue is Overloaded
+#### 8.4 Check if Queue is Overloaded
 
 ```bash
 curl http://localhost:3030/api/queue-manager/overloaded
 ```
 
-### Phase 8: Task Management
+### Phase 9: Task Management
 
-#### 8.1 Get Task by ID
+#### 9.1 Get Task by ID
 
 ```bash
 curl http://localhost:3030/api/tasks/{task-id}
 ```
 
-#### 8.2 Retry Failed Task
+#### 9.2 Retry Failed Task
 
 ```bash
 curl -X POST http://localhost:3030/api/tasks/{task-id}/retry
 ```
 
-#### 8.3 Create Compensation Task
+#### 9.3 Create Compensation Task
 
 ```bash
 curl -X POST http://localhost:3030/api/tasks/{task-id}/compensate
+```
+
+## Database Seeding API Endpoints
+
+### Seed Database
+
+```bash
+POST /api/seeder/seed
+```
+
+### Clear Database
+
+```bash
+DELETE /api/seeder/clear
+```
+
+### Reset Database (Clear + Seed)
+
+```bash
+POST /api/seeder/reset
 ```
 
 ## Monitoring and Debugging
@@ -393,6 +508,7 @@ The application now includes comprehensive logging with emojis for easy identifi
 - 📧 Email operations
 - 💥 Task failures
 - 🛠️ Compensation tasks
+- 🌱 Database seeding operations
 
 ### 2. Database Monitoring
 
@@ -454,6 +570,16 @@ Key tables to monitor:
 - Verify external service availability
 - Review task payload data
 
+### 5. Seeding Issues
+
+**Symptoms:** Database seeding fails
+**Solutions:**
+
+- Check database connection
+- Verify entity definitions
+- Check for constraint violations
+- Clear database and retry: `curl -X DELETE http://localhost:3030/api/seeder/clear`
+
 ## Advanced Testing Scenarios
 
 ### 1. High Load Testing
@@ -490,12 +616,15 @@ Key tables to monitor:
 
 ## Conclusion
 
-This testing guide covers all major aspects of the invoice workflow system. By following these steps, you can:
+This testing guide covers all major aspects of the invoice workflow system with database seeding. By following these steps, you can:
 
-1. Verify all functionality works correctly
-2. Understand the system's behavior under different conditions
-3. Debug issues effectively
-4. Monitor system performance
-5. Ensure data consistency
+1. ✅ Seed the database with realistic test data
+2. ✅ Verify all functionality works correctly
+3. ✅ Understand the system's behavior under different conditions
+4. ✅ Debug issues effectively
+5. ✅ Monitor system performance
+6. ✅ Ensure data consistency
 
 Remember to check the application logs, database, and RabbitMQ management UI throughout the testing process to get a complete picture of the system's operation.
+
+The new database seeding functionality makes testing much more efficient and realistic, providing a solid foundation for comprehensive invoice workflow testing.

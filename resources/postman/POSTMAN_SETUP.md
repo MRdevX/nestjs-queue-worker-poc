@@ -36,6 +36,9 @@ The environment includes the following variables:
 - `baseUrl`: API base URL (default: `http://localhost:3030/api`)
 - `taskId`: Task ID for testing (leave empty, will be populated after creating tasks)
 - `customerId`: Customer ID for testing (default: `customer-123`)
+- `customerId2`: Second customer ID for testing (default: `customer-456`)
+- `customerIdFailed`: Customer ID for failed task testing (default: `customer-failed`)
+- `customerIdPending`: Customer ID for pending task testing (default: `customer-pending`)
 - `workflowId`: Workflow ID for testing (default: `workflow-123`)
 - `invoiceId`: Invoice ID for testing (default: `invoice-123`)
 
@@ -55,15 +58,26 @@ The environment includes the following variables:
 - `rabbitmqHost`, `rabbitmqPort`, `rabbitmqUser`, `rabbitmqPassword`: RabbitMQ configuration
 - `dbHost`, `dbPort`, `dbName`, `dbUsername`, `dbPassword`: Database configuration
 
+### Seeding Configuration
+
+- `autoSeedDatabase`: Enable auto-seeding on startup (default: `false`)
+
 ## API Endpoints Overview
 
 ### Health Check
 
 - **GET** `/health` - Check application health status
 
+### Database Seeder
+
+- **POST** `/seeder/seed` - Seed the database with initial test data
+- **DELETE** `/seeder/clear` - Clear all seeded data from the database
+- **POST** `/seeder/reset` - Clear the database and reseed with initial test data
+
 ### Task Management
 
 - **POST** `/tasks` - Create a new task
+- **GET** `/tasks` - Get all tasks in the database
 - **GET** `/tasks/{id}` - Get task by ID
 - **POST** `/tasks/{id}/retry` - Retry a failed task
 - **POST** `/tasks/{id}/cancel` - Cancel a pending task
@@ -91,7 +105,7 @@ The environment includes the following variables:
 - **POST** `/scheduler/tasks/recurring` - Create recurring task
 - **GET** `/scheduler/tasks/scheduled` - Get scheduled tasks
 
-## Testing Workflow
+## Testing Workflow with Database Seeding
 
 ### 1. Health Check
 
@@ -101,32 +115,25 @@ Start by testing the health endpoint to ensure the application is running:
 GET {{baseUrl}}/health
 ```
 
-### 2. Create a Simple Task
+### 2. Seed the Database
 
-Test basic task creation:
-
-```
-POST {{baseUrl}}/tasks
-{
-  "type": "http_request",
-  "payload": {
-    "url": "https://jsonplaceholder.typicode.com/posts/1",
-    "method": "GET"
-  }
-}
-```
-
-### 3. Check Queue Status
-
-Monitor the queue:
+Seed the database with initial test data:
 
 ```
-GET {{baseUrl}}/queue-manager/status
+POST {{baseUrl}}/seeder/seed
+```
+
+### 3. Verify Seeded Data
+
+Check that the database was seeded correctly:
+
+```
+GET {{baseUrl}}/tasks
 ```
 
 ### 4. Start Invoice Workflow
 
-Test the complete invoice workflow:
+Test the complete invoice workflow using seeded data:
 
 ```
 POST {{baseUrl}}/invoice/workflow/start
@@ -145,6 +152,34 @@ Check the status of your workflow:
 ```
 GET {{baseUrl}}/invoice/status/{{customerId}}
 ```
+
+### 6. Test Different Scenarios
+
+Use the different customer IDs to test various scenarios:
+
+- `{{customerId}}` - Complete workflow with seeded data
+- `{{customerId2}}` - Second customer for testing
+- `{{customerIdFailed}}` - Test error scenarios
+- `{{customerIdPending}}` - Test pending task processing
+
+## Database Seeding Examples
+
+### Complete Seeding Workflow
+
+The collection includes a complete example workflow in the "Examples" folder:
+
+1. **Seed Database** - Populate the database with test data
+2. **Verify Seeded Data** - Check that tasks were created
+3. **Start Invoice Workflow** - Begin testing with seeded data
+4. **Check Workflow Status** - Monitor the workflow progress
+
+### Manual Seeding Operations
+
+You can also perform manual seeding operations:
+
+- **Seed Database**: `POST {{baseUrl}}/seeder/seed`
+- **Clear Database**: `DELETE {{baseUrl}}/seeder/clear`
+- **Reset Database**: `POST {{baseUrl}}/seeder/reset`
 
 ## Task Types Available
 
@@ -218,14 +253,16 @@ yarn start:dev
 2. **Database Connection Error**: Check PostgreSQL is running and accessible
 3. **RabbitMQ Connection Error**: Verify RabbitMQ is running and credentials are correct
 4. **Task Not Processing**: Check if workers are running and connected to RabbitMQ
+5. **Seeding Fails**: Check database connection and entity definitions
 
 ### Debug Steps
 
 1. Check application logs for errors
 2. Verify environment variables are set correctly
 3. Test health endpoint first
-4. Monitor queue status for task processing
-5. Check database for task records
+4. Seed the database and verify data was created
+5. Monitor queue status for task processing
+6. Check database for task records
 
 ## Advanced Usage
 
@@ -244,6 +281,16 @@ For integration testing:
 1. Use the Examples folder for common scenarios
 2. Chain requests using environment variables
 3. Validate responses using test scripts
+4. Use the database seeding workflow for consistent test data
+
+### Database Seeding for Testing
+
+The seeding functionality provides:
+
+- **Consistent Test Data**: Same data structure for every test run
+- **Realistic Scenarios**: Complete workflows with proper data relationships
+- **Error Testing**: Pre-configured failed and pending tasks
+- **Easy Reset**: Clear and reseed the database as needed
 
 ## Support
 
@@ -253,6 +300,7 @@ For issues or questions:
 2. Review the API documentation
 3. Test with the provided examples
 4. Verify environment configuration
+5. Use the database seeding for consistent testing
 
 ## Collection Features
 
@@ -262,3 +310,5 @@ For issues or questions:
 - **Descriptions**: Detailed descriptions for each endpoint
 - **Error Handling**: Examples of error responses
 - **Workflow Examples**: Complete workflow demonstrations
+- **Database Seeding**: Integrated seeding functionality for testing
+- **Comprehensive Testing**: Full coverage of all API endpoints
