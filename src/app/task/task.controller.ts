@@ -52,6 +52,12 @@ export class TaskController {
     return { message: 'Task queued for retry' };
   }
 
+  @Post(':id/cancel')
+  async cancelTask(@Param('id') id: string) {
+    await this.taskService.cancelTask(id);
+    return { message: 'Task cancelled successfully' };
+  }
+
   @Post(':id/compensate')
   async compensateTask(@Param('id') id: string) {
     const task = await this.taskService.getTaskById(id);

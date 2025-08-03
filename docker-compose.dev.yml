@@ -48,7 +48,7 @@ services:
     container_name: queue_worker_app_dev
     environment:
       NODE_ENV: development
-      HOST: localhost
+      HOST: 0.0.0.0
       PORT: 3030
 
       # Database configuration

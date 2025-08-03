@@ -270,6 +270,90 @@ describe('TaskService', () => {
     });
   });
 
+  describe('cancelTask', () => {
+    it('should cancel a pending task successfully', async () => {
+      const taskId = 'task-123';
+      const mockTask = TaskEntityMockFactory.create({
+        id: taskId,
+        status: TaskStatus.PENDING,
+      });
+
+      taskRepository.findById.mockResolvedValue(mockTask as TaskEntity);
+      taskRepository.updateTaskStatus.mockResolvedValue();
+      taskLogRepository.createLogEntry.mockResolvedValue({} as any);
+
+      const result = await service.cancelTask(taskId);
+
+      expect(taskRepository.findById).toHaveBeenCalledWith(taskId);
+      expect(taskLogRepository.createLogEntry).toHaveBeenCalledWith(
+        taskId,
+        LogLevel.INFO,
+        'Task cancelled by user',
+      );
+      expect(taskRepository.updateTaskStatus).toHaveBeenCalledWith(
+        taskId,
+        TaskStatus.CANCELLED,
+        undefined,
+      );
+      expect(result).toEqual(mockTask);
+    });
+
+    it('should throw BadRequestException when taskId is missing', async () => {
+      await expect(service.cancelTask('')).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException when task is not found', async () => {
+      const taskId = 'task-123';
+      taskRepository.findById.mockResolvedValue(null);
+
+      await expect(service.cancelTask(taskId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw BadRequestException when trying to cancel non-pending task', async () => {
+      const taskId = 'task-123';
+      const mockTask = TaskEntityMockFactory.create({
+        id: taskId,
+        status: TaskStatus.PROCESSING,
+      });
+
+      taskRepository.findById.mockResolvedValue(mockTask as TaskEntity);
+
+      await expect(service.cancelTask(taskId)).rejects.toThrow(
+        'Only pending tasks can be cancelled',
+      );
+    });
+
+    it('should throw BadRequestException when trying to cancel completed task', async () => {
+      const taskId = 'task-123';
+      const mockTask = TaskEntityMockFactory.create({
+        id: taskId,
+        status: TaskStatus.COMPLETED,
+      });
+
+      taskRepository.findById.mockResolvedValue(mockTask as TaskEntity);
+
+      await expect(service.cancelTask(taskId)).rejects.toThrow(
+        'Only pending tasks can be cancelled',
+      );
+    });
+
+    it('should throw BadRequestException when trying to cancel failed task', async () => {
+      const taskId = 'task-123';
+      const mockTask = TaskEntityMockFactory.create({
+        id: taskId,
+        status: TaskStatus.FAILED,
+      });
+
+      taskRepository.findById.mockResolvedValue(mockTask as TaskEntity);
+
+      await expect(service.cancelTask(taskId)).rejects.toThrow(
+        'Only pending tasks can be cancelled',
+      );
+    });
+  });
+
   describe('getPendingTasks', () => {
     it('should return pending tasks with default limit', async () => {
       const mockTasks = TaskEntityMockFactory.createArray(3, {

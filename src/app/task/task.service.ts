@@ -87,6 +87,29 @@ export class TaskService {
     await this.updateTaskStatus(taskId, newStatus, error.message);
   }
 
+  async cancelTask(taskId: string): Promise<TaskEntity | null> {
+    if (!taskId) {
+      throw new BadRequestException('Task ID is required');
+    }
+
+    const task = await this.taskRepo.findById(taskId);
+    if (!task) {
+      throw new NotFoundException(`Task with id ${taskId} not found`);
+    }
+
+    if (task.status !== TaskStatus.PENDING) {
+      throw new BadRequestException('Only pending tasks can be cancelled');
+    }
+
+    await this.logRepo.createLogEntry(
+      taskId,
+      LogLevel.INFO,
+      'Task cancelled by user',
+    );
+
+    return this.updateTaskStatus(taskId, TaskStatus.CANCELLED);
+  }
+
   async getPendingTasks(limit = 100): Promise<TaskEntity[]> {
     return this.taskRepo.findPendingTasks(limit);
   }

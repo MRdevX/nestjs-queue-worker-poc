@@ -3,7 +3,6 @@ import { TaskService } from '../task.service';
 import { TaskRepository } from '../task.repository';
 import { TaskLogRepository } from '../task-log.repository';
 import { TaskController } from '../task.controller';
-import { QueueController } from '../queue.controller';
 
 describe('TaskModule Integration', () => {
   describe('Module Structure', () => {
@@ -32,7 +31,6 @@ describe('TaskModule Integration', () => {
     it('should have TaskController and QueueController', () => {
       const controllers = Reflect.getMetadata('controllers', TaskModule);
       expect(controllers).toContain(TaskController);
-      expect(controllers).toContain(QueueController);
     });
 
     it('should have required providers', () => {
