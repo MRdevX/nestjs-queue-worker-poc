@@ -5,7 +5,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TaskEntity } from '@root/app/task/task.entity';
 import { TaskLogEntity } from '@root/app/task/task-log.entity';
-import { WorkflowEntity } from '@root/app/workflow/workflow.entity';
+import {
+  WorkflowEntity,
+  WorkflowStatus,
+} from '@root/app/workflow/workflow.entity';
 import { TaskType } from '@root/app/task/types/task-type.enum';
 import { TaskStatus } from '@root/app/task/types/task-status.enum';
 import { LogLevel } from '@root/app/task/types/log-level.enum';
@@ -107,6 +110,8 @@ export class DatabaseSeeder {
             },
           },
         },
+        status: WorkflowStatus.PENDING,
+        isActive: true,
       },
       {
         name: 'Data Processing Workflow',
@@ -122,6 +127,8 @@ export class DatabaseSeeder {
             },
           },
         },
+        status: WorkflowStatus.RUNNING,
+        isActive: true,
       },
       {
         name: 'Scheduled Invoice Workflow',
@@ -137,15 +144,27 @@ export class DatabaseSeeder {
             },
           },
         },
+        status: WorkflowStatus.COMPLETED,
+        isActive: true,
+      },
+      {
+        name: 'Failed Workflow',
+        definition: {
+          initialTask: {
+            type: TaskType.FETCH_ORDERS,
+            payload: { customerId: this.getRandomCustomer() },
+          },
+          transitions: {},
+        },
+        status: WorkflowStatus.FAILED,
+        isActive: false,
+        error: 'Workflow failed due to external service unavailability',
       },
     ];
 
     const workflows = await Promise.all(
       workflowTemplates.map(async (template) => {
-        const workflow = this.workflowRepository.create({
-          ...template,
-          isActive: faker.datatype.boolean(),
-        });
+        const workflow = this.workflowRepository.create(template);
         return this.workflowRepository.save(workflow);
       }),
     );
@@ -171,6 +190,8 @@ export class DatabaseSeeder {
       allTasks.push(...createdTasks);
     }
 
+    await this.createParentChildRelationships(allTasks);
+
     this.logger.log(`✅ Created ${allTasks.length} tasks total`);
     return allTasks;
   }
@@ -185,6 +206,8 @@ export class DatabaseSeeder {
       status,
       retries: faker.number.int({ min: 0, max: 3 }),
       maxRetries: 3,
+      retryDelay: faker.number.int({ min: 1000, max: 5000 }),
+      maxRetryDelay: faker.number.int({ min: 30000, max: 60000 }),
       workflow: faker.helpers.arrayElement(workflows),
       payload: this.generatePayload(taskType, status),
     };
@@ -197,7 +220,35 @@ export class DatabaseSeeder {
       return { ...baseTask, scheduledAt: faker.date.future() };
     }
 
+    if (status === TaskStatus.CANCELLED) {
+      return { ...baseTask, error: 'Task was cancelled by user' };
+    }
+
     return baseTask;
+  }
+
+  private async createParentChildRelationships(
+    tasks: TaskEntity[],
+  ): Promise<void> {
+    const parentTasks = tasks.filter((task) =>
+      [TaskType.FETCH_ORDERS, TaskType.CREATE_INVOICE].includes(task.type),
+    );
+
+    const childTasks = tasks.filter((task) =>
+      [
+        TaskType.GENERATE_PDF,
+        TaskType.SEND_EMAIL,
+        TaskType.COMPENSATION,
+      ].includes(task.type),
+    );
+
+    for (let i = 0; i < Math.min(parentTasks.length, childTasks.length); i++) {
+      const parentTask = parentTasks[i];
+      const childTask = childTasks[i];
+
+      childTask.parentTask = parentTask;
+      await this.taskRepository.save(childTask);
+    }
   }
 
   private generatePayload(
@@ -338,6 +389,11 @@ export class DatabaseSeeder {
         level: LogLevel.INFO,
         message: `Task ${task.type} created`,
         timestamp: task.createdAt,
+        context: {
+          taskId: task.id,
+          taskType: task.type,
+          workflowId: task.workflow?.id,
+        },
       });
 
       const statusMessages = {
@@ -345,6 +401,7 @@ export class DatabaseSeeder {
         [TaskStatus.FAILED]: `Task ${task.type} failed: ${task.error}`,
         [TaskStatus.PROCESSING]: `Task ${task.type} started processing`,
         [TaskStatus.RETRYING]: `Task ${task.type} retrying (attempt ${task.retries})`,
+        [TaskStatus.CANCELLED]: `Task ${task.type} was cancelled`,
       };
 
       if (statusMessages[task.status]) {
@@ -353,11 +410,19 @@ export class DatabaseSeeder {
           level:
             task.status === TaskStatus.FAILED
               ? LogLevel.ERROR
-              : task.status === TaskStatus.RETRYING
+              : task.status === TaskStatus.RETRYING ||
+                  task.status === TaskStatus.CANCELLED
                 ? LogLevel.WARNING
                 : LogLevel.INFO,
           message: statusMessages[task.status],
           timestamp: task.updatedAt,
+          context: {
+            taskId: task.id,
+            taskType: task.type,
+            status: task.status,
+            retries: task.retries,
+            error: task.error,
+          },
         });
       }
 
@@ -370,6 +435,11 @@ export class DatabaseSeeder {
             from: task.createdAt,
             to: new Date(),
           }),
+          context: {
+            taskId: task.id,
+            taskType: task.type,
+            customField: faker.string.alphanumeric(8),
+          },
         });
       }
     }
