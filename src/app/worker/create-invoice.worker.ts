@@ -38,6 +38,11 @@ export class CreateInvoiceWorker extends BaseWorker {
 
     const invoice = await this.createInvoice(customerId, orders, invoiceNumber);
 
+    await this.taskService.updateTaskPayload(taskId, {
+      ...task.payload,
+      invoice,
+    });
+
     this.logger.log(
       `Invoice created: ${invoice.id} for customer ${customerId}`,
     );

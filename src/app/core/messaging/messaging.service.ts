@@ -1,4 +1,3 @@
-import { firstValueFrom } from 'rxjs';
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxy, ClientProxyFactory } from '@nestjs/microservices';
@@ -31,7 +30,7 @@ export class MessagingService implements OnModuleDestroy {
     return this.client;
   }
 
-  private getMessagePattern(taskType: TaskType): string {
+  private getEventPattern(taskType: TaskType): string {
     const patterns = {
       [TaskType.HTTP_REQUEST]: 'http.request',
       [TaskType.DATA_PROCESSING]: 'data.processing',
@@ -49,7 +48,7 @@ export class MessagingService implements OnModuleDestroy {
     taskId: string,
     options?: { delay?: number; metadata?: Record<string, any> },
   ): Promise<void> {
-    const pattern = this.getMessagePattern(taskType);
+    const pattern = this.getEventPattern(taskType);
     const message: ITaskMessage = {
       taskId,
       taskType,
@@ -58,23 +57,8 @@ export class MessagingService implements OnModuleDestroy {
     };
 
     this.logger.log(`Publishing task: ${taskType} - ${taskId}`);
-    await this.sendMessage(pattern, message);
+    await this.emitEvent(pattern, message);
     this.logger.log(`Task published: ${taskType} - ${taskId}`);
-  }
-
-  async sendMessage<T = any>(pattern: string, payload: any): Promise<T> {
-    this.logger.log(`Sending message to: ${pattern}`);
-
-    try {
-      const response = await firstValueFrom(this.client.send(pattern, payload));
-      this.logger.log(`Message sent to: ${pattern}`);
-      return response as T;
-    } catch (error) {
-      this.logger.error(`Failed to send message to ${pattern}:`, error.stack);
-      throw new Error(
-        `Failed to publish task: ${error.message || 'Unknown error'}`,
-      );
-    }
   }
 
   async emitEvent(

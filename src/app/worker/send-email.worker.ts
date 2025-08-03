@@ -44,6 +44,11 @@ export class SendEmailWorker extends BaseWorker {
       emailServiceUrl,
     );
 
+    await this.taskService.updateTaskPayload(taskId, {
+      ...task.payload,
+      emailResult,
+    });
+
     this.logger.log(
       `Email sent to customer ${customerId} for invoice ${invoice.id}: ${emailResult.emailId}`,
     );

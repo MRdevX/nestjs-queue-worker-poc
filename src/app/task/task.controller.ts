@@ -26,35 +26,21 @@ export class TaskController {
       createTaskDto.payload,
     );
 
-    if (createTaskDto.type === TaskType.HTTP_REQUEST) {
-      const response = await this.messagingService.sendMessage(
-        'api.http_request',
-        {
-          taskId: task.id,
-          ...createTaskDto.payload,
-        },
-      );
-      return {
-        message: 'Task created and processed successfully',
+    await this.messagingService.emitEvent(
+      this.getEventPattern(createTaskDto.type),
+      {
         taskId: task.id,
-        type: task.type,
-        response,
-      };
-    } else {
-      await this.messagingService.emitEvent(
-        this.getEventPattern(createTaskDto.type),
-        {
-          taskId: task.id,
-          taskType: task.type,
-          ...createTaskDto.payload,
-        },
-      );
-      return {
-        message: 'Task created and queued successfully',
-        taskId: task.id,
-        type: task.type,
-      };
-    }
+        taskType: task.type,
+        ...createTaskDto.payload,
+      },
+    );
+
+    return {
+      message: 'Task created and queued successfully',
+      taskId: task.id,
+      type: task.type,
+      status: task.status,
+    };
   }
 
   @Get()
@@ -79,18 +65,20 @@ export class TaskController {
 
   private getEventPattern(taskType: TaskType): string {
     switch (taskType) {
+      case TaskType.HTTP_REQUEST:
+        return 'http.request';
       case TaskType.FETCH_ORDERS:
-        return 'order.fetch';
+        return 'fetch.orders';
       case TaskType.CREATE_INVOICE:
-        return 'order.create_invoice';
+        return 'create.invoice';
       case TaskType.GENERATE_PDF:
-        return 'pdf.generate';
+        return 'generate.pdf';
       case TaskType.SEND_EMAIL:
-        return 'email.send';
+        return 'send.email';
       case TaskType.COMPENSATION:
-        return 'compensation.execute';
+        return 'compensation';
       case TaskType.DATA_PROCESSING:
-        return 'data.process';
+        return 'data.processing';
       default:
         return 'task.created';
     }
@@ -132,22 +120,15 @@ export class TaskController {
 
     await this.taskService.updateTaskStatus(id, TaskStatus.PENDING);
 
-    if (task.type === TaskType.HTTP_REQUEST) {
-      await this.messagingService.sendMessage('api.http_request', {
+    await this.messagingService.emitEvent(
+      this.getEventPattern(task.type),
+      {
         taskId: task.id,
+        taskType: task.type,
         ...task.payload,
-      });
-    } else {
-      await this.messagingService.emitEvent(
-        this.getEventPattern(task.type),
-        {
-          taskId: task.id,
-          taskType: task.type,
-          ...task.payload,
-        },
-        { metadata: { retry: true } },
-      );
-    }
+      },
+      { metadata: { retry: true } },
+    );
 
     return { message: 'Task queued for retry' };
   }
@@ -175,7 +156,7 @@ export class TaskController {
     );
 
     await this.messagingService.emitEvent(
-      'compensation.execute',
+      'compensation',
       {
         taskId: compensationTask.id,
         taskType: compensationTask.type,
