@@ -51,7 +51,6 @@ export class WorkflowService {
   async getWorkflowWithTasks(id: string): Promise<WorkflowEntity | null> {
     try {
       return await this.workflowRepository.findWithTasks(id);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       return null;
     }

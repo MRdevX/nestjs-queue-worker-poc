@@ -1,11 +1,16 @@
 import { faker } from '@faker-js/faker';
-import { WorkflowEntity } from '@root/app/workflow/workflow.entity';
+import {
+  WorkflowEntity,
+  WorkflowStatus,
+} from '@root/app/workflow/workflow.entity';
 import { TaskType } from '@root/app/task/types/task-type.enum';
 import { IBaseEntityMockData } from './base-entity.mock';
 
 export interface IWorkflowEntityMockData extends IBaseEntityMockData {
   name?: string;
   isActive?: boolean;
+  status?: WorkflowStatus;
+  error?: string;
   tasks?: any[];
   definition?: {
     initialTask: {
@@ -31,6 +36,8 @@ export class WorkflowEntityMockFactory {
       deletedAt: data.deletedAt || undefined,
       name: data.name || faker.lorem.words(3),
       isActive: data.isActive ?? faker.datatype.boolean(),
+      status: data.status || WorkflowStatus.PENDING,
+      error: data.error || undefined,
       tasks: data.tasks || [],
       definition: data.definition || {
         initialTask: {
