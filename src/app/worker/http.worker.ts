@@ -1,52 +1,70 @@
 import axios from 'axios';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { BaseWorker } from './base.worker';
+import { TaskService } from '../task/task.service';
 import { CoordinatorService } from '../workflow/coordinator.service';
 import { MessagingService } from '../core/messaging/messaging.service';
-import { TaskService } from '../task/task.service';
-import { TaskType } from '../task/types/task-type.enum';
-import { ITaskMessage } from '../core/messaging/types/task-message.interface';
+import { TaskStatus } from '../task/types/task-status.enum';
 
 @Injectable()
-export class HttpWorker extends BaseWorker {
+export class HttpWorker {
+  private readonly logger = new Logger(HttpWorker.name);
+
   constructor(
-    taskService: TaskService,
-    coordinator: CoordinatorService,
-    messagingService: MessagingService,
-  ) {
-    super(taskService, coordinator, messagingService);
-  }
+    private readonly taskService: TaskService,
+    private readonly coordinator: CoordinatorService,
+    private readonly messagingService: MessagingService,
+  ) {}
 
-  @MessagePattern('http.request')
-  async handleTask(@Payload() data: ITaskMessage) {
-    return super.handleTask(data);
-  }
+  @MessagePattern('api.http_request')
+  async handleHttpRequest(@Payload() data: any) {
+    this.logger.log(`Received HTTP request: ${JSON.stringify(data)}`);
 
-  protected async processTask(taskId: string) {
-    const task = await this.taskService.getTaskById(taskId);
-    if (!task) {
-      throw new Error(`Task with id ${taskId} not found`);
+    const { taskId, url, method, headers, body } = data;
+    if (!taskId || !url || !method) {
+      throw new Error('Task ID, URL, and method are required');
     }
 
-    const { url, method } = task.payload;
+    try {
+      const task = await this.taskService.getTaskById(taskId);
+      if (!task) {
+        throw new Error(`Task ${taskId} not found`);
+      }
 
-    if (!url || !method) {
-      throw new Error('URL and method are required for HTTP tasks');
+      await this.taskService.updateTaskStatus(taskId, TaskStatus.PROCESSING);
+
+      this.logger.log(`Making HTTP ${method} request to: ${url}`);
+
+      const response = await axios({
+        method,
+        url,
+        headers,
+        data: body,
+        timeout: 10000,
+      });
+
+      if (response.status >= 400) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Update task with response
+      await this.taskService.updateTaskStatus(taskId, TaskStatus.COMPLETED);
+      await this.taskService.updateTaskPayload(taskId, {
+        ...task.payload,
+        response: response.data,
+      });
+
+      this.logger.log(`HTTP request completed successfully: ${taskId}`);
+
+      // Handle workflow completion
+      await this.coordinator.handleTaskCompletion(taskId);
+
+      return { success: true, response: response.data };
+    } catch (error) {
+      this.logger.error(`HTTP request failed: ${taskId}`, error.stack);
+      await this.taskService.handleFailure(taskId, error);
+      await this.coordinator.handleTaskFailure(taskId, error);
+      throw error;
     }
-
-    const response = await axios({
-      method,
-      url,
-      timeout: 10000,
-    });
-
-    if (response.status >= 400) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-  }
-
-  protected shouldProcessTaskType(taskType: TaskType): boolean {
-    return taskType === TaskType.HTTP_REQUEST;
   }
 }

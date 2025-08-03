@@ -5,6 +5,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { ClientProxyFactory } from '@nestjs/microservices';
 import { MessagingService } from '../messaging.service';
 import { TaskType } from '../../../task/types/task-type.enum';
+import { ITaskMessage } from '../types/task-message.interface';
 
 // Mock firstValueFrom
 jest.mock('rxjs', () => ({
@@ -106,9 +107,9 @@ describe('MessagingService', () => {
     it('should publish task successfully without options', async () => {
       const taskType = TaskType.HTTP_REQUEST;
       const taskId = 'task-123';
-      const expectedMessage = {
-        taskType,
+      const expectedMessage: ITaskMessage = {
         taskId,
+        taskType,
         delay: undefined,
         metadata: undefined,
       };
@@ -129,9 +130,9 @@ describe('MessagingService', () => {
       const taskType = TaskType.DATA_PROCESSING;
       const taskId = 'task-456';
       const delay = 5000;
-      const expectedMessage = {
-        taskType,
+      const expectedMessage: ITaskMessage = {
         taskId,
+        taskType,
         delay,
         metadata: undefined,
       };
@@ -152,9 +153,9 @@ describe('MessagingService', () => {
       const taskType = TaskType.COMPENSATION;
       const taskId = 'task-789';
       const metadata = { retryCount: 3, isRetry: true };
-      const expectedMessage = {
-        taskType,
+      const expectedMessage: ITaskMessage = {
         taskId,
+        taskType,
         delay: undefined,
         metadata,
       };
@@ -176,9 +177,9 @@ describe('MessagingService', () => {
       const taskId = 'task-999';
       const delay = 2000;
       const metadata = { priority: 'high', source: 'api' };
-      const expectedMessage = {
-        taskType,
+      const expectedMessage: ITaskMessage = {
         taskId,
+        taskType,
         delay,
         metadata,
       };
@@ -208,8 +209,8 @@ describe('MessagingService', () => {
       );
 
       expect(mockClient.send).toHaveBeenCalledWith('http.request', {
-        taskType,
         taskId,
+        taskType,
         delay: undefined,
         metadata: undefined,
       });
@@ -229,20 +230,20 @@ describe('MessagingService', () => {
       );
 
       expect(mockClient.send).toHaveBeenCalledWith('data.processing', {
-        taskType,
         taskId,
+        taskType,
         delay: undefined,
         metadata: undefined,
       });
       expect(mockFirstValueFrom).toHaveBeenCalled();
     });
 
-    it('should handle empty string task type', async () => {
-      const taskType = '';
+    it('should handle unknown task type', async () => {
+      const taskType = 'UNKNOWN_TYPE' as TaskType;
       const taskId = 'task-123';
-      const expectedMessage = {
-        taskType,
+      const expectedMessage: ITaskMessage = {
         taskId,
+        taskType,
         delay: undefined,
         metadata: undefined,
       };

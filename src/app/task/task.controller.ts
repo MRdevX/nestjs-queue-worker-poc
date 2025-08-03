@@ -24,8 +24,58 @@ export class TaskController {
       createTaskDto.type,
       createTaskDto.payload,
     );
-    await this.messagingService.publishTask(task.type, task.id);
-    return task;
+
+    // Use appropriate pattern based on task type
+    if (createTaskDto.type === TaskType.HTTP_REQUEST) {
+      // For HTTP requests, use MessagePattern for immediate response
+      const response = await this.messagingService.sendMessage(
+        'api.http_request',
+        {
+          taskId: task.id,
+          ...createTaskDto.payload,
+        },
+      );
+      return {
+        message: 'Task created and processed successfully',
+        taskId: task.id,
+        type: task.type,
+        response,
+      };
+    } else {
+      // For other tasks, use EventPattern for async processing
+      await this.messagingService.emitEvent(
+        this.getEventPattern(createTaskDto.type),
+        {
+          taskId: task.id,
+          taskType: task.type,
+          ...createTaskDto.payload,
+        },
+      );
+      return {
+        message: 'Task created and queued successfully',
+        taskId: task.id,
+        type: task.type,
+      };
+    }
+  }
+
+  private getEventPattern(taskType: TaskType): string {
+    switch (taskType) {
+      case TaskType.FETCH_ORDERS:
+        return 'order.fetch';
+      case TaskType.CREATE_INVOICE:
+        return 'order.create_invoice';
+      case TaskType.GENERATE_PDF:
+        return 'pdf.generate';
+      case TaskType.SEND_EMAIL:
+        return 'email.send';
+      case TaskType.COMPENSATION:
+        return 'compensation.execute';
+      case TaskType.DATA_PROCESSING:
+        return 'data.process';
+      default:
+        return 'task.created';
+    }
   }
 
   @Get(':id')
@@ -45,9 +95,23 @@ export class TaskController {
     }
 
     await this.taskService.updateTaskStatus(id, TaskStatus.PENDING);
-    await this.messagingService.publishTask(task.type, task.id, {
-      metadata: { retry: true },
-    });
+
+    if (task.type === TaskType.HTTP_REQUEST) {
+      await this.messagingService.sendMessage('api.http_request', {
+        taskId: task.id,
+        ...task.payload,
+      });
+    } else {
+      await this.messagingService.emitEvent(
+        this.getEventPattern(task.type),
+        {
+          taskId: task.id,
+          taskType: task.type,
+          ...task.payload,
+        },
+        { metadata: { retry: true } },
+      );
+    }
 
     return { message: 'Task queued for retry' };
   }
@@ -75,12 +139,16 @@ export class TaskController {
       },
     );
 
-    await this.messagingService.publishTask(
-      compensationTask.type,
-      compensationTask.id,
+    await this.messagingService.emitEvent(
+      'compensation.execute',
       {
-        metadata: { originalTaskId: id, isCompensation: true },
+        taskId: compensationTask.id,
+        taskType: compensationTask.type,
+        originalTaskId: id,
+        originalTaskType: task.type,
+        compensationAction: 'rollback',
       },
+      { metadata: { originalTaskId: id, isCompensation: true } },
     );
 
     return { message: 'Compensation task created and queued' };

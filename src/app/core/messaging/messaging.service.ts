@@ -3,8 +3,8 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxy, ClientProxyFactory } from '@nestjs/microservices';
 import { RmqOptions } from '@nestjs/microservices/interfaces';
-import { ITaskMessage } from './types/task-message.interface';
 import { TaskType } from '../../task/types/task-type.enum';
+import { ITaskMessage } from './types/task-message.interface';
 
 @Injectable()
 export class MessagingService implements OnModuleDestroy {
@@ -17,17 +17,12 @@ export class MessagingService implements OnModuleDestroy {
 
   private createClient(): ClientProxy {
     const s2sConfig = this.configService.get('s2s');
-
     return ClientProxyFactory.create({
       transport: s2sConfig.transport,
       options: {
         urls: s2sConfig.options.urls,
         queue: s2sConfig.options.queue,
-        queueOptions: {
-          durable: true,
-          deadLetterExchange: 'task.dlx',
-          deadLetterRoutingKey: 'failed',
-        },
+        queueOptions: s2sConfig.options.queueOptions,
       },
     } as RmqOptions);
   }
@@ -37,67 +32,70 @@ export class MessagingService implements OnModuleDestroy {
   }
 
   private getMessagePattern(taskType: TaskType): string {
-    switch (taskType) {
-      case TaskType.HTTP_REQUEST:
-        return 'http.request';
-      case TaskType.DATA_PROCESSING:
-        return 'data.processing';
-      case TaskType.COMPENSATION:
-        return 'compensation';
-      case TaskType.FETCH_ORDERS:
-        return 'fetch.orders';
-      case TaskType.CREATE_INVOICE:
-        return 'create.invoice';
-      case TaskType.GENERATE_PDF:
-        return 'generate.pdf';
-      case TaskType.SEND_EMAIL:
-        return 'send.email';
-      default:
-        return 'task.created';
-    }
+    const patterns = {
+      [TaskType.HTTP_REQUEST]: 'http.request',
+      [TaskType.DATA_PROCESSING]: 'data.processing',
+      [TaskType.COMPENSATION]: 'compensation',
+      [TaskType.FETCH_ORDERS]: 'fetch.orders',
+      [TaskType.CREATE_INVOICE]: 'create.invoice',
+      [TaskType.GENERATE_PDF]: 'generate.pdf',
+      [TaskType.SEND_EMAIL]: 'send.email',
+    };
+    return patterns[taskType] || 'task.created';
   }
 
   async publishTask(
-    taskType: string,
+    taskType: TaskType,
     taskId: string,
     options?: { delay?: number; metadata?: Record<string, any> },
   ): Promise<void> {
+    const pattern = this.getMessagePattern(taskType);
     const message: ITaskMessage = {
-      taskType,
       taskId,
+      taskType,
       delay: options?.delay,
       metadata: options?.metadata,
     };
 
-    const pattern = this.getMessagePattern(taskType as TaskType);
+    this.logger.log(`Publishing task: ${taskType} - ${taskId}`);
+    await this.sendMessage(pattern, message);
+    this.logger.log(`Task published: ${taskType} - ${taskId}`);
+  }
 
-    this.logger.log(
-      `Publishing task message: ${JSON.stringify(message)} to pattern: ${pattern}`,
-    );
+  async sendMessage<T = any>(pattern: string, payload: any): Promise<T> {
+    this.logger.log(`Sending message to: ${pattern}`);
 
     try {
-      this.logger.log('Sending message...');
-      await firstValueFrom(this.client.send(pattern, message));
-
-      this.logger.log(
-        `Task published successfully: ${taskType} - ${taskId}${
-          options?.delay ? ` (delayed by ${options.delay}ms)` : ''
-        }`,
-      );
+      const response = await firstValueFrom(this.client.send(pattern, payload));
+      this.logger.log(`Message sent to: ${pattern}`);
+      return response as T;
     } catch (error) {
-      this.logger.error(
-        `Failed to publish task: ${taskType} - ${taskId}`,
-        error.stack,
-      );
-      this.logger.error('Error details:', {
-        message: error.message,
-        name: error.name,
-        code: error.code,
-        fullError: error,
-      });
+      this.logger.error(`Failed to send message to ${pattern}:`, error.stack);
       throw new Error(
-        `Failed to publish task: ${error.message || 'Unknown error'}`,
+        `Message send failed: ${error.message || 'Unknown error'}`,
       );
+    }
+  }
+
+  async emitEvent(
+    pattern: string,
+    payload: any,
+    options?: { delay?: number; metadata?: Record<string, any> },
+  ): Promise<void> {
+    const message = {
+      ...payload,
+      delay: options?.delay,
+      metadata: options?.metadata,
+    };
+
+    this.logger.log(`Emitting event to: ${pattern}`);
+
+    try {
+      this.client.emit(pattern, message);
+      this.logger.log(`Event emitted to: ${pattern}`);
+    } catch (error) {
+      this.logger.error(`Failed to emit event to ${pattern}:`, error.stack);
+      throw new Error(`Event emit failed: ${error.message || 'Unknown error'}`);
     }
   }
 
@@ -106,8 +104,8 @@ export class MessagingService implements OnModuleDestroy {
       await this.client.connect();
       this.logger.log('Connected to RabbitMQ');
     } catch (error) {
-      this.logger.error('Failed to connect to RabbitMQ', error.stack);
-      throw new Error(`Failed to connect to RabbitMQ: ${error.message}`);
+      this.logger.error('Failed to connect to RabbitMQ:', error.stack);
+      throw new Error(`Connection failed: ${error.message}`);
     }
   }
 
@@ -116,7 +114,7 @@ export class MessagingService implements OnModuleDestroy {
       await this.client.close();
       this.logger.log('Disconnected from RabbitMQ');
     } catch (error) {
-      this.logger.error('Failed to disconnect from RabbitMQ', error.stack);
+      this.logger.error('Failed to disconnect from RabbitMQ:', error.stack);
     }
   }
 

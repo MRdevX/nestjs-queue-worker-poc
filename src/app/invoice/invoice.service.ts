@@ -64,7 +64,13 @@ export class InvoiceService {
       `✅ [START_INVOICE_WORKFLOW] FETCH_ORDERS task created with ID: ${task.id}`,
     );
 
-    await this.messagingService.publishTask(task.type, task.id);
+    await this.messagingService.emitEvent('order.fetch', {
+      taskId: task.id,
+      taskType: task.type,
+      customerId: dto.customerId,
+      dateFrom: dto.dateFrom,
+      dateTo: dto.dateTo,
+    });
 
     this.logger.log(
       `📤 [START_INVOICE_WORKFLOW] FETCH_ORDERS task published to queue: ${task.id}`,

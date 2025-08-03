@@ -146,4 +146,22 @@ export class TaskService {
     }
     return this.taskRepo.findByIdWithRelations(taskId, ['logs']);
   }
+
+  async updateTaskPayload(
+    taskId: string,
+    payload: any,
+  ): Promise<TaskEntity | null> {
+    if (!taskId) {
+      throw new BadRequestException('Task ID is required');
+    }
+
+    await this.taskRepo.update(taskId, { payload });
+    await this.logRepo.createLogEntry(
+      taskId,
+      LogLevel.INFO,
+      'Task payload updated',
+    );
+
+    return this.taskRepo.findById(taskId);
+  }
 }
