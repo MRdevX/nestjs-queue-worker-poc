@@ -66,15 +66,8 @@ The environment includes the following variables:
 - **POST** `/tasks` - Create a new task
 - **GET** `/tasks/{id}` - Get task by ID
 - **POST** `/tasks/{id}/retry` - Retry a failed task
+- **POST** `/tasks/{id}/cancel` - Cancel a pending task
 - **POST** `/tasks/{id}/compensate` - Create compensation task
-
-### Queue Management
-
-- **GET** `/queue/status` - Get queue status
-- **GET** `/queue/pending` - Get pending tasks
-- **GET** `/queue/failed` - Get failed tasks
-- **POST** `/queue/{id}/retry` - Retry task from queue
-- **POST** `/queue/{id}/cancel` - Cancel pending task
 
 ### Queue Manager
 
@@ -128,7 +121,7 @@ POST {{baseUrl}}/tasks
 Monitor the queue:
 
 ```
-GET {{baseUrl}}/queue/status
+GET {{baseUrl}}/queue-manager/status
 ```
 
 ### 4. Start Invoice Workflow

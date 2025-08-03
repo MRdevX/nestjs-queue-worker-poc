@@ -81,6 +81,20 @@
           "response": []
         },
         {
+          "name": "Cancel Task",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "{{taskId}}", "cancel"]
+            },
+            "description": "Cancel a pending task"
+          },
+          "response": []
+        },
+        {
           "name": "Compensate Task",
           "request": {
             "method": "POST",
@@ -96,82 +110,6 @@
         }
       ],
       "description": "Task management operations"
-    },
-    {
-      "name": "Queue Management",
-      "item": [
-        {
-          "name": "Get Queue Status",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/queue/status",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue", "status"]
-            },
-            "description": "Get current queue status including pending, processing, and failed task counts"
-          },
-          "response": []
-        },
-        {
-          "name": "Get Pending Tasks",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/queue/pending",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue", "pending"]
-            },
-            "description": "Get all pending tasks in the queue"
-          },
-          "response": []
-        },
-        {
-          "name": "Get Failed Tasks",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/queue/failed",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue", "failed"]
-            },
-            "description": "Get all failed tasks"
-          },
-          "response": []
-        },
-        {
-          "name": "Retry Task from Queue",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/queue/{{taskId}}/retry",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue", "{{taskId}}", "retry"]
-            },
-            "description": "Retry a specific task from the queue"
-          },
-          "response": []
-        },
-        {
-          "name": "Cancel Task",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/queue/{{taskId}}/cancel",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue", "{{taskId}}", "cancel"]
-            },
-            "description": "Cancel a pending task"
-          },
-          "response": []
-        }
-      ],
-      "description": "Queue monitoring and management operations"
     },
     {
       "name": "Queue Manager",
