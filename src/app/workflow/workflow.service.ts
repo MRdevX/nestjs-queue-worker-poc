@@ -1,44 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { WorkflowRepository } from './workflow.repository';
 import { TaskService } from '../task/task.service';
 import { TaskStatus } from '../task/types/task-status.enum';
-import { WorkflowEntity } from './workflow.entity';
-
-interface ICreateWorkflowDto {
-  name: string;
-  definition: {
-    initialTask: {
-      type: any;
-      payload: Record<string, any>;
-    };
-    transitions: Record<
-      string,
-      {
-        type: any;
-        payload: Record<string, any>;
-      }
-    >;
-  };
-  isActive?: boolean;
-}
-
-interface IUpdateWorkflowDto {
-  name?: string;
-  definition?: {
-    initialTask: {
-      type: any;
-      payload: Record<string, any>;
-    };
-    transitions: Record<
-      string,
-      {
-        type: any;
-        payload: Record<string, any>;
-      }
-    >;
-  };
-  isActive?: boolean;
-}
+import { WorkflowEntity, WorkflowStatus } from './workflow.entity';
+import {
+  ICreateWorkflowDto,
+  IUpdateWorkflowDto,
+  IWorkflowStatusResponse,
+} from './types';
 
 @Injectable()
 export class WorkflowService {
@@ -126,13 +95,58 @@ export class WorkflowService {
     return deleted;
   }
 
-  async getWorkflowStatus(id: string): Promise<any> {
+  async getWorkflowStatus(id: string): Promise<IWorkflowStatusResponse | null> {
     const workflow = await this.getWorkflowWithTasks(id);
     if (!workflow) {
       return null;
     }
 
     const tasks = workflow.tasks || [];
+    const taskStats = this.calculateTaskStats(tasks);
+
+    return {
+      workflowId: id,
+      workflowName: workflow.name,
+      isActive: workflow.isActive,
+      ...taskStats,
+      tasks: tasks.map((task) => ({
+        id: task.id,
+        type: task.type,
+        status: task.status,
+        createdAt: task.createdAt,
+        completedAt:
+          task.status === TaskStatus.COMPLETED ? task.updatedAt : null,
+        error: task.error,
+      })),
+    };
+  }
+
+  async getWorkflowsByCustomer(customerId: string): Promise<WorkflowEntity[]> {
+    return this.workflowRepository.findWorkflowsByCustomer(customerId);
+  }
+
+  async updateWorkflowStatus(
+    id: string,
+    status: WorkflowStatus,
+    error?: string,
+  ): Promise<WorkflowEntity | null> {
+    this.logger.log(`Updating workflow ${id} status to ${status}`);
+
+    const updateData: any = { status };
+    if (error) {
+      updateData.error = error;
+    }
+
+    const updatedWorkflow = await this.workflowRepository.update(
+      id,
+      updateData,
+    );
+    this.logger.log(`Workflow ${id} status updated to ${status}`);
+
+    return updatedWorkflow;
+  }
+
+  private calculateTaskStats(tasks: any[]) {
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter(
       (task) => task.status === TaskStatus.COMPLETED,
@@ -150,11 +164,10 @@ export class WorkflowService {
     const isComplete = totalTasks > 0 && completedTasks === totalTasks;
     const hasFailures = failedTasks > 0;
     const isInProgress = processingTasks > 0 || pendingTasks > 0;
+    const progress =
+      totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
     return {
-      workflowId: id,
-      workflowName: workflow.name,
-      isActive: workflow.isActive,
       totalTasks,
       completedTasks,
       failedTasks,
@@ -163,36 +176,7 @@ export class WorkflowService {
       isComplete,
       hasFailures,
       isInProgress,
-      progress:
-        totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
-      tasks: tasks.map((task) => ({
-        id: task.id,
-        type: task.type,
-        status: task.status,
-        createdAt: task.createdAt,
-        completedAt:
-          task.status === TaskStatus.COMPLETED ? task.updatedAt : null,
-        error: task.error,
-      })),
+      progress,
     };
-  }
-
-  async getWorkflowsByCustomer(customerId: string): Promise<WorkflowEntity[]> {
-    const workflows = await this.getAllWorkflows();
-
-    const customerWorkflows: WorkflowEntity[] = [];
-    for (const workflow of workflows) {
-      const workflowWithTasks = await this.getWorkflowWithTasks(workflow.id);
-      if (workflowWithTasks) {
-        const hasCustomerTasks = workflowWithTasks.tasks.some(
-          (task) => task.payload && task.payload.customerId === customerId,
-        );
-        if (hasCustomerTasks) {
-          customerWorkflows.push(workflow);
-        }
-      }
-    }
-
-    return customerWorkflows;
   }
 }

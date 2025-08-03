@@ -21,17 +21,36 @@ export class TaskService {
     type: TaskType,
     payload: any,
     workflowId?: string,
+    retryConfig?: {
+      maxRetries?: number;
+      retryDelay?: number;
+      maxRetryDelay?: number;
+    },
   ): Promise<TaskEntity> {
     if (!type || !payload) {
       throw new BadRequestException('Task type and payload are required');
     }
 
-    const task = await this.taskRepo.create({
+    const taskData: any = {
       type,
       payload,
       status: TaskStatus.PENDING,
       workflow: workflowId ? { id: workflowId } : undefined,
-    });
+    };
+
+    if (retryConfig) {
+      if (retryConfig.maxRetries !== undefined) {
+        taskData.maxRetries = retryConfig.maxRetries;
+      }
+      if (retryConfig.retryDelay !== undefined) {
+        taskData.retryDelay = retryConfig.retryDelay;
+      }
+      if (retryConfig.maxRetryDelay !== undefined) {
+        taskData.maxRetryDelay = retryConfig.maxRetryDelay;
+      }
+    }
+
+    const task = await this.taskRepo.create(taskData);
 
     await this.logRepo.createLogEntry(task.id, LogLevel.INFO, 'Task created');
 

@@ -23,7 +23,10 @@ export class FaultService {
         throw new NotFoundException(`Task with id ${taskId} not found`);
       }
 
-      const delay = Math.min(30000, 2000 * task.retries);
+      const delay = Math.min(
+        task.maxRetryDelay,
+        task.retryDelay * Math.pow(2, task.retries),
+      );
 
       this.logger.log(
         `Handling retry for task ${taskId} with delay ${delay}ms`,

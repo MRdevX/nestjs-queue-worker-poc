@@ -11,43 +11,7 @@ import {
 } from '@nestjs/common';
 import { WorkflowService } from './workflow.service';
 import { CoordinatorService } from './coordinator.service';
-import { TaskType } from '../task/types/task-type.enum';
-
-interface ICreateWorkflowDto {
-  name: string;
-  definition: {
-    initialTask: {
-      type: TaskType;
-      payload: Record<string, any>;
-    };
-    transitions: Record<
-      string,
-      {
-        type: TaskType;
-        payload: Record<string, any>;
-      }
-    >;
-  };
-  isActive?: boolean;
-}
-
-interface IUpdateWorkflowDto {
-  name?: string;
-  definition?: {
-    initialTask: {
-      type: TaskType;
-      payload: Record<string, any>;
-    };
-    transitions: Record<
-      string,
-      {
-        type: TaskType;
-        payload: Record<string, any>;
-      }
-    >;
-  };
-  isActive?: boolean;
-}
+import { ICreateWorkflowDto, IUpdateWorkflowDto } from './types';
 
 @Controller('workflows')
 export class WorkflowController {
@@ -60,29 +24,30 @@ export class WorkflowController {
   async createWorkflow(@Body() createWorkflowDto: ICreateWorkflowDto) {
     const workflow =
       await this.workflowService.createWorkflow(createWorkflowDto);
-    return {
-      message: 'Workflow created successfully',
+    return this.createSuccessResponse('Workflow created successfully', {
       workflow,
-    };
+    });
   }
 
   @Get()
   async getAllWorkflows(@Query('active') active?: boolean) {
     const workflows = await this.workflowService.getAllWorkflows(active);
-
-    return {
+    return this.createSuccessResponse('Workflows retrieved successfully', {
       workflows,
       total: workflows.length,
-    };
+    });
   }
 
   @Get('active')
   async getActiveWorkflows() {
     const workflows = await this.workflowService.getActiveWorkflows();
-    return {
-      workflows,
-      total: workflows.length,
-    };
+    return this.createSuccessResponse(
+      'Active workflows retrieved successfully',
+      {
+        workflows,
+        total: workflows.length,
+      },
+    );
   }
 
   @Get(':id')
@@ -115,10 +80,9 @@ export class WorkflowController {
     if (!workflow) {
       throw new NotFoundException('Workflow not found');
     }
-    return {
-      message: 'Workflow updated successfully',
+    return this.createSuccessResponse('Workflow updated successfully', {
       workflow,
-    };
+    });
   }
 
   @Delete(':id')
@@ -127,9 +91,7 @@ export class WorkflowController {
     if (!deleted) {
       throw new NotFoundException('Workflow not found');
     }
-    return {
-      message: 'Workflow deleted successfully',
-    };
+    return this.createSuccessResponse('Workflow deleted successfully');
   }
 
   @Post(':id/start')
@@ -144,10 +106,9 @@ export class WorkflowController {
     }
 
     await this.coordinatorService.startWorkflow(workflow);
-    return {
-      message: 'Workflow started successfully',
+    return this.createSuccessResponse('Workflow started successfully', {
       workflowId: id,
-    };
+    });
   }
 
   @Post(':id/activate')
@@ -158,10 +119,9 @@ export class WorkflowController {
     if (!workflow) {
       throw new NotFoundException('Workflow not found');
     }
-    return {
-      message: 'Workflow activated successfully',
+    return this.createSuccessResponse('Workflow activated successfully', {
       workflow,
-    };
+    });
   }
 
   @Post(':id/deactivate')
@@ -172,10 +132,9 @@ export class WorkflowController {
     if (!workflow) {
       throw new NotFoundException('Workflow not found');
     }
-    return {
-      message: 'Workflow deactivated successfully',
+    return this.createSuccessResponse('Workflow deactivated successfully', {
       workflow,
-    };
+    });
   }
 
   @Get(':id/status')
@@ -185,5 +144,12 @@ export class WorkflowController {
       throw new NotFoundException('Workflow not found');
     }
     return status;
+  }
+
+  private createSuccessResponse(message: string, data?: any) {
+    return {
+      message,
+      ...data,
+    };
   }
 }

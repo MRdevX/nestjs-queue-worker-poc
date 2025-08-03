@@ -22,6 +22,12 @@ export class TaskEntity extends BaseModel {
   @Column({ default: 3 })
   maxRetries: number;
 
+  @Column({ default: 2000 })
+  retryDelay: number;
+
+  @Column({ default: 30000 })
+  maxRetryDelay: number;
+
   @Column({ nullable: true })
   error: string;
 
