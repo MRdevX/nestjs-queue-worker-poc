@@ -5,7 +5,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import dbConfig from '@root/app/config/db.config';
 import s2sConfig from '@root/app/config/s2s.config';
 import appConfig from '@root/app/config/app.config';
-import { entities } from './database/entities';
 import { MessagingModule } from './messaging/messaging.module';
 import { UtilsService } from './utils/utils.service';
 import { HealthModule } from './health/health.module';
@@ -33,9 +32,10 @@ import { SeederModule } from './database/seeder/seeder.module';
           port: dbConfig.port,
           username: dbConfig.username,
           password: dbConfig.password,
-          database: dbConfig.name,
-          entities,
+          database: dbConfig.database,
+          entities: dbConfig.entities,
           synchronize: dbConfig.synchronize,
+          logging: dbConfig.logging,
         };
       },
       inject: [ConfigService],

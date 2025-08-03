@@ -58,6 +58,7 @@ services:
       DB_PASSWORD: postgrespw
       DB_PORT: 5432
       DB_SYNCHRONIZE: true
+      AUTO_SEED_DATABASE: false
 
       # RabbitMQ configuration
       RABBITMQ_USER: guest
