@@ -40,12 +40,6 @@ export class QueueManagerService {
     }
   }
 
-  assignTaskToWorker(taskId: string, taskType: TaskType): string {
-    const workerName = getWorkerForTaskType(taskType);
-    this.logger.log(`Assigned task ${taskId} to worker: ${workerName}`);
-    return workerName;
-  }
-
   async retryTask(taskId: string): Promise<void> {
     const task = await this.taskService.getTaskById(taskId);
     if (!task) {

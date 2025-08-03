@@ -89,16 +89,6 @@ describe('QueueManagerService', () => {
     });
   });
 
-  describe('assignTaskToWorker', () => {
-    it('should assign task to correct worker', () => {
-      const workerName = service.assignTaskToWorker(
-        'task-123',
-        TaskType.HTTP_REQUEST,
-      );
-      expect(workerName).toBe('http.worker');
-    });
-  });
-
   describe('retryTask', () => {
     it('should retry failed task', async () => {
       const mockTask = TaskEntityMockFactory.create({
