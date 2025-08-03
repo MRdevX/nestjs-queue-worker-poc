@@ -1,4 +1,5 @@
 import { Repository } from 'typeorm';
+import { faker } from '@faker-js/faker';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TaskEntity } from '@root/app/task/task.entity';
@@ -8,9 +9,23 @@ import { TaskType } from '@root/app/task/types/task-type.enum';
 import { TaskStatus } from '@root/app/task/types/task-status.enum';
 import { LogLevel } from '@root/app/task/types/log-level.enum';
 
+interface ISeederConfig {
+  workflows: number;
+  tasksPerType: number;
+  customers: number;
+}
+
 @Injectable()
 export class DatabaseSeeder {
   private readonly logger = new Logger(DatabaseSeeder.name);
+  private config: ISeederConfig = {
+    workflows: 3,
+    tasksPerType: 5,
+    customers: 10,
+  };
+
+  private readonly customers: string[] = [];
+  private readonly workflows: WorkflowEntity[] = [];
 
   constructor(
     @InjectRepository(TaskEntity)
@@ -21,8 +36,13 @@ export class DatabaseSeeder {
     private readonly workflowRepository: Repository<WorkflowEntity>,
   ) {}
 
-  async seed(): Promise<void> {
+  async seed(config?: Partial<ISeederConfig>): Promise<void> {
     this.logger.log('🌱 Starting database seeding...');
+
+    // Merge custom config with default config
+    if (config) {
+      this.config = { ...this.config, ...config };
+    }
 
     try {
       // Check if data already exists
@@ -32,11 +52,14 @@ export class DatabaseSeeder {
         return;
       }
 
+      // Generate customer IDs
+      this.generateCustomerIds();
+
       // Seed workflows
       await this.seedWorkflows();
 
-      // Seed sample tasks
-      await this.seedSampleTasks();
+      // Seed tasks for each type
+      await this.seedTasksByType();
 
       // Seed task logs
       await this.seedTaskLogs();
@@ -48,273 +71,370 @@ export class DatabaseSeeder {
     }
   }
 
+  private generateCustomerIds(): void {
+    this.customers.length = 0;
+    for (let i = 0; i < this.config.customers; i++) {
+      this.customers.push(faker.string.uuid());
+    }
+  }
+
   private async seedWorkflows(): Promise<void> {
     this.logger.log('📋 Seeding workflows...');
 
-    const workflows = [
+    const workflowTemplates = [
       {
         name: 'Invoice Generation Workflow',
         definition: {
           initialTask: {
             type: TaskType.FETCH_ORDERS,
-            payload: {
-              customerId: 'customer-123',
-              dateFrom: '2024-01-01',
-              dateTo: '2024-01-31',
-            },
+            payload: { customerId: this.getRandomCustomer() },
           },
           transitions: {
             fetch_orders: {
               type: TaskType.CREATE_INVOICE,
-              payload: {
-                customerId: 'customer-123',
-              },
+              payload: { customerId: this.getRandomCustomer() },
             },
             create_invoice: {
               type: TaskType.GENERATE_PDF,
-              payload: {
-                customerId: 'customer-123',
-              },
+              payload: { customerId: this.getRandomCustomer() },
             },
             generate_pdf: {
               type: TaskType.SEND_EMAIL,
-              payload: {
-                customerId: 'customer-123',
-              },
+              payload: { customerId: this.getRandomCustomer() },
             },
           },
         },
-        isActive: true,
+      },
+      {
+        name: 'Data Processing Workflow',
+        definition: {
+          initialTask: {
+            type: TaskType.DATA_PROCESSING,
+            payload: { dataset: faker.string.alphanumeric(10) },
+          },
+          transitions: {
+            data_processing: {
+              type: TaskType.HTTP_REQUEST,
+              payload: { endpoint: faker.internet.url() },
+            },
+          },
+        },
       },
       {
         name: 'Scheduled Invoice Workflow',
         definition: {
           initialTask: {
             type: TaskType.FETCH_ORDERS,
-            payload: {
-              customerId: 'customer-456',
-              dateFrom: '2024-01-01',
-              dateTo: '2024-01-31',
-            },
+            payload: { customerId: this.getRandomCustomer() },
           },
           transitions: {
             fetch_orders: {
               type: TaskType.CREATE_INVOICE,
-              payload: {
-                customerId: 'customer-456',
-              },
+              payload: { customerId: this.getRandomCustomer() },
             },
           },
         },
-        isActive: true,
       },
     ];
 
-    for (const workflowData of workflows) {
-      const workflow = this.workflowRepository.create(workflowData);
-      await this.workflowRepository.save(workflow);
+    for (const template of workflowTemplates) {
+      const workflow = this.workflowRepository.create({
+        ...template,
+        isActive: faker.datatype.boolean(),
+      });
+      const savedWorkflow = await this.workflowRepository.save(workflow);
+      this.workflows.push(savedWorkflow);
       this.logger.log(
         `✅ Created workflow: ${workflow.name} (ID: ${workflow.id})`,
       );
     }
   }
 
-  private async seedSampleTasks(): Promise<void> {
-    this.logger.log('📝 Seeding sample tasks...');
+  private async seedTasksByType(): Promise<void> {
+    this.logger.log('📝 Seeding tasks by type...');
 
-    const sampleTasks = [
-      {
-        type: TaskType.FETCH_ORDERS,
-        payload: {
-          customerId: 'customer-123',
-          dateFrom: '2024-01-01',
-          dateTo: '2024-01-31',
-          orders: [
-            {
-              id: 'order-1',
-              customerId: 'customer-123',
-              status: 'delivered',
-              invoiced: false,
-              items: [
-                { id: 'item-1', name: 'Product A', price: 100, quantity: 2 },
-                { id: 'item-2', name: 'Product B', price: 50, quantity: 1 },
-              ],
-              totalAmount: 250,
-              deliveryDate: '2024-01-15',
-            },
-            {
-              id: 'order-2',
-              customerId: 'customer-123',
-              status: 'delivered',
-              invoiced: false,
-              items: [
-                { id: 'item-3', name: 'Product C', price: 75, quantity: 3 },
-              ],
-              totalAmount: 225,
-              deliveryDate: '2024-01-16',
-            },
-          ],
-        },
-        status: TaskStatus.COMPLETED,
-        retries: 0,
-        maxRetries: 3,
-      },
-      {
-        type: TaskType.CREATE_INVOICE,
-        payload: {
-          customerId: 'customer-123',
-          orders: [
-            {
-              id: 'order-1',
-              customerId: 'customer-123',
-              status: 'delivered',
-              invoiced: false,
-              items: [
-                { id: 'item-1', name: 'Product A', price: 100, quantity: 2 },
-                { id: 'item-2', name: 'Product B', price: 50, quantity: 1 },
-              ],
-              totalAmount: 250,
-              deliveryDate: '2024-01-15',
-            },
-            {
-              id: 'order-2',
-              customerId: 'customer-123',
-              status: 'delivered',
-              invoiced: false,
-              items: [
-                { id: 'item-3', name: 'Product C', price: 75, quantity: 3 },
-              ],
-              totalAmount: 225,
-              deliveryDate: '2024-01-16',
-            },
-          ],
-          invoice: {
-            id: 'invoice-123',
-            invoiceNumber: 'INV-2024-001',
-            customerId: 'customer-123',
-            totalAmount: 475,
-            grandTotal: 475,
-            items: [
-              { id: 'item-1', name: 'Product A', price: 100, quantity: 2 },
-              { id: 'item-2', name: 'Product B', price: 50, quantity: 1 },
-              { id: 'item-3', name: 'Product C', price: 75, quantity: 3 },
-            ],
-            createdAt: new Date(),
-          },
-        },
-        status: TaskStatus.COMPLETED,
-        retries: 0,
-        maxRetries: 3,
-      },
-      {
-        type: TaskType.GENERATE_PDF,
-        payload: {
-          customerId: 'customer-123',
-          invoice: {
-            id: 'invoice-123',
-            invoiceNumber: 'INV-2024-001',
-            customerId: 'customer-123',
-            totalAmount: 475,
-            grandTotal: 475,
-          },
-          pdfUrl: 'https://example.com/invoices/invoice-123.pdf',
-        },
-        status: TaskStatus.COMPLETED,
-        retries: 0,
-        maxRetries: 3,
-      },
-      {
-        type: TaskType.SEND_EMAIL,
-        payload: {
-          customerId: 'customer-123',
-          invoice: {
-            id: 'invoice-123',
-            invoiceNumber: 'INV-2024-001',
-            customerId: 'customer-123',
-            totalAmount: 475,
-            grandTotal: 475,
-          },
-          pdfUrl: 'https://example.com/invoices/invoice-123.pdf',
-          emailSent: true,
-          recipientEmail: 'customer@example.com',
-        },
-        status: TaskStatus.COMPLETED,
-        retries: 0,
-        maxRetries: 3,
-      },
-      // Failed task for testing
-      {
-        type: TaskType.FETCH_ORDERS,
-        payload: {
-          customerId: 'customer-failed',
-          dateFrom: '2024-01-01',
-          dateTo: '2024-01-31',
-        },
-        status: TaskStatus.FAILED,
-        error: 'Simulated failure for testing',
-        retries: 3,
-        maxRetries: 3,
-      },
-      // Pending task for testing
-      {
-        type: TaskType.FETCH_ORDERS,
-        payload: {
-          customerId: 'customer-pending',
-          dateFrom: '2024-01-01',
-          dateTo: '2024-01-31',
-        },
-        status: TaskStatus.PENDING,
-        retries: 0,
-        maxRetries: 3,
-      },
-    ];
+    const taskTypes = Object.values(TaskType);
+    const taskStatuses = Object.values(TaskStatus);
 
-    for (const taskData of sampleTasks) {
-      const task = this.taskRepository.create(taskData);
-      await this.taskRepository.save(task);
-      this.logger.log(
-        `✅ Created task: ${task.type} (ID: ${task.id}, Status: ${task.status})`,
-      );
+    for (const taskType of taskTypes) {
+      await this.seedTasksForType(taskType, taskStatuses);
     }
+  }
+
+  private async seedTasksForType(
+    taskType: TaskType,
+    statuses: TaskStatus[],
+  ): Promise<void> {
+    const tasks: Partial<TaskEntity>[] = [];
+
+    for (let i = 0; i < this.config.tasksPerType; i++) {
+      const status = statuses[i % statuses.length];
+      const task = this.createTaskData(taskType, status);
+      tasks.push(task);
+    }
+
+    // Batch insert for better performance
+    const createdTasks = await this.taskRepository.save(tasks);
+
+    this.logger.log(
+      `✅ Created ${createdTasks.length} tasks for type: ${taskType}`,
+    );
+  }
+
+  private createTaskData(
+    taskType: TaskType,
+    status: TaskStatus,
+  ): Partial<TaskEntity> {
+    const baseTask = {
+      type: taskType,
+      status,
+      retries: faker.number.int({ min: 0, max: 3 }),
+      maxRetries: 3,
+      workflow: faker.helpers.arrayElement(this.workflows),
+    };
+
+    const payload = this.generatePayloadForTaskType(taskType, status);
+
+    if (status === TaskStatus.FAILED) {
+      return {
+        ...baseTask,
+        payload,
+        error: faker.lorem.sentence(),
+        retries: 3,
+      };
+    }
+
+    if (status === TaskStatus.PENDING) {
+      return {
+        ...baseTask,
+        payload,
+        scheduledAt: faker.date.future(),
+      };
+    }
+
+    return {
+      ...baseTask,
+      payload,
+    };
+  }
+
+  private generatePayloadForTaskType(
+    taskType: TaskType,
+    status: TaskStatus,
+  ): Record<string, any> {
+    const customerId = this.getRandomCustomer();
+
+    switch (taskType) {
+      case TaskType.FETCH_ORDERS:
+        return {
+          customerId,
+          dateFrom: faker.date.past().toISOString(),
+          dateTo: faker.date.recent().toISOString(),
+          ...(status === TaskStatus.COMPLETED && {
+            orders: this.generateOrders(customerId),
+          }),
+        };
+
+      case TaskType.CREATE_INVOICE:
+        return {
+          customerId,
+          ...(status === TaskStatus.COMPLETED && {
+            orders: this.generateOrders(customerId),
+            invoice: this.generateInvoice(customerId),
+          }),
+        };
+
+      case TaskType.GENERATE_PDF:
+        return {
+          customerId,
+          ...(status === TaskStatus.COMPLETED && {
+            invoice: this.generateInvoice(customerId),
+            pdfUrl: faker.internet.url(),
+          }),
+        };
+
+      case TaskType.SEND_EMAIL:
+        return {
+          customerId,
+          ...(status === TaskStatus.COMPLETED && {
+            invoice: this.generateInvoice(customerId),
+            pdfUrl: faker.internet.url(),
+            emailSent: true,
+            recipientEmail: faker.internet.email(),
+          }),
+        };
+
+      case TaskType.HTTP_REQUEST:
+        return {
+          url: faker.internet.url(),
+          method: faker.helpers.arrayElement(['GET', 'POST', 'PUT', 'DELETE']),
+          headers: { 'Content-Type': 'application/json' },
+          ...(status === TaskStatus.COMPLETED && {
+            response: { status: 200, data: faker.lorem.paragraph() },
+          }),
+        };
+
+      case TaskType.DATA_PROCESSING:
+        return {
+          dataset: faker.string.alphanumeric(10),
+          operation: faker.helpers.arrayElement([
+            'transform',
+            'validate',
+            'aggregate',
+          ]),
+          ...(status === TaskStatus.COMPLETED && {
+            result: { processed: faker.number.int({ min: 100, max: 1000 }) },
+          }),
+        };
+
+      case TaskType.COMPENSATION:
+        return {
+          originalTaskId: faker.string.uuid(),
+          originalTaskType: faker.helpers.arrayElement(Object.values(TaskType)),
+          reason: faker.lorem.sentence(),
+          ...(status === TaskStatus.COMPLETED && {
+            compensationApplied: true,
+          }),
+        };
+
+      default:
+        return { data: faker.lorem.paragraph() };
+    }
+  }
+
+  private generateOrders(customerId: string): any[] {
+    const orderCount = faker.number.int({ min: 1, max: 5 });
+    const orders: any[] = [];
+
+    for (let i = 0; i < orderCount; i++) {
+      const itemCount = faker.number.int({ min: 1, max: 4 });
+      const items: any[] = [];
+
+      for (let j = 0; j < itemCount; j++) {
+        items.push({
+          id: faker.string.uuid(),
+          name: faker.commerce.productName(),
+          price: parseFloat(faker.commerce.price()),
+          quantity: faker.number.int({ min: 1, max: 10 }),
+        });
+      }
+
+      const totalAmount = items.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0,
+      );
+
+      orders.push({
+        id: faker.string.uuid(),
+        customerId,
+        status: faker.helpers.arrayElement([
+          'delivered',
+          'pending',
+          'cancelled',
+        ]),
+        invoiced: faker.datatype.boolean(),
+        items,
+        totalAmount,
+        deliveryDate: faker.date.recent().toISOString(),
+      });
+    }
+
+    return orders;
+  }
+
+  private generateInvoice(customerId: string): any {
+    const items = Array.from(
+      { length: faker.number.int({ min: 1, max: 5 }) },
+      () => ({
+        id: faker.string.uuid(),
+        name: faker.commerce.productName(),
+        price: parseFloat(faker.commerce.price()),
+        quantity: faker.number.int({ min: 1, max: 10 }),
+      }),
+    );
+
+    const totalAmount = items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
+
+    return {
+      id: faker.string.uuid(),
+      invoiceNumber: `INV-${faker.number.int({ min: 2020, max: 2024 })}-${faker.number.int({ min: 1, max: 9999 }).toString().padStart(4, '0')}`,
+      customerId,
+      totalAmount,
+      grandTotal: totalAmount,
+      items,
+      createdAt: faker.date.recent(),
+    };
   }
 
   private async seedTaskLogs(): Promise<void> {
     this.logger.log('📋 Seeding task logs...');
 
     const tasks = await this.taskRepository.find();
-    const logEntries: TaskLogEntity[] = [];
+    const logEntries: Partial<TaskLogEntity>[] = [];
 
     for (const task of tasks) {
-      // Create log entries for each task
-      const createLogEntry = this.taskLogRepository.create({
-        task: { id: task.id },
+      // Create log entry for task creation
+      logEntries.push({
+        task: task,
         level: LogLevel.INFO,
         message: `Task ${task.type} created`,
         timestamp: task.createdAt,
       });
-      logEntries.push(createLogEntry);
 
+      // Create log entry based on task status
       if (task.status === TaskStatus.COMPLETED) {
-        const completedLogEntry = this.taskLogRepository.create({
-          task: { id: task.id },
+        logEntries.push({
+          task: task,
           level: LogLevel.INFO,
           message: `Task ${task.type} completed successfully`,
           timestamp: task.updatedAt,
         });
-        logEntries.push(completedLogEntry);
       } else if (task.status === TaskStatus.FAILED) {
-        const failedLogEntry = this.taskLogRepository.create({
-          task: { id: task.id },
+        logEntries.push({
+          task: task,
           level: LogLevel.ERROR,
           message: `Task ${task.type} failed: ${task.error}`,
           timestamp: task.updatedAt,
         });
-        logEntries.push(failedLogEntry);
+      } else if (task.status === TaskStatus.PROCESSING) {
+        logEntries.push({
+          task: task,
+          level: LogLevel.INFO,
+          message: `Task ${task.type} started processing`,
+          timestamp: task.updatedAt,
+        });
+      } else if (task.status === TaskStatus.RETRYING) {
+        logEntries.push({
+          task: task,
+          level: LogLevel.WARNING,
+          message: `Task ${task.type} retrying (attempt ${task.retries})`,
+          timestamp: task.updatedAt,
+        });
+      }
+
+      // Add some random log entries for variety
+      if (faker.datatype.boolean()) {
+        logEntries.push({
+          task: task,
+          level: faker.helpers.arrayElement(Object.values(LogLevel)),
+          message: faker.lorem.sentence(),
+          timestamp: faker.date.between({
+            from: task.createdAt,
+            to: new Date(),
+          }),
+        });
       }
     }
 
     await this.taskLogRepository.save(logEntries);
     this.logger.log(`✅ Created ${logEntries.length} log entries`);
+  }
+
+  private getRandomCustomer(): string {
+    return faker.helpers.arrayElement(this.customers);
   }
 
   async clear(): Promise<void> {

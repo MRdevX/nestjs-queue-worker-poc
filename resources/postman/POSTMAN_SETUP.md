@@ -61,6 +61,9 @@ The environment includes the following variables:
 ### Seeding Configuration
 
 - `autoSeedDatabase`: Enable auto-seeding on startup (default: `false`)
+- `seederWorkflows`: Number of workflows to create (default: `2`)
+- `seederTasksPerType`: Number of tasks per task type (default: `3`)
+- `seederCustomers`: Number of unique customer IDs (default: `5`)
 
 ## API Endpoints Overview
 
@@ -70,9 +73,11 @@ The environment includes the following variables:
 
 ### Database Seeder
 
-- **POST** `/seeder/seed` - Seed the database with initial test data
+- **POST** `/seeder/seed` - Seed the database with default configuration (3 workflows, 5 tasks per type, 10 customers)
+- **POST** `/seeder/seed` (with body) - Seed the database with custom configuration
 - **DELETE** `/seeder/clear` - Clear all seeded data from the database
-- **POST** `/seeder/reset` - Clear the database and reseed with initial test data
+- **POST** `/seeder/reset` - Clear the database and reseed with default configuration
+- **POST** `/seeder/reset` (with body) - Clear the database and reseed with custom configuration
 
 ### Task Management
 
@@ -105,7 +110,7 @@ The environment includes the following variables:
 - **POST** `/scheduler/tasks/recurring` - Create recurring task
 - **GET** `/scheduler/tasks/scheduled` - Get scheduled tasks
 
-## Testing Workflow with Database Seeding
+## Testing Workflow with Dynamic Database Seeding
 
 ### 1. Health Check
 
@@ -115,12 +120,47 @@ Start by testing the health endpoint to ensure the application is running:
 GET {{baseUrl}}/health
 ```
 
-### 2. Seed the Database
+### 2. Choose Seeding Configuration
 
-Seed the database with initial test data:
+Select the appropriate seeding configuration based on your testing needs:
+
+#### Quick Development Testing
 
 ```
 POST {{baseUrl}}/seeder/seed
+{
+  "workflows": 1,
+  "tasksPerType": 2,
+  "customers": 3
+}
+```
+
+#### Standard Testing (Recommended)
+
+```
+POST {{baseUrl}}/seeder/seed
+```
+
+#### Comprehensive Testing
+
+```
+POST {{baseUrl}}/seeder/seed
+{
+  "workflows": 5,
+  "tasksPerType": 10,
+  "customers": 20
+}
+```
+
+#### Custom Testing
+
+```
+POST {{baseUrl}}/seeder/seed
+{
+  "workflows": {{seederWorkflows}},
+  "tasksPerType": {{seederTasksPerType}},
+  "customers": {{seederCustomers}}
+}
 ```
 
 ### 3. Verify Seeded Data
@@ -155,31 +195,79 @@ GET {{baseUrl}}/invoice/status/{{customerId}}
 
 ### 6. Test Different Scenarios
 
-Use the different customer IDs to test various scenarios:
+The dynamic seeder now generates realistic data with proper UUIDs. Use the seeded data to test various scenarios:
 
-- `{{customerId}}` - Complete workflow with seeded data
-- `{{customerId2}}` - Second customer for testing
-- `{{customerIdFailed}}` - Test error scenarios
-- `{{customerIdPending}}` - Test pending task processing
+- **All Task Types**: The seeder creates tasks for all 7 task types (HTTP_REQUEST, DATA_PROCESSING, COMPENSATION, FETCH_ORDERS, CREATE_INVOICE, GENERATE_PDF, SEND_EMAIL)
+- **All Task Statuses**: Tasks are created with all 6 statuses (PENDING, PROCESSING, COMPLETED, FAILED, RETRYING, CANCELLED)
+- **Realistic Data**: All data is generated using Faker.js for realistic business scenarios
+- **Dynamic Customer IDs**: Each run generates new UUID-based customer IDs
+- **Realistic Payloads**: Task payloads contain realistic business data (orders, invoices, products, etc.)
+
+### 7. Test All Task Types
+
+Use the "Test All Task Types" example workflow to verify comprehensive seeding:
+
+1. **Seed with All Task Types** - Creates tasks for all available task types
+2. **Get Tasks by Type** - View the distribution of task types and statuses
+3. **Check Queue Status** - Monitor queue health and task distribution
 
 ## Database Seeding Examples
 
-### Complete Seeding Workflow
+### Complete Seeding Workflows
 
-The collection includes a complete example workflow in the "Examples" folder:
+The collection includes multiple example workflows in the "Examples" folder:
 
-1. **Seed Database** - Populate the database with test data
+#### Default Seeding Workflow
+
+1. **Seed Database (Default)** - Populate the database with default configuration
 2. **Verify Seeded Data** - Check that tasks were created
 3. **Start Invoice Workflow** - Begin testing with seeded data
 4. **Check Workflow Status** - Monitor the workflow progress
 
+#### Light Seeding Workflow (Quick Testing)
+
+1. **Seed Database (Light)** - Populate the database with minimal data for quick testing
+2. **Verify Seeded Data** - Check that tasks were created
+3. **Start Invoice Workflow** - Begin testing with seeded data
+4. **Check Workflow Status** - Monitor the workflow progress
+
+#### Custom Seeding Workflow
+
+1. **Seed Database (Custom)** - Populate the database with custom configuration using environment variables
+2. **Verify Seeded Data** - Check that tasks were created
+3. **Start Invoice Workflow** - Begin testing with seeded data
+4. **Check Workflow Status** - Monitor the workflow progress
+
+#### Test All Task Types Workflow
+
+1. **Seed with All Task Types** - Creates comprehensive test data for all task types
+2. **Get Tasks by Type** - View the distribution of task types and statuses
+3. **Check Queue Status** - Monitor queue health and task distribution
+
 ### Manual Seeding Operations
 
-You can also perform manual seeding operations:
+You can also perform manual seeding operations with different configurations:
+
+#### Default Operations
 
 - **Seed Database**: `POST {{baseUrl}}/seeder/seed`
 - **Clear Database**: `DELETE {{baseUrl}}/seeder/clear`
 - **Reset Database**: `POST {{baseUrl}}/seeder/reset`
+
+#### Light Operations (Quick Testing)
+
+- **Seed Database**: `POST {{baseUrl}}/seeder/seed` with `{"workflows": 1, "tasksPerType": 2, "customers": 3}`
+- **Reset Database**: `POST {{baseUrl}}/seeder/reset` with `{"workflows": 1, "tasksPerType": 2, "customers": 3}`
+
+#### Heavy Operations (Stress Testing)
+
+- **Seed Database**: `POST {{baseUrl}}/seeder/seed` with `{"workflows": 5, "tasksPerType": 10, "customers": 20}`
+- **Reset Database**: `POST {{baseUrl}}/seeder/reset` with `{"workflows": 5, "tasksPerType": 10, "customers": 20}`
+
+#### Custom Operations
+
+- **Seed Database**: `POST {{baseUrl}}/seeder/seed` with `{"workflows": {{seederWorkflows}}, "tasksPerType": {{seederTasksPerType}}, "customers": {{seederCustomers}}}`
+- **Reset Database**: `POST {{baseUrl}}/seeder/reset` with `{"workflows": {{seederWorkflows}}, "tasksPerType": {{seederTasksPerType}}, "customers": {{seederCustomers}}}`
 
 ## Task Types Available
 
@@ -285,12 +373,21 @@ For integration testing:
 
 ### Database Seeding for Testing
 
-The seeding functionality provides:
+The dynamic seeding functionality provides:
 
-- **Consistent Test Data**: Same data structure for every test run
-- **Realistic Scenarios**: Complete workflows with proper data relationships
-- **Error Testing**: Pre-configured failed and pending tasks
-- **Easy Reset**: Clear and reseed the database as needed
+- **Configurable Test Data**: Different data volumes for different testing needs
+- **Realistic Scenarios**: Faker-generated realistic business data with proper relationships
+- **Comprehensive Coverage**: All task types and statuses with realistic payloads
+- **Flexible Configuration**: Light, default, and heavy seeding options
+- **Dynamic Data**: No hard-coded values, fresh realistic data every time
+- **Easy Reset**: Clear and reseed the database with custom configurations
+
+#### Seeding Configurations
+
+- **Light Seeding**: 1 workflow, 2 tasks per type, 3 customers (~14 tasks total)
+- **Default Seeding**: 3 workflows, 5 tasks per type, 10 customers (~35 tasks total)
+- **Heavy Seeding**: 5 workflows, 10 tasks per type, 20 customers (~70 tasks total)
+- **Custom Seeding**: Configurable via environment variables or request body
 
 ## Support
 
@@ -310,5 +407,7 @@ For issues or questions:
 - **Descriptions**: Detailed descriptions for each endpoint
 - **Error Handling**: Examples of error responses
 - **Workflow Examples**: Complete workflow demonstrations
-- **Database Seeding**: Integrated seeding functionality for testing
-- **Comprehensive Testing**: Full coverage of all API endpoints
+- **Dynamic Database Seeding**: Configurable seeding with realistic Faker-generated data
+- **Multiple Seeding Configurations**: Light, default, heavy, and custom seeding options
+- **Comprehensive Testing**: Full coverage of all API endpoints and task types
+- **Realistic Test Data**: Business-like data for better testing scenarios

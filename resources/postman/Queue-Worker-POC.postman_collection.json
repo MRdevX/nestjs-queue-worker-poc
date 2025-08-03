@@ -30,7 +30,7 @@
       "name": "Database Seeder",
       "item": [
         {
-          "name": "Seed Database",
+          "name": "Seed Database (Default)",
           "request": {
             "method": "POST",
             "header": [],
@@ -39,7 +39,76 @@
               "host": ["{{baseUrl}}"],
               "path": ["seeder", "seed"]
             },
-            "description": "Seed the database with initial test data including workflows, tasks, and task logs"
+            "description": "Seed the database with default configuration (3 workflows, 5 tasks per type, 10 customers)"
+          },
+          "response": []
+        },
+        {
+          "name": "Seed Database (Light)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflows\": 1,\n  \"tasksPerType\": 2,\n  \"customers\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/seeder/seed",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "seed"]
+            },
+            "description": "Seed the database with light configuration for quick testing (1 workflow, 2 tasks per type, 3 customers)"
+          },
+          "response": []
+        },
+        {
+          "name": "Seed Database (Heavy)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflows\": 5,\n  \"tasksPerType\": 10,\n  \"customers\": 20\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/seeder/seed",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "seed"]
+            },
+            "description": "Seed the database with heavy configuration for stress testing (5 workflows, 10 tasks per type, 20 customers)"
+          },
+          "response": []
+        },
+        {
+          "name": "Seed Database (Custom)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflows\": {{seederWorkflows}},\n  \"tasksPerType\": {{seederTasksPerType}},\n  \"customers\": {{seederCustomers}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/seeder/seed",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "seed"]
+            },
+            "description": "Seed the database with custom configuration using environment variables"
           },
           "response": []
         },
@@ -58,7 +127,7 @@
           "response": []
         },
         {
-          "name": "Reset Database",
+          "name": "Reset Database (Default)",
           "request": {
             "method": "POST",
             "header": [],
@@ -67,7 +136,53 @@
               "host": ["{{baseUrl}}"],
               "path": ["seeder", "reset"]
             },
-            "description": "Clear the database and reseed with initial test data"
+            "description": "Clear the database and reseed with default configuration (3 workflows, 5 tasks per type, 10 customers)"
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Database (Light)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflows\": 1,\n  \"tasksPerType\": 2,\n  \"customers\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/seeder/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "reset"]
+            },
+            "description": "Clear the database and reseed with light configuration for quick testing"
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Database (Custom)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflows\": {{seederWorkflows}},\n  \"tasksPerType\": {{seederTasksPerType}},\n  \"customers\": {{seederCustomers}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/seeder/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "reset"]
+            },
+            "description": "Clear the database and reseed with custom configuration using environment variables"
           },
           "response": []
         }
@@ -431,10 +546,10 @@
       "name": "Examples",
       "item": [
         {
-          "name": "Database Seeding Workflow",
+          "name": "Database Seeding Workflow (Default)",
           "item": [
             {
-              "name": "1. Seed Database",
+              "name": "1. Seed Database (Default)",
               "request": {
                 "method": "POST",
                 "header": [],
@@ -443,7 +558,7 @@
                   "host": ["{{baseUrl}}"],
                   "path": ["seeder", "seed"]
                 },
-                "description": "Step 1: Seed the database with initial test data"
+                "description": "Step 1: Seed the database with default configuration (3 workflows, 5 tasks per type, 10 customers)"
               },
               "response": []
             },
@@ -499,7 +614,167 @@
               "response": []
             }
           ],
-          "description": "Complete workflow example using database seeding"
+          "description": "Complete workflow example using default database seeding"
+        },
+        {
+          "name": "Database Seeding Workflow (Light)",
+          "item": [
+            {
+              "name": "1. Seed Database (Light)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"workflows\": 1,\n  \"tasksPerType\": 2,\n  \"customers\": 3\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/seeder/seed",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["seeder", "seed"]
+                },
+                "description": "Step 1: Seed the database with light configuration for quick testing"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Verify Seeded Data",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["tasks"]
+                },
+                "description": "Step 2: Verify that the database was seeded with tasks"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Start Invoice Workflow",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"dateFrom\": \"2024-01-01\",\n  \"dateTo\": \"2024-01-31\",\n  \"workflowId\": \"{{workflowId}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/invoice/workflow/start",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["invoice", "workflow", "start"]
+                },
+                "description": "Step 3: Start an invoice workflow using the seeded data"
+              },
+              "response": []
+            },
+            {
+              "name": "4. Check Workflow Status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/invoice/status/{{customerId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["invoice", "status", "{{customerId}}"]
+                },
+                "description": "Step 4: Check the status of the invoice workflow"
+              },
+              "response": []
+            }
+          ],
+          "description": "Quick testing workflow using light database seeding"
+        },
+        {
+          "name": "Database Seeding Workflow (Custom)",
+          "item": [
+            {
+              "name": "1. Seed Database (Custom)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"workflows\": {{seederWorkflows}},\n  \"tasksPerType\": {{seederTasksPerType}},\n  \"customers\": {{seederCustomers}}\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/seeder/seed",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["seeder", "seed"]
+                },
+                "description": "Step 1: Seed the database with custom configuration using environment variables"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Verify Seeded Data",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["tasks"]
+                },
+                "description": "Step 2: Verify that the database was seeded with tasks"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Start Invoice Workflow",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"dateFrom\": \"2024-01-01\",\n  \"dateTo\": \"2024-01-31\",\n  \"workflowId\": \"{{workflowId}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/invoice/workflow/start",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["invoice", "workflow", "start"]
+                },
+                "description": "Step 3: Start an invoice workflow using the seeded data"
+              },
+              "response": []
+            },
+            {
+              "name": "4. Check Workflow Status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/invoice/status/{{customerId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["invoice", "status", "{{customerId}}"]
+                },
+                "description": "Step 4: Check the status of the invoice workflow"
+              },
+              "response": []
+            }
+          ],
+          "description": "Custom workflow using configurable database seeding"
         },
         {
           "name": "Create HTTP Request Task",
@@ -569,6 +844,63 @@
             "description": "Example: Create a task to fetch orders from Ninox database"
           },
           "response": []
+        },
+        {
+          "name": "Test All Task Types",
+          "item": [
+            {
+              "name": "1. Seed with All Task Types",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"workflows\": 3,\n  \"tasksPerType\": 3,\n  \"customers\": 5\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/seeder/seed",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["seeder", "seed"]
+                },
+                "description": "Step 1: Seed database with all task types (HTTP_REQUEST, DATA_PROCESSING, COMPENSATION, FETCH_ORDERS, CREATE_INVOICE, GENERATE_PDF, SEND_EMAIL)"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Get Tasks by Type",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["tasks"]
+                },
+                "description": "Step 2: View all seeded tasks with different types and statuses"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Check Queue Status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/queue-manager/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["queue-manager", "status"]
+                },
+                "description": "Step 3: Check queue status to see distribution of task types and statuses"
+              },
+              "response": []
+            }
+          ],
+          "description": "Test workflow to verify all task types are properly seeded with realistic data"
         },
         {
           "name": "Create Invoice Workflow - Complete Example",

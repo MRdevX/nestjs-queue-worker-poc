@@ -28,8 +28,12 @@ export class SeederService implements OnModuleInit {
     }
   }
 
-  async seedDatabase(): Promise<void> {
-    return this.databaseSeeder.seed();
+  async seedDatabase(config?: {
+    workflows?: number;
+    tasksPerType?: number;
+    customers?: number;
+  }): Promise<void> {
+    return this.databaseSeeder.seed(config);
   }
 
   async clearDatabase(): Promise<void> {

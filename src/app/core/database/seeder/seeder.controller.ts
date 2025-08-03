@@ -1,5 +1,18 @@
-import { Controller, Post, Delete, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Delete,
+  HttpCode,
+  HttpStatus,
+  Body,
+} from '@nestjs/common';
 import { DatabaseSeeder } from './database.seeder';
+
+interface ISeedConfig {
+  workflows?: number;
+  tasksPerType?: number;
+  customers?: number;
+}
 
 @Controller('seeder')
 export class SeederController {
@@ -7,8 +20,8 @@ export class SeederController {
 
   @Post('seed')
   @HttpCode(HttpStatus.OK)
-  async seedDatabase() {
-    await this.databaseSeeder.seed();
+  async seedDatabase(@Body() config?: ISeedConfig) {
+    await this.databaseSeeder.seed(config);
     return {
       message: 'Database seeded successfully',
       timestamp: new Date().toISOString(),
@@ -27,9 +40,9 @@ export class SeederController {
 
   @Post('reset')
   @HttpCode(HttpStatus.OK)
-  async resetDatabase() {
+  async resetDatabase(@Body() config?: ISeedConfig) {
     await this.databaseSeeder.clear();
-    await this.databaseSeeder.seed();
+    await this.databaseSeeder.seed(config);
     return {
       message: 'Database reset successfully',
       timestamp: new Date().toISOString(),
