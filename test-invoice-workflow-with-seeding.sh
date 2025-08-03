@@ -43,13 +43,13 @@ print_info() {
 wait_for_service() {
     local service_name=$1
     local url=$2
-    local max_attempts=30
+    local max_attempts=10
     local attempt=1
 
     print_info "Waiting for $service_name to be ready..."
     
     while [ $attempt -le $max_attempts ]; do
-        if curl -s "$url" > /dev/null 2>&1; then
+        if curl -s --max-time 5 "$url" > /dev/null 2>&1; then
             print_status "$service_name is ready!"
             return 0
         fi
@@ -82,9 +82,9 @@ make_request() {
             "$BASE_URL$endpoint")
     fi
     
-    # Extract status code and body
+    # Extract status code and body (compatible with both macOS and Linux)
     http_code=$(echo "$response" | tail -n1)
-    body=$(echo "$response" | head -n -1)
+    body=$(echo "$response" | sed '$d')
     
     if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
         print_status "Request successful (HTTP $http_code)"
@@ -113,8 +113,8 @@ echo "=============================="
 # Seed the database
 make_request "POST" "/seeder/seed" "" "Seeding database with initial data"
 
-# Verify seeding worked
-make_request "GET" "/tasks" "" "Checking seeded tasks"
+# Verify seeding worked by checking queue status
+make_request "GET" "/queue-manager/status" "" "Checking queue status after seeding"
 
 echo ""
 print_info "Phase 2: Basic Health Checks"
@@ -124,7 +124,7 @@ echo "=================================="
 make_request "GET" "/health" "" "Checking application health"
 
 # Queue status
-make_request "GET" "/queue/status" "" "Checking queue status"
+make_request "GET" "/queue-manager/status" "" "Checking queue status"
 
 echo ""
 print_info "Phase 3: Invoice Workflow Testing"
@@ -178,14 +178,14 @@ echo ""
 print_info "Phase 6: Task Management Testing"
 echo "====================================="
 
-# Get all tasks
-make_request "GET" "/tasks" "" "Getting all tasks"
-
-# Get pending tasks
-make_request "GET" "/queue-manager/pending-count" "" "Getting pending tasks count"
+# Get queue manager status
+make_request "GET" "/queue-manager/status" "" "Getting queue manager status"
 
 # Get failed tasks count
 make_request "GET" "/queue-manager/failed-count" "" "Getting failed tasks count"
+
+# Get pending tasks count
+make_request "GET" "/queue-manager/pending-count" "" "Getting pending tasks count"
 
 echo ""
 print_info "Phase 7: Error Scenario Testing"
@@ -209,8 +209,8 @@ echo ""
 print_info "Phase 8: Database Verification"
 echo "==================================="
 
-# Check database state
-make_request "GET" "/tasks" "" "Final database state - all tasks"
+# Check queue status
+make_request "GET" "/queue-manager/status" "" "Final queue status"
 
 # Check specific customer tasks
 make_request "GET" "/invoice/tasks/$CUSTOMER_ID" "" "Final state - tasks for $CUSTOMER_ID"
