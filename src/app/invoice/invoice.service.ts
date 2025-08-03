@@ -32,9 +32,6 @@ export class InvoiceService {
     private readonly configService: ConfigService,
   ) {}
 
-  /**
-   * Start an invoice workflow for a customer
-   */
   async startInvoiceWorkflow(
     dto: StartInvoiceWorkflowDto,
   ): Promise<InvoiceWorkflowResponseDto> {
@@ -90,9 +87,6 @@ export class InvoiceService {
     return response;
   }
 
-  /**
-   * Create a scheduled invoice workflow
-   */
   async createScheduledInvoiceWorkflow(
     dto: CreateScheduledInvoiceWorkflowDto,
   ): Promise<InvoiceWorkflowResponseDto> {
@@ -148,9 +142,6 @@ export class InvoiceService {
     return response;
   }
 
-  /**
-   * Create a recurring invoice workflow
-   */
   async createRecurringInvoiceWorkflow(
     dto: CreateRecurringInvoiceWorkflowDto,
   ): Promise<InvoiceWorkflowResponseDto> {
@@ -201,9 +192,6 @@ export class InvoiceService {
     return response;
   }
 
-  /**
-   * Create a scheduled email workflow
-   */
   async createScheduledEmailWorkflow(
     dto: CreateScheduledEmailWorkflowDto,
   ): Promise<InvoiceWorkflowResponseDto> {
@@ -258,9 +246,6 @@ export class InvoiceService {
     return response;
   }
 
-  /**
-   * Get all invoice tasks for a customer
-   */
   async getCustomerInvoiceTasks(
     customerId: string,
   ): Promise<CustomerInvoiceTasksResponseDto> {
@@ -290,9 +275,6 @@ export class InvoiceService {
     return response;
   }
 
-  /**
-   * Get comprehensive workflow status for a customer
-   */
   async getInvoiceWorkflowStatus(
     customerId: string,
   ): Promise<InvoiceWorkflowStatusResponseDto> {
@@ -336,9 +318,6 @@ export class InvoiceService {
     return status;
   }
 
-  /**
-   * Calculate comprehensive workflow status from tasks
-   */
   private calculateWorkflowStatus(
     tasks: any[],
     customerId: string,
@@ -354,13 +333,11 @@ export class InvoiceService {
       workflows: {},
     };
 
-    // Group tasks by workflow
     const workflowGroups = UtilsService.groupBy(
       tasks,
       (task) => task.workflow?.id || 'standalone',
     );
 
-    // Calculate status for each workflow
     for (const [workflowId, workflowTasks] of Object.entries(workflowGroups)) {
       status.workflows[workflowId] =
         this.calculateWorkflowGroupStatus(workflowTasks);
@@ -369,9 +346,6 @@ export class InvoiceService {
     return status;
   }
 
-  /**
-   * Calculate status for a group of workflow tasks
-   */
   private calculateWorkflowGroupStatus(workflowTasks: any[]): {
     totalTasks: number;
     completedTasks: number;

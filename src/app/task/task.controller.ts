@@ -25,9 +25,7 @@ export class TaskController {
       createTaskDto.payload,
     );
 
-    // Use appropriate pattern based on task type
     if (createTaskDto.type === TaskType.HTTP_REQUEST) {
-      // For HTTP requests, use MessagePattern for immediate response
       const response = await this.messagingService.sendMessage(
         'api.http_request',
         {
@@ -42,7 +40,6 @@ export class TaskController {
         response,
       };
     } else {
-      // For other tasks, use EventPattern for async processing
       await this.messagingService.emitEvent(
         this.getEventPattern(createTaskDto.type),
         {
@@ -129,7 +126,6 @@ export class TaskController {
       throw new NotFoundException('Task not found');
     }
 
-    // Create a compensation task
     const compensationTask = await this.taskService.createTask(
       TaskType.COMPENSATION,
       {

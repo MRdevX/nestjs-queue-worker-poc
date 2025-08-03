@@ -88,7 +88,5 @@ export abstract class BaseWorker implements OnModuleDestroy {
 
   protected abstract shouldProcessTaskType(taskType: TaskType): boolean;
 
-  async onModuleDestroy() {
-    // any resources need to be cleaned up
-  }
+  async onModuleDestroy() {}
 }

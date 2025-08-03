@@ -9,23 +9,28 @@ import { TaskType } from '@root/app/task/types/task-type.enum';
 import { TaskStatus } from '@root/app/task/types/task-status.enum';
 import { LogLevel } from '@root/app/task/types/log-level.enum';
 
-interface ISeederConfig {
+export interface ISeederConfig {
   workflows: number;
   tasksPerType: number;
   customers: number;
 }
 
+export interface ISeederResult {
+  workflows: number;
+  tasks: number;
+  taskLogs: number;
+}
+
 @Injectable()
 export class DatabaseSeeder {
   private readonly logger = new Logger(DatabaseSeeder.name);
+  private customers: string[] = [];
+
   private config: ISeederConfig = {
     workflows: 3,
     tasksPerType: 5,
     customers: 10,
   };
-
-  private readonly customers: string[] = [];
-  private readonly workflows: WorkflowEntity[] = [];
 
   constructor(
     @InjectRepository(TaskEntity)
@@ -36,49 +41,46 @@ export class DatabaseSeeder {
     private readonly workflowRepository: Repository<WorkflowEntity>,
   ) {}
 
-  async seed(config?: Partial<ISeederConfig>): Promise<void> {
+  async seed(config?: Partial<ISeederConfig>): Promise<ISeederResult> {
     this.logger.log('🌱 Starting database seeding...');
 
-    // Merge custom config with default config
     if (config) {
       this.config = { ...this.config, ...config };
     }
 
     try {
-      // Check if data already exists
-      const existingTasks = await this.taskRepository.count();
-      if (existingTasks > 0) {
+      if (await this.hasExistingData()) {
         this.logger.log('📊 Database already contains data, skipping seeding');
-        return;
+        return { workflows: 0, tasks: 0, taskLogs: 0 };
       }
 
-      // Generate customer IDs
-      this.generateCustomerIds();
+      this.customers = Array.from({ length: this.config.customers }, () =>
+        faker.string.uuid(),
+      );
 
-      // Seed workflows
-      await this.seedWorkflows();
+      const workflows = await this.seedWorkflows();
+      const tasks = await this.seedTasks(workflows);
+      const taskLogs = await this.seedTaskLogs(tasks);
 
-      // Seed tasks for each type
-      await this.seedTasksByType();
+      const result: ISeederResult = {
+        workflows: workflows.length,
+        tasks: tasks.length,
+        taskLogs: taskLogs.length,
+      };
 
-      // Seed task logs
-      await this.seedTaskLogs();
-
-      this.logger.log('✅ Database seeding completed successfully');
+      this.logger.log('✅ Database seeding completed successfully', result);
+      return result;
     } catch (error) {
       this.logger.error('❌ Database seeding failed:', error);
       throw error;
     }
   }
 
-  private generateCustomerIds(): void {
-    this.customers.length = 0;
-    for (let i = 0; i < this.config.customers; i++) {
-      this.customers.push(faker.string.uuid());
-    }
+  private async hasExistingData(): Promise<boolean> {
+    return (await this.taskRepository.count()) > 0;
   }
 
-  private async seedWorkflows(): Promise<void> {
+  private async seedWorkflows(): Promise<WorkflowEntity[]> {
     this.logger.log('📋 Seeding workflows...');
 
     const workflowTemplates = [
@@ -137,194 +139,151 @@ export class DatabaseSeeder {
       },
     ];
 
-    for (const template of workflowTemplates) {
-      const workflow = this.workflowRepository.create({
-        ...template,
-        isActive: faker.datatype.boolean(),
-      });
-      const savedWorkflow = await this.workflowRepository.save(workflow);
-      this.workflows.push(savedWorkflow);
-      this.logger.log(
-        `✅ Created workflow: ${workflow.name} (ID: ${workflow.id})`,
-      );
-    }
+    const workflows = await Promise.all(
+      workflowTemplates.map(async (template) => {
+        const workflow = this.workflowRepository.create({
+          ...template,
+          isActive: faker.datatype.boolean(),
+        });
+        return this.workflowRepository.save(workflow);
+      }),
+    );
+
+    this.logger.log(`✅ Created ${workflows.length} workflows`);
+    return workflows;
   }
 
-  private async seedTasksByType(): Promise<void> {
-    this.logger.log('📝 Seeding tasks by type...');
+  private async seedTasks(workflows: WorkflowEntity[]): Promise<TaskEntity[]> {
+    this.logger.log('📝 Seeding tasks...');
 
     const taskTypes = Object.values(TaskType);
     const taskStatuses = Object.values(TaskStatus);
+    const allTasks: TaskEntity[] = [];
 
     for (const taskType of taskTypes) {
-      await this.seedTasksForType(taskType, taskStatuses);
-    }
-  }
+      const tasks = Array.from({ length: this.config.tasksPerType }, (_, i) => {
+        const status = taskStatuses[i % taskStatuses.length];
+        return this.createTask(taskType, status, workflows);
+      });
 
-  private async seedTasksForType(
-    taskType: TaskType,
-    statuses: TaskStatus[],
-  ): Promise<void> {
-    const tasks: Partial<TaskEntity>[] = [];
-
-    for (let i = 0; i < this.config.tasksPerType; i++) {
-      const status = statuses[i % statuses.length];
-      const task = this.createTaskData(taskType, status);
-      tasks.push(task);
+      const createdTasks = await this.taskRepository.save(tasks);
+      allTasks.push(...createdTasks);
     }
 
-    // Batch insert for better performance
-    const createdTasks = await this.taskRepository.save(tasks);
-
-    this.logger.log(
-      `✅ Created ${createdTasks.length} tasks for type: ${taskType}`,
-    );
+    this.logger.log(`✅ Created ${allTasks.length} tasks total`);
+    return allTasks;
   }
 
-  private createTaskData(
+  private createTask(
     taskType: TaskType,
     status: TaskStatus,
+    workflows: WorkflowEntity[],
   ): Partial<TaskEntity> {
     const baseTask = {
       type: taskType,
       status,
       retries: faker.number.int({ min: 0, max: 3 }),
       maxRetries: 3,
-      workflow: faker.helpers.arrayElement(this.workflows),
+      workflow: faker.helpers.arrayElement(workflows),
+      payload: this.generatePayload(taskType, status),
     };
 
-    const payload = this.generatePayloadForTaskType(taskType, status);
-
     if (status === TaskStatus.FAILED) {
-      return {
-        ...baseTask,
-        payload,
-        error: faker.lorem.sentence(),
-        retries: 3,
-      };
+      return { ...baseTask, error: faker.lorem.sentence(), retries: 3 };
     }
 
     if (status === TaskStatus.PENDING) {
-      return {
-        ...baseTask,
-        payload,
-        scheduledAt: faker.date.future(),
-      };
+      return { ...baseTask, scheduledAt: faker.date.future() };
     }
 
-    return {
-      ...baseTask,
-      payload,
-    };
+    return baseTask;
   }
 
-  private generatePayloadForTaskType(
+  private generatePayload(
     taskType: TaskType,
     status: TaskStatus,
   ): Record<string, any> {
     const customerId = this.getRandomCustomer();
+    const isCompleted = status === TaskStatus.COMPLETED;
 
-    switch (taskType) {
-      case TaskType.FETCH_ORDERS:
-        return {
-          customerId,
-          dateFrom: faker.date.past().toISOString(),
-          dateTo: faker.date.recent().toISOString(),
-          ...(status === TaskStatus.COMPLETED && {
-            orders: this.generateOrders(customerId),
-          }),
-        };
+    const payloads = {
+      [TaskType.FETCH_ORDERS]: {
+        customerId,
+        dateFrom: faker.date.past().toISOString(),
+        dateTo: faker.date.recent().toISOString(),
+        ...(isCompleted && { orders: this.generateOrders(customerId) }),
+      },
+      [TaskType.CREATE_INVOICE]: {
+        customerId,
+        ...(isCompleted && {
+          orders: this.generateOrders(customerId),
+          invoice: this.generateInvoice(customerId),
+        }),
+      },
+      [TaskType.GENERATE_PDF]: {
+        customerId,
+        ...(isCompleted && {
+          invoice: this.generateInvoice(customerId),
+          pdfUrl: faker.internet.url(),
+        }),
+      },
+      [TaskType.SEND_EMAIL]: {
+        customerId,
+        ...(isCompleted && {
+          invoice: this.generateInvoice(customerId),
+          pdfUrl: faker.internet.url(),
+          emailSent: true,
+          recipientEmail: faker.internet.email(),
+        }),
+      },
+      [TaskType.HTTP_REQUEST]: {
+        url: faker.internet.url(),
+        method: faker.helpers.arrayElement(['GET', 'POST', 'PUT', 'DELETE']),
+        headers: { 'Content-Type': 'application/json' },
+        ...(isCompleted && {
+          response: { status: 200, data: faker.lorem.paragraph() },
+        }),
+      },
+      [TaskType.DATA_PROCESSING]: {
+        dataset: faker.string.alphanumeric(10),
+        operation: faker.helpers.arrayElement([
+          'transform',
+          'validate',
+          'aggregate',
+        ]),
+        ...(isCompleted && {
+          result: { processed: faker.number.int({ min: 100, max: 1000 }) },
+        }),
+      },
+      [TaskType.COMPENSATION]: {
+        originalTaskId: faker.string.uuid(),
+        originalTaskType: faker.helpers.arrayElement(Object.values(TaskType)),
+        reason: faker.lorem.sentence(),
+        ...(isCompleted && { compensationApplied: true }),
+      },
+    };
 
-      case TaskType.CREATE_INVOICE:
-        return {
-          customerId,
-          ...(status === TaskStatus.COMPLETED && {
-            orders: this.generateOrders(customerId),
-            invoice: this.generateInvoice(customerId),
-          }),
-        };
-
-      case TaskType.GENERATE_PDF:
-        return {
-          customerId,
-          ...(status === TaskStatus.COMPLETED && {
-            invoice: this.generateInvoice(customerId),
-            pdfUrl: faker.internet.url(),
-          }),
-        };
-
-      case TaskType.SEND_EMAIL:
-        return {
-          customerId,
-          ...(status === TaskStatus.COMPLETED && {
-            invoice: this.generateInvoice(customerId),
-            pdfUrl: faker.internet.url(),
-            emailSent: true,
-            recipientEmail: faker.internet.email(),
-          }),
-        };
-
-      case TaskType.HTTP_REQUEST:
-        return {
-          url: faker.internet.url(),
-          method: faker.helpers.arrayElement(['GET', 'POST', 'PUT', 'DELETE']),
-          headers: { 'Content-Type': 'application/json' },
-          ...(status === TaskStatus.COMPLETED && {
-            response: { status: 200, data: faker.lorem.paragraph() },
-          }),
-        };
-
-      case TaskType.DATA_PROCESSING:
-        return {
-          dataset: faker.string.alphanumeric(10),
-          operation: faker.helpers.arrayElement([
-            'transform',
-            'validate',
-            'aggregate',
-          ]),
-          ...(status === TaskStatus.COMPLETED && {
-            result: { processed: faker.number.int({ min: 100, max: 1000 }) },
-          }),
-        };
-
-      case TaskType.COMPENSATION:
-        return {
-          originalTaskId: faker.string.uuid(),
-          originalTaskType: faker.helpers.arrayElement(Object.values(TaskType)),
-          reason: faker.lorem.sentence(),
-          ...(status === TaskStatus.COMPLETED && {
-            compensationApplied: true,
-          }),
-        };
-
-      default:
-        return { data: faker.lorem.paragraph() };
-    }
+    return payloads[taskType] || { data: faker.lorem.paragraph() };
   }
 
   private generateOrders(customerId: string): any[] {
-    const orderCount = faker.number.int({ min: 1, max: 5 });
-    const orders: any[] = [];
-
-    for (let i = 0; i < orderCount; i++) {
-      const itemCount = faker.number.int({ min: 1, max: 4 });
-      const items: any[] = [];
-
-      for (let j = 0; j < itemCount; j++) {
-        items.push({
+    return Array.from({ length: faker.number.int({ min: 1, max: 5 }) }, () => {
+      const items = Array.from(
+        { length: faker.number.int({ min: 1, max: 4 }) },
+        () => ({
           id: faker.string.uuid(),
           name: faker.commerce.productName(),
           price: parseFloat(faker.commerce.price()),
           quantity: faker.number.int({ min: 1, max: 10 }),
-        });
-      }
+        }),
+      );
 
       const totalAmount = items.reduce(
         (sum, item) => sum + item.price * item.quantity,
         0,
       );
 
-      orders.push({
+      return {
         id: faker.string.uuid(),
         customerId,
         status: faker.helpers.arrayElement([
@@ -336,10 +295,8 @@ export class DatabaseSeeder {
         items,
         totalAmount,
         deliveryDate: faker.date.recent().toISOString(),
-      });
-    }
-
-    return orders;
+      };
+    });
   }
 
   private generateInvoice(customerId: string): any {
@@ -369,56 +326,43 @@ export class DatabaseSeeder {
     };
   }
 
-  private async seedTaskLogs(): Promise<void> {
+  private async seedTaskLogs(tasks: TaskEntity[]): Promise<TaskLogEntity[]> {
     this.logger.log('📋 Seeding task logs...');
 
-    const tasks = await this.taskRepository.find();
     const logEntries: Partial<TaskLogEntity>[] = [];
 
     for (const task of tasks) {
-      // Create log entry for task creation
       logEntries.push({
-        task: task,
+        task,
         level: LogLevel.INFO,
         message: `Task ${task.type} created`,
         timestamp: task.createdAt,
       });
 
-      // Create log entry based on task status
-      if (task.status === TaskStatus.COMPLETED) {
+      const statusMessages = {
+        [TaskStatus.COMPLETED]: `Task ${task.type} completed successfully`,
+        [TaskStatus.FAILED]: `Task ${task.type} failed: ${task.error}`,
+        [TaskStatus.PROCESSING]: `Task ${task.type} started processing`,
+        [TaskStatus.RETRYING]: `Task ${task.type} retrying (attempt ${task.retries})`,
+      };
+
+      if (statusMessages[task.status]) {
         logEntries.push({
-          task: task,
-          level: LogLevel.INFO,
-          message: `Task ${task.type} completed successfully`,
-          timestamp: task.updatedAt,
-        });
-      } else if (task.status === TaskStatus.FAILED) {
-        logEntries.push({
-          task: task,
-          level: LogLevel.ERROR,
-          message: `Task ${task.type} failed: ${task.error}`,
-          timestamp: task.updatedAt,
-        });
-      } else if (task.status === TaskStatus.PROCESSING) {
-        logEntries.push({
-          task: task,
-          level: LogLevel.INFO,
-          message: `Task ${task.type} started processing`,
-          timestamp: task.updatedAt,
-        });
-      } else if (task.status === TaskStatus.RETRYING) {
-        logEntries.push({
-          task: task,
-          level: LogLevel.WARNING,
-          message: `Task ${task.type} retrying (attempt ${task.retries})`,
+          task,
+          level:
+            task.status === TaskStatus.FAILED
+              ? LogLevel.ERROR
+              : task.status === TaskStatus.RETRYING
+                ? LogLevel.WARNING
+                : LogLevel.INFO,
+          message: statusMessages[task.status],
           timestamp: task.updatedAt,
         });
       }
 
-      // Add some random log entries for variety
       if (faker.datatype.boolean()) {
         logEntries.push({
-          task: task,
+          task,
           level: faker.helpers.arrayElement(Object.values(LogLevel)),
           message: faker.lorem.sentence(),
           timestamp: faker.date.between({
@@ -429,8 +373,9 @@ export class DatabaseSeeder {
       }
     }
 
-    await this.taskLogRepository.save(logEntries);
-    this.logger.log(`✅ Created ${logEntries.length} log entries`);
+    const createdLogs = await this.taskLogRepository.save(logEntries);
+    this.logger.log(`✅ Created ${createdLogs.length} log entries`);
+    return createdLogs;
   }
 
   private getRandomCustomer(): string {
@@ -444,6 +389,7 @@ export class DatabaseSeeder {
       await this.taskLogRepository.clear();
       await this.taskRepository.clear();
       await this.workflowRepository.clear();
+      this.customers = [];
 
       this.logger.log('✅ Database cleared successfully');
     } catch (error) {

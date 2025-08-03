@@ -80,7 +80,6 @@ describe('Invoice Workflow Integration', () => {
       const customerId = 'customer-123';
       const workflowId = 'workflow-123';
 
-      // Step 1: Start invoice workflow
       const fetchOrdersTask = TaskEntityMockFactory.create({
         id: 'fetch-orders-task',
         type: TaskType.FETCH_ORDERS,
@@ -106,7 +105,6 @@ describe('Invoice Workflow Integration', () => {
       expect(startResult.message).toBe('Invoice workflow started');
       expect(startResult.taskId).toBe('fetch-orders-task');
 
-      // Step 2: Handle fetch orders completion
       const mockOrders = [
         {
           id: 'order-1',
@@ -133,7 +131,6 @@ describe('Invoice Workflow Integration', () => {
         workflow: { id: workflowId },
       });
 
-      // Mock the task service to return the fetch orders task with orders
       taskService.getTaskById.mockResolvedValue({
         ...fetchOrdersTask,
         payload: {
@@ -158,7 +155,6 @@ describe('Invoice Workflow Integration', () => {
         'create-invoice-task',
       );
 
-      // Step 3: Handle create invoice completion
       const mockInvoice = {
         id: 'invoice-123',
         invoiceNumber: 'INV-123',
@@ -185,7 +181,6 @@ describe('Invoice Workflow Integration', () => {
         workflow: { id: workflowId },
       });
 
-      // Mock the task service to return the create invoice task with invoice
       taskService.getTaskById.mockResolvedValue({
         ...createInvoiceTask,
         payload: {
@@ -213,7 +208,6 @@ describe('Invoice Workflow Integration', () => {
         'generate-pdf-task',
       );
 
-      // Step 4: Handle generate PDF completion
       const pdfUrl = 'https://storage.example.com/invoices/INV-123.pdf';
 
       const sendEmailTask = TaskEntityMockFactory.create({
@@ -229,7 +223,6 @@ describe('Invoice Workflow Integration', () => {
         workflow: { id: workflowId },
       });
 
-      // Mock the task service to return the generate PDF task with PDF URL
       taskService.getTaskById.mockResolvedValue({
         ...generatePdfTask,
         payload: {
@@ -256,10 +249,8 @@ describe('Invoice Workflow Integration', () => {
         'send-email-task',
       );
 
-      // Step 5: Handle send email completion
       await workflowService.handleSendEmailCompletion('send-email-task');
 
-      // Verify workflow completion
       const mockTasks = [
         { ...fetchOrdersTask, status: TaskStatus.COMPLETED },
         { ...createInvoiceTask, status: TaskStatus.COMPLETED },
@@ -296,7 +287,6 @@ describe('Invoice Workflow Integration', () => {
         workflow: { id: workflowId },
       });
 
-      // Mock the task service to return a task for the failure scenario
       taskService.getTaskById.mockResolvedValue({
         id: 'generate-pdf-task',
         type: TaskType.GENERATE_PDF,
@@ -333,7 +323,7 @@ describe('Invoice Workflow Integration', () => {
         status: TaskStatus.COMPLETED,
         payload: {
           customerId,
-          orders: [], // No deliverable orders
+          orders: [],
         },
         workflow: { id: workflowId },
       });
@@ -342,7 +332,6 @@ describe('Invoice Workflow Integration', () => {
 
       await workflowService.handleFetchOrdersCompletion('fetch-orders-task');
 
-      // Should not create any additional tasks
       expect(taskService.createTask).not.toHaveBeenCalled();
       expect(messagingService.publishTask).not.toHaveBeenCalled();
     });
@@ -351,7 +340,7 @@ describe('Invoice Workflow Integration', () => {
   describe('Scheduled Workflows', () => {
     it('should create daily invoice workflow', async () => {
       const customerId = 'customer-123';
-      const cronExpression = '0 0 * * *'; // Daily at midnight
+      const cronExpression = '0 0 * * *';
 
       const mockTask = TaskEntityMockFactory.create({
         id: 'recurring-task',
@@ -390,7 +379,7 @@ describe('Invoice Workflow Integration', () => {
     it('should create weekly email workflow', async () => {
       const customerId = 'customer-123';
       const invoiceId = 'invoice-123';
-      const scheduledAt = '2024-01-20T10:00:00Z'; // End of week
+      const scheduledAt = '2024-01-20T10:00:00Z';
 
       const mockTask = TaskEntityMockFactory.create({
         id: 'scheduled-email-task',

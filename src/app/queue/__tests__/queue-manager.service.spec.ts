@@ -73,7 +73,7 @@ describe('QueueManagerService', () => {
         completed: 3,
         failed: 1,
         total: 7,
-        isHealthy: true, // failed < 50 && pending < 500
+        isHealthy: true,
       });
     });
 
@@ -101,7 +101,7 @@ describe('QueueManagerService', () => {
         completed: 0,
         failed: 60,
         total: 61,
-        isHealthy: false, // failed >= 50
+        isHealthy: false,
       });
     });
 
@@ -129,7 +129,7 @@ describe('QueueManagerService', () => {
         completed: 0,
         failed: 1,
         total: 601,
-        isHealthy: false, // pending >= 500
+        isHealthy: false,
       });
     });
 
@@ -180,7 +180,7 @@ describe('QueueManagerService', () => {
   describe('isOverloaded', () => {
     it('should return true when pending tasks exceed threshold', async () => {
       const mockStatus = {
-        pending: 250, // > 200
+        pending: 250,
         processing: 10,
         completed: 100,
         failed: 5,
@@ -201,7 +201,7 @@ describe('QueueManagerService', () => {
         pending: 50,
         processing: 10,
         completed: 100,
-        failed: 25, // > 20
+        failed: 25,
         total: 185,
         isHealthy: false,
       };
@@ -216,10 +216,10 @@ describe('QueueManagerService', () => {
 
     it('should return false when both thresholds are within limits', async () => {
       const mockStatus = {
-        pending: 150, // <= 200
+        pending: 150,
         processing: 10,
         completed: 100,
-        failed: 15, // <= 20
+        failed: 15,
         total: 275,
         isHealthy: true,
       };
@@ -234,10 +234,10 @@ describe('QueueManagerService', () => {
 
     it('should return false when exactly at thresholds', async () => {
       const mockStatus = {
-        pending: 200, // == 200
+        pending: 200,
         processing: 10,
         completed: 100,
-        failed: 20, // == 20
+        failed: 20,
         total: 330,
         isHealthy: false,
       };

@@ -6,13 +6,7 @@ import {
   HttpStatus,
   Body,
 } from '@nestjs/common';
-import { DatabaseSeeder } from './database.seeder';
-
-interface ISeedConfig {
-  workflows?: number;
-  tasksPerType?: number;
-  customers?: number;
-}
+import { DatabaseSeeder, ISeederConfig, ISeederResult } from './database.seeder';
 
 @Controller('seeder')
 export class SeederController {
@@ -20,17 +14,25 @@ export class SeederController {
 
   @Post('seed')
   @HttpCode(HttpStatus.OK)
-  async seedDatabase(@Body() config?: ISeedConfig) {
-    await this.databaseSeeder.seed(config);
+  async seedDatabase(@Body() config?: Partial<ISeederConfig>): Promise<{
+    message: string;
+    timestamp: string;
+    result: ISeederResult;
+  }> {
+    const result = await this.databaseSeeder.seed(config);
     return {
       message: 'Database seeded successfully',
       timestamp: new Date().toISOString(),
+      result,
     };
   }
 
   @Delete('clear')
   @HttpCode(HttpStatus.OK)
-  async clearDatabase() {
+  async clearDatabase(): Promise<{
+    message: string;
+    timestamp: string;
+  }> {
     await this.databaseSeeder.clear();
     return {
       message: 'Database cleared successfully',
@@ -40,12 +42,17 @@ export class SeederController {
 
   @Post('reset')
   @HttpCode(HttpStatus.OK)
-  async resetDatabase(@Body() config?: ISeedConfig) {
+  async resetDatabase(@Body() config?: Partial<ISeederConfig>): Promise<{
+    message: string;
+    timestamp: string;
+    result: ISeederResult;
+  }> {
     await this.databaseSeeder.clear();
-    await this.databaseSeeder.seed(config);
+    const result = await this.databaseSeeder.seed(config);
     return {
       message: 'Database reset successfully',
       timestamp: new Date().toISOString(),
+      result,
     };
   }
 }

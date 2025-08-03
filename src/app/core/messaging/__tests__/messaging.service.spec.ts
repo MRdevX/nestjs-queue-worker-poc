@@ -7,7 +7,6 @@ import { MessagingService } from '../messaging.service';
 import { TaskType } from '../../../task/types/task-type.enum';
 import { ITaskMessage } from '../types/task-message.interface';
 
-// Mock firstValueFrom
 jest.mock('rxjs', () => ({
   ...jest.requireActual('rxjs'),
   firstValueFrom: jest.fn(),
@@ -17,7 +16,6 @@ const mockFirstValueFrom = firstValueFrom as jest.MockedFunction<
   typeof firstValueFrom
 >;
 
-// Mock ClientProxyFactory
 jest.mock('@nestjs/microservices', () => {
   const actual = jest.requireActual('@nestjs/microservices');
   return {
@@ -34,14 +32,12 @@ describe('MessagingService', () => {
   let mockClient: jest.Mocked<ClientProxy>;
 
   beforeEach(async () => {
-    // Create mock client
     mockClient = {
       send: jest.fn(),
       connect: jest.fn(),
       close: jest.fn(),
     } as any;
 
-    // Mock ClientProxyFactory.create to return our mock client
     (ClientProxyFactory.create as jest.Mock).mockReturnValue(mockClient);
 
     const module: TestingModule = await Test.createTestingModule({
@@ -306,7 +302,6 @@ describe('MessagingService', () => {
       const error = new Error('Close failed');
       mockClient.close.mockRejectedValue(error);
 
-      // Should not throw error
       await expect(service.close()).resolves.toBeUndefined();
 
       expect(mockClient.close).toHaveBeenCalled();
@@ -326,7 +321,6 @@ describe('MessagingService', () => {
       const error = new Error('Close failed');
       mockClient.close.mockRejectedValue(error);
 
-      // Should not throw error
       await expect(service.onModuleDestroy()).resolves.toBeUndefined();
 
       expect(mockClient.close).toHaveBeenCalled();
@@ -345,7 +339,6 @@ describe('MessagingService', () => {
 
       configService.get.mockReturnValue(s2sConfig);
 
-      // Recreate service to trigger createClient
       new MessagingService(configService);
 
       expect(configService.get).toHaveBeenCalledWith('s2s');

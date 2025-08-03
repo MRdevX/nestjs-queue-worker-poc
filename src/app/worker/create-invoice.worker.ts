@@ -36,11 +36,8 @@ export class CreateInvoiceWorker extends BaseWorker {
       );
     }
 
-    // Create invoice from orders
     const invoice = await this.createInvoice(customerId, orders, invoiceNumber);
 
-    // In a real implementation, you would update the task with the invoice data
-    // For now, we'll just log the invoice creation
     this.logger.log(
       `Invoice created: ${invoice.id} for customer ${customerId}`,
     );
@@ -51,18 +48,15 @@ export class CreateInvoiceWorker extends BaseWorker {
     orders: any[],
     invoiceNumber?: string,
   ) {
-    // Calculate total amount from all orders
     const totalAmount = orders.reduce(
       (sum, order) => sum + order.totalAmount,
       0,
     );
 
-    // Generate invoice number if not provided
     const finalInvoiceNumber =
       invoiceNumber ||
       `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // Create invoice object
     const invoice = {
       id: `invoice-${Date.now()}`,
       invoiceNumber: finalInvoiceNumber,
@@ -70,15 +64,13 @@ export class CreateInvoiceWorker extends BaseWorker {
       orders: orders.map((order) => order.id),
       items: orders.flatMap((order) => order.items),
       totalAmount,
-      taxAmount: totalAmount * 0.1, // 10% tax
+      taxAmount: totalAmount * 0.1,
       grandTotal: totalAmount * 1.1,
       status: 'created',
       createdAt: new Date().toISOString(),
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
-    // In a real implementation, you would save this to a database
-    // For now, we'll just return the invoice object
     return invoice;
   }
 

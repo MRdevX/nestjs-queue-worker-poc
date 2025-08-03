@@ -35,19 +35,16 @@ export class GeneratePdfWorker extends BaseWorker {
       throw new Error('Invoice data is required for PDF generation');
     }
 
-    // Generate PDF using external PDF processor
     const pdfUrl = await this.generatePdf(invoice, pdfProcessorUrl);
 
     this.logger.log(`PDF generated for invoice ${invoice.id}: ${pdfUrl}`);
   }
 
   private async generatePdf(invoice: any, pdfProcessorUrl?: string) {
-    // Use provided PDF processor URL or default to a mock service
     const processorUrl =
       pdfProcessorUrl || 'https://api.pdf-processor.com/generate';
 
     try {
-      // Prepare invoice data for PDF generation
       const pdfData = {
         template: 'invoice',
         data: {
@@ -66,21 +63,17 @@ export class GeneratePdfWorker extends BaseWorker {
         },
       };
 
-      // In a real implementation, this would be an actual HTTP call to a PDF service
-      // For demonstration, we'll simulate the API call
       if (processorUrl.includes('mock')) {
-        // Simulate PDF generation
-        await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate processing time
+        await new Promise((resolve) => setTimeout(resolve, 2000));
 
         return `https://storage.example.com/invoices/${invoice.invoiceNumber}.pdf`;
       } else {
-        // Real API call to PDF processor
         const response = await axios.post(processorUrl, pdfData, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${process.env.PDF_PROCESSOR_API_KEY}`,
           },
-          timeout: 30000, // 30 second timeout for PDF generation
+          timeout: 30000,
         });
 
         if (response.status !== 200) {

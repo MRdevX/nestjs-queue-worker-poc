@@ -159,7 +159,6 @@ describe('HttpWorker', () => {
         type: TaskType.HTTP_REQUEST,
         payload: {
           method: 'GET',
-          // url is missing
         },
       });
 

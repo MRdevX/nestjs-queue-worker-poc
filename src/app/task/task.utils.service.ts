@@ -1,10 +1,4 @@
-/**
- * Task-specific utility functions
- */
 export class TaskUtilsService {
-  /**
-   * Count tasks by status
-   */
   static countTasksByStatus(tasks: any[]) {
     const counts = {
       total: tasks.length,
@@ -34,9 +28,6 @@ export class TaskUtilsService {
     return counts;
   }
 
-  /**
-   * Format a task for API response
-   */
   static formatTask(task: any) {
     return {
       id: task.id,

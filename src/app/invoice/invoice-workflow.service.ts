@@ -57,7 +57,6 @@ export class InvoiceWorkflowService {
       );
     });
 
-    // Create invoice creation task
     this.logger.log(
       `🔄 [FETCH_ORDERS_COMPLETION] Creating CREATE_INVOICE task for customer: ${customerId}`,
     );
@@ -127,7 +126,6 @@ export class InvoiceWorkflowService {
       `🧾 [CREATE_INVOICE_COMPLETION] Invoice created successfully - ID: ${invoice.id}, Number: ${invoice.invoiceNumber}, Amount: ${invoice.totalAmount}, Grand Total: ${invoice.grandTotal}`,
     );
 
-    // Create PDF generation task
     const pdfProcessorUrl =
       task.payload.pdfProcessorUrl ||
       this.configService.get('invoice.pdfProcessor.url');
@@ -203,7 +201,6 @@ export class InvoiceWorkflowService {
       `📄 [GENERATE_PDF_COMPLETION] PDF generated successfully - URL: ${pdfUrl}`,
     );
 
-    // Create email sending task
     const emailServiceUrl =
       task.payload.emailServiceUrl ||
       this.configService.get('invoice.emailService.url');
@@ -282,10 +279,6 @@ export class InvoiceWorkflowService {
       `📊 [SEND_EMAIL_COMPLETION] Final invoice details - ID: ${invoice?.id}, Number: ${invoice?.invoiceNumber}, Amount: ${invoice?.grandTotal}`,
     );
 
-    // In a real implementation, you might want to:
-    // 1. Update the orders as invoiced in the Ninox database
-    // 2. Send notifications to the business
-    // 3. Update workflow status
     this.logger.log(
       '💡 [SEND_EMAIL_COMPLETION] Next steps in production: Update orders as invoiced, send business notifications, update workflow status',
     );
@@ -313,7 +306,6 @@ export class InvoiceWorkflowService {
 
     this.logger.error(INVOICE_LOG_MESSAGES.TASK_FAILED(taskId), error.stack);
 
-    // Create compensation task for failed invoice workflow
     this.logger.log(
       `🔄 [TASK_FAILURE] Creating compensation task for failed task: ${taskId}`,
     );

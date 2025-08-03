@@ -89,7 +89,6 @@ describe('FetchOrdersWorker', () => {
         id: taskId,
         type: TaskType.FETCH_ORDERS,
         payload: {
-          // Missing customerId
           dateFrom: '2024-01-01',
         },
         status: TaskStatus.PENDING,
@@ -175,7 +174,6 @@ describe('FetchOrdersWorker', () => {
         dateTo,
       );
 
-      // Should only include orders delivered on or after 2024-01-16
       expect(orders).toHaveLength(1);
       expect(orders[0].deliveryDate).toBe('2024-01-16');
     });
@@ -189,7 +187,6 @@ describe('FetchOrdersWorker', () => {
         dateFrom,
       );
 
-      // Should only include orders delivered on or after 2024-01-16
       expect(orders).toHaveLength(1);
       expect(orders[0].deliveryDate).toBe('2024-01-16');
     });
@@ -204,7 +201,6 @@ describe('FetchOrdersWorker', () => {
         dateTo,
       );
 
-      // Should only include orders delivered on or before 2024-01-15
       expect(orders).toHaveLength(1);
       expect(orders[0].deliveryDate).toBe('2024-01-15');
     });

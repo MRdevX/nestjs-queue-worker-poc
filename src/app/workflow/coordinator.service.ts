@@ -48,7 +48,7 @@ export class CoordinatorService {
         this.logger.warn(
           `Task ${taskId} failed, workflow ${task.workflow.id} may need compensation`,
         );
-        // compensation logic
+
         return;
       }
 
@@ -95,8 +95,6 @@ export class CoordinatorService {
       this.logger.warn(
         `Task ${taskId} failed in workflow ${task.workflow.id}: ${error.message}`,
       );
-
-      // retry logic or compensation
     } catch (coordinatorError) {
       this.logger.error(
         `Failed to handle task failure for ${taskId}`,

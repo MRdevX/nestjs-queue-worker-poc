@@ -216,7 +216,7 @@ describe('SchedulerService', () => {
 
   describe('processScheduledTasks', () => {
     it('should process scheduled tasks that are due for execution', async () => {
-      const pastDate = new Date(Date.now() - 60000); // 1 minute ago
+      const pastDate = new Date(Date.now() - 60000);
       const mockTasks = [
         TaskEntityMockFactory.create({
           id: 'task-1',
@@ -240,7 +240,6 @@ describe('SchedulerService', () => {
       expect(taskRepository.update).toHaveBeenCalledTimes(2);
       expect(messagingService.publishTask).toHaveBeenCalledTimes(2);
 
-      // Check that tasks were updated to PENDING and scheduledAt was cleared
       expect(taskRepository.update).toHaveBeenCalledWith('task-1', {
         status: TaskStatus.PENDING,
         scheduledAt: null,
@@ -250,7 +249,6 @@ describe('SchedulerService', () => {
         scheduledAt: null,
       });
 
-      // Check that tasks were published
       expect(messagingService.publishTask).toHaveBeenCalledWith(
         TaskType.HTTP_REQUEST,
         'task-1',
@@ -262,7 +260,7 @@ describe('SchedulerService', () => {
     });
 
     it('should not process tasks that are not due yet', async () => {
-      const futureDate = new Date(Date.now() + 60000); // 1 minute in future
+      const futureDate = new Date(Date.now() + 60000);
       const mockTasks = [
         TaskEntityMockFactory.create({
           id: 'task-1',

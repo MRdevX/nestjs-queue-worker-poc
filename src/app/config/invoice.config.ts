@@ -22,10 +22,10 @@ export default registerAs('invoice', () => ({
       process.env.INVOICE_DEFAULT_RETRY_ATTEMPTS || '3',
       10,
     ),
-    taskTimeout: parseInt(process.env.INVOICE_TASK_TIMEOUT || '300000', 10), // 5 minutes
+    taskTimeout: parseInt(process.env.INVOICE_TASK_TIMEOUT || '300000', 10),
   },
   scheduling: {
-    defaultCronExpression: process.env.INVOICE_DEFAULT_CRON || '0 0 * * *', // Daily at midnight
+    defaultCronExpression: process.env.INVOICE_DEFAULT_CRON || '0 0 * * *',
     maxScheduledTasks: parseInt(
       process.env.INVOICE_MAX_SCHEDULED_TASKS || '100',
       10,

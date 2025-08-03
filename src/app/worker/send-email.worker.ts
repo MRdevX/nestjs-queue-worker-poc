@@ -37,7 +37,6 @@ export class SendEmailWorker extends BaseWorker {
       );
     }
 
-    // Send email to customer with invoice attachment
     const emailResult = await this.sendEmail(
       customerId,
       invoice,
@@ -56,14 +55,11 @@ export class SendEmailWorker extends BaseWorker {
     pdfUrl: string,
     emailServiceUrl?: string,
   ) {
-    // Use provided email service URL or default to a mock service
     const serviceUrl = emailServiceUrl || 'https://api.email-service.com/send';
 
     try {
-      // Get customer email from customer service
       const customerEmail = await this.getCustomerEmail(customerId);
 
-      // Prepare email data
       const emailData = {
         to: customerEmail,
         subject: `Invoice ${invoice.invoiceNumber} - Payment Due`,
@@ -89,11 +85,8 @@ export class SendEmailWorker extends BaseWorker {
         },
       };
 
-      // In a real implementation, this would be an actual HTTP call to an email service
-      // For demonstration, we'll simulate the API call
       if (serviceUrl.includes('mock')) {
-        // Simulate email sending
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate processing time
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
         return {
           emailId: `email-${Date.now()}`,
@@ -101,13 +94,12 @@ export class SendEmailWorker extends BaseWorker {
           messageId: `msg-${Math.random().toString(36).substr(2, 9)}`,
         };
       } else {
-        // Real API call to email service
         const response = await axios.post(serviceUrl, emailData, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${process.env.EMAIL_SERVICE_API_KEY}`,
           },
-          timeout: 10000, // 10 second timeout for email sending
+          timeout: 10000,
         });
 
         if (response.status !== 200) {
@@ -126,8 +118,6 @@ export class SendEmailWorker extends BaseWorker {
   }
 
   private async getCustomerEmail(customerId: string): Promise<string> {
-    // In a real implementation, this would fetch customer details from a customer service
-    // For demonstration, we'll return a mock email
     return `customer-${customerId}@example.com`;
   }
 

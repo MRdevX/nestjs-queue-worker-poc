@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnModuleInit } from '@nestjs/common';
-import { DatabaseSeeder } from './database.seeder';
+import { DatabaseSeeder, ISeederConfig, ISeederResult } from './database.seeder';
 
 @Injectable()
 export class SeederService implements OnModuleInit {
@@ -9,15 +9,13 @@ export class SeederService implements OnModuleInit {
   constructor(private readonly databaseSeeder: DatabaseSeeder) {}
 
   async onModuleInit() {
-    // Auto-seed database on application startup if needed
-    // You can control this with environment variables
     const shouldAutoSeed = process.env.AUTO_SEED_DATABASE === 'true';
 
     if (shouldAutoSeed) {
       this.logger.log('🚀 Auto-seeding database on startup...');
       try {
-        await this.databaseSeeder.seed();
-        this.logger.log('✅ Auto-seeding completed successfully');
+        const result = await this.databaseSeeder.seed();
+        this.logger.log('✅ Auto-seeding completed successfully', result);
       } catch (error) {
         this.logger.error('❌ Auto-seeding failed:', error);
       }
@@ -28,11 +26,7 @@ export class SeederService implements OnModuleInit {
     }
   }
 
-  async seedDatabase(config?: {
-    workflows?: number;
-    tasksPerType?: number;
-    customers?: number;
-  }): Promise<void> {
+  async seedDatabase(config?: Partial<ISeederConfig>): Promise<ISeederResult> {
     return this.databaseSeeder.seed(config);
   }
 
@@ -40,8 +34,8 @@ export class SeederService implements OnModuleInit {
     return this.databaseSeeder.clear();
   }
 
-  async resetDatabase(): Promise<void> {
+  async resetDatabase(config?: Partial<ISeederConfig>): Promise<ISeederResult> {
     await this.databaseSeeder.clear();
-    return this.databaseSeeder.seed();
+    return this.databaseSeeder.seed(config);
   }
 }

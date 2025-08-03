@@ -34,14 +34,12 @@ export class FetchOrdersWorker {
 
       this.logger.log(`Fetching orders for customer: ${customerId}`);
 
-      // Simulate fetching orders from Ninox database
       const orders = await this.fetchOrdersFromNinox(
         customerId,
         dateFrom,
         dateTo,
       );
 
-      // Filter orders that are delivered but not invoiced
       const deliverableOrders = orders.filter(
         (order) => order.status === 'delivered' && !order.invoiced,
       );
@@ -50,14 +48,12 @@ export class FetchOrdersWorker {
         `Fetched ${deliverableOrders.length} deliverable orders for customer ${customerId}`,
       );
 
-      // Update task payload with fetched orders
       await this.taskService.updateTaskStatus(taskId, TaskStatus.COMPLETED);
       await this.taskService.updateTaskPayload(taskId, {
         ...task.payload,
         orders: deliverableOrders,
       });
 
-      // Handle workflow completion
       await this.coordinator.handleTaskCompletion(taskId);
     } catch (error) {
       this.logger.error(`Failed to fetch orders: ${taskId}`, error.stack);
@@ -72,10 +68,6 @@ export class FetchOrdersWorker {
     dateFrom?: string,
     dateTo?: string,
   ) {
-    // Simulate API call to Ninox database
-    // In a real implementation, this would be an actual HTTP call to Ninox API
-
-    // Mock data for demonstration
     const mockOrders = [
       {
         id: 'order-1',
@@ -109,11 +101,9 @@ export class FetchOrdersWorker {
       },
     ];
 
-    // Filter by date range if provided
     let filteredOrders = mockOrders;
     if (dateFrom || dateTo) {
       filteredOrders = mockOrders.filter((order) => {
-        // Skip orders with null delivery date when filtering by date
         if (!order.deliveryDate) {
           return false;
         }

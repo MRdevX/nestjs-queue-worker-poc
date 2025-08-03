@@ -130,7 +130,6 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           id: taskId,
           type: TaskType.FETCH_ORDERS,
           payload: {
-            // Missing customerId
             dateFrom: '2024-01-01',
           },
           status: TaskStatus.PENDING,
@@ -171,8 +170,6 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
 
         await fetchOrdersWorker.handleTask(message);
 
-        // When task is not found, the base worker logs a warning and returns early
-        // without calling handleFailure or coordinator.handleTaskFailure
         expect(taskService.handleFailure).not.toHaveBeenCalled();
         expect(coordinator.handleTaskFailure).not.toHaveBeenCalled();
       });
@@ -190,7 +187,6 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           dateTo,
         );
 
-        // Should only include orders delivered on or after 2024-01-16
         expect(orders).toHaveLength(1);
         expect(orders[0].deliveryDate).toBe('2024-01-16');
       });
@@ -204,7 +200,6 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           dateFrom,
         );
 
-        // Should exclude orders with null delivery date
         const ordersWithNullDelivery = orders.filter(
           (order) => order.deliveryDate === null,
         );
@@ -276,7 +271,6 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           payload: {
             customerId: 'customer-123',
             orders: mockOrders,
-            // No invoiceNumber provided
           },
           status: TaskStatus.PENDING,
         });
@@ -305,7 +299,6 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           type: TaskType.CREATE_INVOICE,
           payload: {
             orders: [{ id: 'order-1', totalAmount: 100 }],
-            // Missing customerId
           },
           status: TaskStatus.PENDING,
         });
@@ -339,7 +332,6 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           type: TaskType.CREATE_INVOICE,
           payload: {
             customerId: 'customer-123',
-            // Missing orders array
           },
           status: TaskStatus.PENDING,
         });
@@ -380,9 +372,9 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           orders,
         );
 
-        expect(invoice.totalAmount).toBe(300); // 100 + 200
-        expect(invoice.taxAmount).toBe(30); // 10% of 300
-        expect(invoice.grandTotal).toBe(330); // 300 + 30
+        expect(invoice.totalAmount).toBe(300);
+        expect(invoice.taxAmount).toBe(30);
+        expect(invoice.grandTotal).toBe(330);
       });
 
       it('should handle zero amount orders', async () => {
@@ -459,7 +451,7 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           payload: {
             customerId: 'customer-123',
             invoice: mockInvoice,
-            pdfProcessorUrl: 'https://mock-pdf-processor.com/generate', // Use mock URL to avoid HTTP call
+            pdfProcessorUrl: 'https://mock-pdf-processor.com/generate',
           },
           status: TaskStatus.PENDING,
         });
@@ -488,7 +480,6 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           type: TaskType.GENERATE_PDF,
           payload: {
             customerId: 'customer-123',
-            // Missing invoice
           },
           status: TaskStatus.PENDING,
         });
@@ -616,7 +607,7 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
             customerId: 'customer-123',
             invoice: mockInvoice,
             pdfUrl: 'https://storage.example.com/invoices/INV-123.pdf',
-            emailServiceUrl: 'https://mock-email-service.com/send', // Use mock URL to avoid HTTP call
+            emailServiceUrl: 'https://mock-email-service.com/send',
           },
           status: TaskStatus.PENDING,
         });
@@ -646,7 +637,6 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           payload: {
             invoice: { id: 'invoice-123' },
             pdfUrl: 'https://storage.example.com/invoices/INV-123.pdf',
-            // Missing customerId
           },
           status: TaskStatus.PENDING,
         });
@@ -681,7 +671,6 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           payload: {
             customerId: 'customer-123',
             invoice: { id: 'invoice-123' },
-            // Missing pdfUrl
           },
           status: TaskStatus.PENDING,
         });

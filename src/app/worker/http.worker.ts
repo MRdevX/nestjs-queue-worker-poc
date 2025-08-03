@@ -47,7 +47,6 @@ export class HttpWorker {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Update task with response
       await this.taskService.updateTaskStatus(taskId, TaskStatus.COMPLETED);
       await this.taskService.updateTaskPayload(taskId, {
         ...task.payload,
@@ -56,7 +55,6 @@ export class HttpWorker {
 
       this.logger.log(`HTTP request completed successfully: ${taskId}`);
 
-      // Handle workflow completion
       await this.coordinator.handleTaskCompletion(taskId);
 
       return { success: true, response: response.data };

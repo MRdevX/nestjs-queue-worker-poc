@@ -69,7 +69,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
         const customerId = 'customer-123';
         const workflowId = 'workflow-123';
 
-        // Step 1: Start workflow
         const fetchOrdersTask = TaskEntityMockFactory.create({
           id: 'fetch-orders-task',
           type: TaskType.FETCH_ORDERS,
@@ -91,7 +90,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
         expect(startResult.message).toBe('Invoice workflow started');
         expect(startResult.taskId).toBe('fetch-orders-task');
 
-        // Step 2: Handle fetch orders completion
         const mockOrders = [
           {
             id: 'order-1',
@@ -129,7 +127,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           workflowId,
         );
 
-        // Step 3: Handle create invoice completion
         const mockInvoice = {
           id: 'invoice-123',
           invoiceNumber: 'INV-123',
@@ -174,7 +171,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           workflowId,
         );
 
-        // Step 4: Handle generate PDF completion
         const pdfUrl = 'https://storage.example.com/invoices/INV-123.pdf';
 
         const sendEmailTask = TaskEntityMockFactory.create({
@@ -204,10 +200,8 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           workflowId,
         );
 
-        // Step 5: Handle send email completion
         await workflowService.handleSendEmailCompletion('send-email-task');
 
-        // Verify final status
         const mockTasks = [
           { ...fetchOrdersTask, status: TaskStatus.COMPLETED },
           { ...createInvoiceTask, status: TaskStatus.COMPLETED },
@@ -264,7 +258,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
 
         taskService.getTaskById.mockResolvedValue(fetchOrdersTask as any);
 
-        // Mock the createTask call that will be made in handleFetchOrdersCompletion
         const createInvoiceTask = TaskEntityMockFactory.create({
           id: 'create-invoice-task',
           type: TaskType.CREATE_INVOICE,
@@ -330,7 +323,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
 
         await workflowService.handleFetchOrdersCompletion('fetch-orders-task');
 
-        // Should not create any additional tasks
         expect(taskService.createTask).not.toHaveBeenCalled();
         expect(messagingService.publishTask).not.toHaveBeenCalled();
       });
@@ -339,20 +331,18 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
     describe('2.2 All Orders Already Invoiced', () => {
       it('should handle scenario where all orders are already invoiced', async () => {
         const customerId = 'customer-123';
-        // For already invoiced orders, the fetch orders worker should filter them out
-        // So the payload should contain an empty orders array
+
         const fetchOrdersTask = TaskEntityMockFactory.create({
           id: 'fetch-orders-task',
           type: TaskType.FETCH_ORDERS,
           status: TaskStatus.COMPLETED,
-          payload: { customerId, orders: [] }, // Empty because all orders are already invoiced
+          payload: { customerId, orders: [] },
         });
 
         taskService.getTaskById.mockResolvedValue(fetchOrdersTask as any);
 
         await workflowService.handleFetchOrdersCompletion('fetch-orders-task');
 
-        // Should not create invoice task since all orders are already invoiced
         expect(taskService.createTask).not.toHaveBeenCalled();
       });
     });
@@ -449,7 +439,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
       it('should handle invalid customer ID gracefully', async () => {
         const invalidCustomerId = '';
 
-        // Mock the service to throw an error for invalid customer ID
         taskService.createTask.mockRejectedValue(
           new Error('Customer ID is required'),
         );
@@ -465,9 +454,8 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
     describe('2.6 Invalid Date Range', () => {
       it('should handle invalid date range', async () => {
         const customerId = 'customer-123';
-        const invalidDateFrom = '2024-13-01'; // Invalid month
+        const invalidDateFrom = '2024-13-01';
 
-        // Mock the service to throw an error for invalid date
         taskService.createTask.mockRejectedValue(
           new Error('Invalid date format'),
         );
@@ -486,7 +474,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
     describe('3.1 Daily Invoice Creation', () => {
       it('should create recurring daily invoice workflow', async () => {
         const customerId = 'customer-123';
-        const cronExpression = '0 0 * * *'; // Daily at midnight
+        const cronExpression = '0 0 * * *';
 
         const mockTask = TaskEntityMockFactory.create({
           id: 'recurring-task',
@@ -523,7 +511,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
       it('should create scheduled weekly email workflow', async () => {
         const customerId = 'customer-123';
         const invoiceId = 'invoice-123';
-        const scheduledAt = '2024-01-20T17:00:00Z'; // End of week
+        const scheduledAt = '2024-01-20T17:00:00Z';
 
         const mockTask = TaskEntityMockFactory.create({
           id: 'scheduled-email-task',
@@ -573,7 +561,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
         const customerId = 'customer-123';
         const pastDate = new Date(
           Date.now() - 24 * 60 * 60 * 1000,
-        ).toISOString(); // Yesterday
+        ).toISOString();
 
         const mockTask = TaskEntityMockFactory.create({
           id: 'past-scheduled-task',
@@ -619,20 +607,18 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
     describe('4.2 Orders with Null Delivery Date', () => {
       it('should handle orders with null delivery date', async () => {
         const customerId = 'customer-123';
-        // Orders with null delivery date should be filtered out by the fetch orders worker
-        // So the payload should contain an empty orders array
+
         const fetchOrdersTask = TaskEntityMockFactory.create({
           id: 'fetch-orders-task',
           type: TaskType.FETCH_ORDERS,
           status: TaskStatus.COMPLETED,
-          payload: { customerId, orders: [] }, // Empty because orders have null delivery date
+          payload: { customerId, orders: [] },
         });
 
         taskService.getTaskById.mockResolvedValue(fetchOrdersTask as any);
 
         await workflowService.handleFetchOrdersCompletion('fetch-orders-task');
 
-        // Should not create invoice task for orders without delivery date
         expect(taskService.createTask).not.toHaveBeenCalled();
       });
     });
@@ -785,8 +771,8 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           TaskEntityMockFactory.create({
             id: 'task-4',
             type: TaskType.SEND_EMAIL,
-            status: TaskStatus.PENDING, // Changed to PENDING to match test expectation
-            workflow: null, // standalone task
+            status: TaskStatus.PENDING,
+            workflow: null,
           }),
         ];
 
@@ -852,7 +838,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           },
         } as any);
 
-        // Mock the createTask call that will be made in handleCreateInvoiceCompletion
         const newGeneratePdfTask = TaskEntityMockFactory.create({
           id: 'new-generate-pdf-task',
           type: TaskType.GENERATE_PDF,
@@ -914,7 +899,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           },
         } as any);
 
-        // Mock the createTask call that will be made in handleGeneratePdfCompletion
         const newSendEmailTask = TaskEntityMockFactory.create({
           id: 'new-send-email-task',
           type: TaskType.SEND_EMAIL,
@@ -949,7 +933,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
       it('should handle multiple concurrent workflows', async () => {
         const customerId = 'customer-1';
 
-        // Create a simple mock task
         const mockTask = {
           id: 'task-1',
           type: TaskType.FETCH_ORDERS,
@@ -957,7 +940,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           payload: { customerId },
         };
 
-        // Reset and set up the mock
         taskService.createTask.mockReset();
         taskService.createTask.mockResolvedValue(mockTask as any);
         messagingService.publishTask.mockResolvedValue();
@@ -1008,7 +990,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           payload: { ...generatePdfTask.payload, invoice: largeInvoice },
         } as any);
 
-        // Mock the createTask call that will be made in handleCreateInvoiceCompletion
         const newGeneratePdfTask = TaskEntityMockFactory.create({
           id: 'new-generate-pdf-task',
           type: TaskType.GENERATE_PDF,
@@ -1043,7 +1024,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
       it('should only process orders that are delivered and not invoiced', async () => {
         const customerId = 'customer-123';
 
-        // Use the new mock factory to create mixed status orders
         const mixedOrders = OrderMockFactory.createMixedStatusArray({
           customerId,
         });
@@ -1055,7 +1035,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           payload: { customerId, orders: mixedOrders },
         });
 
-        // Mock the worker logic that filters orders
         const deliverableOrders = mixedOrders.filter(
           (order) => order.status === 'delivered' && !order.invoiced,
         );
@@ -1075,14 +1054,12 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
 
         await workflowService.handleFetchOrdersCompletion('fetch-orders-task');
 
-        // Should only create invoice for deliverable orders (order-1 and order-4)
         expect(taskService.createTask).toHaveBeenCalledWith(
           TaskType.CREATE_INVOICE,
           { customerId, orders: deliverableOrders },
           undefined,
         );
 
-        // Verify only 2 orders were processed (not 4)
         expect(deliverableOrders).toHaveLength(2);
         expect(
           deliverableOrders.every(
@@ -1149,7 +1126,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           undefined,
         );
 
-        // Verify item details are preserved
         const calledOrders = taskService.createTask.mock.calls[0][1].orders;
         expect(calledOrders[0].items).toHaveLength(2);
         expect(calledOrders[0].items[0]).toHaveProperty('price', 100);
@@ -1174,7 +1150,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
               { id: 'item-1', name: 'Product A', price: 100, quantity: 1 },
             ],
             totalAmount: 100,
-            deliveryDate: '2024-01-14', // ❌ Before dateFrom
+            deliveryDate: '2024-01-14',
           },
           {
             id: 'order-2',
@@ -1185,7 +1161,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
               { id: 'item-2', name: 'Product B', price: 200, quantity: 1 },
             ],
             totalAmount: 200,
-            deliveryDate: '2024-01-16', // ✅ Within range
+            deliveryDate: '2024-01-16',
           },
           {
             id: 'order-3',
@@ -1196,7 +1172,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
               { id: 'item-3', name: 'Product C', price: 150, quantity: 1 },
             ],
             totalAmount: 150,
-            deliveryDate: '2024-01-21', // ❌ After dateTo
+            deliveryDate: '2024-01-21',
           },
           {
             id: 'order-4',
@@ -1207,11 +1183,10 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
               { id: 'item-4', name: 'Product D', price: 300, quantity: 1 },
             ],
             totalAmount: 300,
-            deliveryDate: null, // ❌ No delivery date
+            deliveryDate: null,
           },
         ];
 
-        // Mock the date filtering logic
         const filteredOrders = ordersWithDifferentDates.filter((order) => {
           if (!order.deliveryDate) return false;
           if (dateFrom && order.deliveryDate < dateFrom) return false;
@@ -1238,7 +1213,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
 
         await workflowService.handleFetchOrdersCompletion('fetch-orders-task');
 
-        // Should only process order-2 (within date range)
         expect(filteredOrders).toHaveLength(1);
         expect(filteredOrders[0].id).toBe('order-2');
         expect(taskService.createTask).toHaveBeenCalledWith(
@@ -1272,7 +1246,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
             customerId,
             invoice: mockInvoice,
             pdfProcessorUrl: customPdfUrl,
-            pdfUrl, // Add the PDF URL that would be set by the PDF worker
+            pdfUrl,
           },
         });
 
@@ -1331,7 +1305,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
 
         await workflowService.handleSendEmailCompletion('send-email-task');
 
-        // Verify workflow completion logging
         expect(taskService.getTaskById).toHaveBeenCalledWith('send-email-task');
       });
     });
@@ -1374,7 +1347,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
 
         await workflowService.handleGeneratePdfCompletion('generate-pdf-task');
 
-        // Verify invoice data is passed correctly
         const calledPayload = taskService.createTask.mock.calls[0][1];
         expect(calledPayload.invoice).toEqual(mockInvoice);
         expect(calledPayload.invoice.items).toHaveLength(2);
@@ -1437,12 +1409,11 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           undefined,
         );
 
-        // Verify total amount calculation
         const totalAmount = orders.reduce(
           (sum, order) => sum + order.totalAmount,
           0,
         );
-        expect(totalAmount).toBe(250); // 200 + 50
+        expect(totalAmount).toBe(250);
       });
     });
 
@@ -1453,7 +1424,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           {
             id: 'order-1',
             customerId,
-            status: 'cancelled', // ❌ Invalid status
+            status: 'cancelled',
             invoiced: false,
             items: [
               { id: 'item-1', name: 'Product A', price: 100, quantity: 1 },
@@ -1464,7 +1435,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           {
             id: 'order-2',
             customerId,
-            status: 'shipped', // ❌ Not delivered yet
+            status: 'shipped',
             invoiced: false,
             items: [
               { id: 'item-2', name: 'Product B', price: 200, quantity: 1 },
@@ -1474,7 +1445,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           },
         ];
 
-        // Mock the filtering logic that should exclude invalid orders
         const validOrders = invalidOrders.filter(
           (order) => order.status === 'delivered' && !order.invoiced,
         );
@@ -1490,7 +1460,6 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
 
         await workflowService.handleFetchOrdersCompletion('fetch-orders-task');
 
-        // Should not create invoice task for invalid orders
         expect(validOrders).toHaveLength(0);
         expect(taskService.createTask).not.toHaveBeenCalled();
       });
