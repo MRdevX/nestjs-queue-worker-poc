@@ -21,12 +21,14 @@ describe('TaskController', () => {
             createTask: jest.fn(),
             getTaskById: jest.fn(),
             updateTaskStatus: jest.fn(),
+            cancelTask: jest.fn(),
           },
         },
         {
           provide: MessagingService,
           useValue: {
             publishTask: jest.fn(),
+            emitEvent: jest.fn(),
           },
         },
       ],
@@ -53,7 +55,7 @@ describe('TaskController', () => {
       });
 
       taskService.createTask.mockResolvedValue(mockTask as any);
-      messagingService.publishTask.mockResolvedValue();
+      messagingService.emitEvent.mockResolvedValue(undefined);
 
       const result = await controller.createTask(createTaskDto);
 
@@ -61,11 +63,17 @@ describe('TaskController', () => {
         createTaskDto.type,
         createTaskDto.payload,
       );
-      expect(messagingService.publishTask).toHaveBeenCalledWith(
-        mockTask.type,
-        mockTask.id,
-      );
-      expect(result).toEqual(mockTask);
+      expect(messagingService.emitEvent).toHaveBeenCalledWith('http.request', {
+        taskId: mockTask.id,
+        taskType: mockTask.type,
+        ...createTaskDto.payload,
+      });
+      expect(result).toEqual({
+        message: 'Task created and queued successfully',
+        taskId: mockTask.id,
+        type: mockTask.type,
+        status: mockTask.status,
+      });
     });
 
     it('should handle task creation with different task types', async () => {
@@ -79,7 +87,7 @@ describe('TaskController', () => {
       });
 
       taskService.createTask.mockResolvedValue(mockTask as any);
-      messagingService.publishTask.mockResolvedValue();
+      messagingService.emitEvent.mockResolvedValue(undefined);
 
       const result = await controller.createTask(createTaskDto);
 
@@ -87,7 +95,20 @@ describe('TaskController', () => {
         createTaskDto.type,
         createTaskDto.payload,
       );
-      expect(result).toEqual(mockTask);
+      expect(messagingService.emitEvent).toHaveBeenCalledWith(
+        'data.processing',
+        {
+          taskId: mockTask.id,
+          taskType: mockTask.type,
+          ...createTaskDto.payload,
+        },
+      );
+      expect(result).toEqual({
+        message: 'Task created and queued successfully',
+        taskId: mockTask.id,
+        type: mockTask.type,
+        status: mockTask.status,
+      });
     });
   });
 
@@ -128,7 +149,7 @@ describe('TaskController', () => {
 
       taskService.getTaskById.mockResolvedValue(mockTask as any);
       taskService.updateTaskStatus.mockResolvedValue(mockTask as any);
-      messagingService.publishTask.mockResolvedValue();
+      messagingService.emitEvent.mockResolvedValue(undefined);
 
       const result = await controller.retryTask(taskId);
 
@@ -137,9 +158,13 @@ describe('TaskController', () => {
         taskId,
         TaskStatus.PENDING,
       );
-      expect(messagingService.publishTask).toHaveBeenCalledWith(
-        mockTask.type,
-        mockTask.id,
+      expect(messagingService.emitEvent).toHaveBeenCalledWith(
+        'http.request',
+        {
+          taskId: mockTask.id,
+          taskType: mockTask.type,
+          ...mockTask.payload,
+        },
         { metadata: { retry: true } },
       );
       expect(result).toEqual({ message: 'Task queued for retry' });
@@ -156,7 +181,7 @@ describe('TaskController', () => {
 
       expect(taskService.getTaskById).toHaveBeenCalledWith(taskId);
       expect(taskService.updateTaskStatus).not.toHaveBeenCalled();
-      expect(messagingService.publishTask).not.toHaveBeenCalled();
+      expect(messagingService.emitEvent).not.toHaveBeenCalled();
     });
 
     it('should handle retry for different task types', async () => {
@@ -169,16 +194,113 @@ describe('TaskController', () => {
 
       taskService.getTaskById.mockResolvedValue(mockTask as any);
       taskService.updateTaskStatus.mockResolvedValue(mockTask as any);
-      messagingService.publishTask.mockResolvedValue();
+      messagingService.emitEvent.mockResolvedValue(undefined);
 
       const result = await controller.retryTask(taskId);
 
-      expect(messagingService.publishTask).toHaveBeenCalledWith(
-        TaskType.DATA_PROCESSING,
-        taskId,
+      expect(messagingService.emitEvent).toHaveBeenCalledWith(
+        'data.processing',
+        {
+          taskId: mockTask.id,
+          taskType: mockTask.type,
+          ...mockTask.payload,
+        },
         { metadata: { retry: true } },
       );
       expect(result).toEqual({ message: 'Task queued for retry' });
+    });
+  });
+
+  describe('cancelTask', () => {
+    it('should cancel a task successfully', async () => {
+      const taskId = 'task-123';
+      const mockTask = TaskEntityMockFactory.create({
+        id: taskId,
+        status: TaskStatus.PENDING,
+      });
+
+      taskService.cancelTask.mockResolvedValue(mockTask as any);
+
+      const result = await controller.cancelTask(taskId);
+
+      expect(taskService.cancelTask).toHaveBeenCalledWith(taskId);
+      expect(result).toEqual({ message: 'Task cancelled successfully' });
+    });
+
+    it('should handle cancellation for different task types', async () => {
+      const taskId = 'task-123';
+      const mockTask = TaskEntityMockFactory.create({
+        id: taskId,
+        type: TaskType.HTTP_REQUEST,
+        status: TaskStatus.PENDING,
+      });
+
+      taskService.cancelTask.mockResolvedValue(mockTask as any);
+
+      const result = await controller.cancelTask(taskId);
+
+      expect(taskService.cancelTask).toHaveBeenCalledWith(taskId);
+      expect(result).toEqual({ message: 'Task cancelled successfully' });
+    });
+  });
+
+  describe('compensateTask', () => {
+    it('should create a compensation task successfully', async () => {
+      const taskId = 'task-123';
+      const mockTask = TaskEntityMockFactory.create({
+        id: taskId,
+        type: TaskType.HTTP_REQUEST,
+        status: TaskStatus.FAILED,
+      });
+      const mockCompensationTask = TaskEntityMockFactory.create({
+        id: 'compensation-123',
+        type: TaskType.COMPENSATION,
+        status: TaskStatus.PENDING,
+      });
+
+      taskService.getTaskById.mockResolvedValue(mockTask as any);
+      taskService.createTask.mockResolvedValue(mockCompensationTask as any);
+      messagingService.emitEvent.mockResolvedValue(undefined);
+
+      const result = await controller.compensateTask(taskId);
+
+      expect(taskService.getTaskById).toHaveBeenCalledWith(taskId);
+      expect(taskService.createTask).toHaveBeenCalledWith(
+        TaskType.COMPENSATION,
+        {
+          originalTaskId: taskId,
+          originalTaskType: mockTask.type,
+          compensationAction: 'rollback',
+        },
+      );
+      expect(messagingService.emitEvent).toHaveBeenCalledWith(
+        'compensation',
+        {
+          taskId: mockCompensationTask.id,
+          taskType: mockCompensationTask.type,
+          originalTaskId: taskId,
+          originalTaskType: mockTask.type,
+          compensationAction: 'rollback',
+        },
+        { metadata: { originalTaskId: taskId, isCompensation: true } },
+      );
+      expect(result).toEqual({
+        message: 'Compensation task created and queued',
+      });
+    });
+
+    it('should throw error when task is not found', async () => {
+      const taskId = 'non-existent-task';
+
+      taskService.getTaskById.mockResolvedValue(null);
+
+      await expect(controller.compensateTask(taskId)).rejects.toThrow(
+        'Task not found',
+      );
+
+      expect(taskService.getTaskById).toHaveBeenCalledWith(taskId);
+      expect(taskService.createTask).not.toHaveBeenCalled();
+      expect(messagingService.emitEvent).not.toHaveBeenCalled();
     });
   });
 });

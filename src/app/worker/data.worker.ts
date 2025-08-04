@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { EventPattern, Payload } from '@nestjs/microservices';
 import { BaseWorker } from './base.worker';
 import { TaskService } from '../task/task.service';
-import { CoordinatorService } from '../workflow/coordinator.service';
-import { MessagingService } from '../core/messaging/messaging.service';
+import { CoordinatorFactoryService } from '../workflow/coordinator-factory.service';
 import { UtilsService } from '../core/utils/utils.service';
 import { TaskType } from '../task/types/task-type.enum';
 import { ITaskMessage } from '../core/messaging/types/task-message.interface';
@@ -12,13 +11,12 @@ import { ITaskMessage } from '../core/messaging/types/task-message.interface';
 export class DataWorker extends BaseWorker {
   constructor(
     taskService: TaskService,
-    coordinator: CoordinatorService,
-    messagingService: MessagingService,
+    coordinatorFactory: CoordinatorFactoryService,
   ) {
-    super(taskService, coordinator, messagingService);
+    super(taskService, coordinatorFactory);
   }
 
-  @MessagePattern('data.processing')
+  @EventPattern('data.processing')
   async handleTask(@Payload() data: ITaskMessage) {
     return super.handleTask(data);
   }

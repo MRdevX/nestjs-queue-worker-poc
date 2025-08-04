@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { TaskService } from '../task/task.service';
 import { MessagingService } from '../core/messaging/messaging.service';
-import { WorkflowEntity } from './workflow.entity';
+import { WorkflowEntity, WorkflowStatus } from './workflow.entity';
 import { TaskStatus } from '../task/types/task-status.enum';
+import { WorkflowService } from './workflow.service';
 
 @Injectable()
 export class CoordinatorService {
@@ -11,20 +12,33 @@ export class CoordinatorService {
   constructor(
     private taskService: TaskService,
     private messagingService: MessagingService,
+    private workflowService: WorkflowService,
   ) {}
 
   async startWorkflow(workflow: WorkflowEntity) {
     try {
+      await this.workflowService.updateWorkflowStatus(
+        workflow.id,
+        WorkflowStatus.RUNNING,
+      );
+
       const task = await this.taskService.createTask(
         workflow.definition.initialTask.type,
         workflow.definition.initialTask.payload,
         workflow.id,
       );
+
       await this.messagingService.publishTask(task.type, task.id);
+
       this.logger.log(
         `Workflow ${workflow.id} started with initial task ${task.id}`,
       );
     } catch (error) {
+      await this.workflowService.updateWorkflowStatus(
+        workflow.id,
+        WorkflowStatus.FAILED,
+        error.message,
+      );
       this.logger.error(`Failed to start workflow ${workflow.id}`, error.stack);
       throw error;
     }
@@ -48,7 +62,11 @@ export class CoordinatorService {
         this.logger.warn(
           `Task ${taskId} failed, workflow ${task.workflow.id} may need compensation`,
         );
-        // compensation logic
+        await this.workflowService.updateWorkflowStatus(
+          task.workflow.id,
+          WorkflowStatus.FAILED,
+          task.error,
+        );
         return;
       }
 
@@ -65,9 +83,11 @@ export class CoordinatorService {
           `Created next task ${nextTask.id} for workflow ${task.workflow.id}`,
         );
       } else {
-        this.logger.log(
-          `No transition found for task ${taskId}, workflow ${task.workflow.id} completed`,
+        await this.workflowService.updateWorkflowStatus(
+          task.workflow.id,
+          WorkflowStatus.COMPLETED,
         );
+        this.logger.log(`Workflow ${task.workflow.id} completed successfully`);
       }
     } catch (error) {
       this.logger.error(
@@ -96,7 +116,13 @@ export class CoordinatorService {
         `Task ${taskId} failed in workflow ${task.workflow.id}: ${error.message}`,
       );
 
-      // retry logic or compensation
+      if (task.retries >= task.maxRetries) {
+        await this.workflowService.updateWorkflowStatus(
+          task.workflow.id,
+          WorkflowStatus.FAILED,
+          error.message,
+        );
+      }
     } catch (coordinatorError) {
       this.logger.error(
         `Failed to handle task failure for ${taskId}`,

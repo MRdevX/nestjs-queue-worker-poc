@@ -21,17 +21,36 @@ export class TaskService {
     type: TaskType,
     payload: any,
     workflowId?: string,
+    retryConfig?: {
+      maxRetries?: number;
+      retryDelay?: number;
+      maxRetryDelay?: number;
+    },
   ): Promise<TaskEntity> {
     if (!type || !payload) {
       throw new BadRequestException('Task type and payload are required');
     }
 
-    const task = await this.taskRepo.create({
+    const taskData: any = {
       type,
       payload,
       status: TaskStatus.PENDING,
       workflow: workflowId ? { id: workflowId } : undefined,
-    });
+    };
+
+    if (retryConfig) {
+      if (retryConfig.maxRetries !== undefined) {
+        taskData.maxRetries = retryConfig.maxRetries;
+      }
+      if (retryConfig.retryDelay !== undefined) {
+        taskData.retryDelay = retryConfig.retryDelay;
+      }
+      if (retryConfig.maxRetryDelay !== undefined) {
+        taskData.maxRetryDelay = retryConfig.maxRetryDelay;
+      }
+    }
+
+    const task = await this.taskRepo.create(taskData);
 
     await this.logRepo.createLogEntry(task.id, LogLevel.INFO, 'Task created');
 
@@ -87,12 +106,39 @@ export class TaskService {
     await this.updateTaskStatus(taskId, newStatus, error.message);
   }
 
+  async cancelTask(taskId: string): Promise<TaskEntity | null> {
+    if (!taskId) {
+      throw new BadRequestException('Task ID is required');
+    }
+
+    const task = await this.taskRepo.findById(taskId);
+    if (!task) {
+      throw new NotFoundException(`Task with id ${taskId} not found`);
+    }
+
+    if (task.status !== TaskStatus.PENDING) {
+      throw new BadRequestException('Only pending tasks can be cancelled');
+    }
+
+    await this.logRepo.createLogEntry(
+      taskId,
+      LogLevel.INFO,
+      'Task cancelled by user',
+    );
+
+    return this.updateTaskStatus(taskId, TaskStatus.CANCELLED);
+  }
+
   async getPendingTasks(limit = 100): Promise<TaskEntity[]> {
     return this.taskRepo.findPendingTasks(limit);
   }
 
   async findMany(where: any): Promise<TaskEntity[]> {
     return this.taskRepo.findMany(where);
+  }
+
+  async findAll(options?: any): Promise<TaskEntity[]> {
+    return this.taskRepo.findAll(options);
   }
 
   async getTaskById(
@@ -122,5 +168,23 @@ export class TaskService {
       throw new BadRequestException('Task ID is required');
     }
     return this.taskRepo.findByIdWithRelations(taskId, ['logs']);
+  }
+
+  async updateTaskPayload(
+    taskId: string,
+    payload: any,
+  ): Promise<TaskEntity | null> {
+    if (!taskId) {
+      throw new BadRequestException('Task ID is required');
+    }
+
+    await this.taskRepo.update(taskId, { payload });
+    await this.logRepo.createLogEntry(
+      taskId,
+      LogLevel.INFO,
+      'Task payload updated',
+    );
+
+    return this.taskRepo.findById(taskId);
   }
 }

@@ -1,10 +1,9 @@
 import axios from 'axios';
 import { Injectable } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { EventPattern, Payload } from '@nestjs/microservices';
 import { BaseWorker } from './base.worker';
-import { CoordinatorService } from '../workflow/coordinator.service';
-import { MessagingService } from '../core/messaging/messaging.service';
 import { TaskService } from '../task/task.service';
+import { CoordinatorFactoryService } from '../workflow/coordinator-factory.service';
 import { TaskType } from '../task/types/task-type.enum';
 import { ITaskMessage } from '../core/messaging/types/task-message.interface';
 
@@ -12,13 +11,12 @@ import { ITaskMessage } from '../core/messaging/types/task-message.interface';
 export class HttpWorker extends BaseWorker {
   constructor(
     taskService: TaskService,
-    coordinator: CoordinatorService,
-    messagingService: MessagingService,
+    coordinatorFactory: CoordinatorFactoryService,
   ) {
-    super(taskService, coordinator, messagingService);
+    super(taskService, coordinatorFactory);
   }
 
-  @MessagePattern('http.request')
+  @EventPattern('http.request')
   async handleTask(@Payload() data: ITaskMessage) {
     return super.handleTask(data);
   }
@@ -29,21 +27,32 @@ export class HttpWorker extends BaseWorker {
       throw new Error(`Task with id ${taskId} not found`);
     }
 
-    const { url, method } = task.payload;
+    const { url, method, headers, body } = task.payload;
 
     if (!url || !method) {
       throw new Error('URL and method are required for HTTP tasks');
     }
 
+    this.logger.log(`Making HTTP ${method} request to: ${url}`);
+
     const response = await axios({
       method,
       url,
+      headers,
+      data: body,
       timeout: 10000,
     });
 
     if (response.status >= 400) {
-      throw new Error(`HTTP ${response.status}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
+
+    await this.taskService.updateTaskPayload(taskId, {
+      ...task.payload,
+      response: response.data,
+    });
+
+    this.logger.log(`HTTP request completed successfully: ${taskId}`);
   }
 
   protected shouldProcessTaskType(taskType: TaskType): boolean {

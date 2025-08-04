@@ -4,7 +4,8 @@ import { TaskEntityMockFactory } from '@test/mocks';
 import { HttpWorker } from '../http.worker';
 import { TaskService } from '../../task/task.service';
 import { CoordinatorService } from '../../workflow/coordinator.service';
-import { MessagingService } from '../../core/messaging/messaging.service';
+import { CoordinatorFactoryService } from '../../workflow/coordinator-factory.service';
+import { InvoiceCoordinatorService } from '../../invoice/invoice-coordinator.service';
 import { TaskType } from '../../task/types/task-type.enum';
 
 jest.mock('axios');
@@ -14,6 +15,8 @@ describe('HttpWorker', () => {
   let worker: HttpWorker;
   let taskService: jest.Mocked<TaskService>;
   let coordinator: jest.Mocked<CoordinatorService>;
+  let coordinatorFactory: jest.Mocked<CoordinatorFactoryService>;
+  let invoiceCoordinator: jest.Mocked<InvoiceCoordinatorService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -24,6 +27,7 @@ describe('HttpWorker', () => {
           useValue: {
             getTaskById: jest.fn(),
             updateTaskStatus: jest.fn(),
+            updateTaskPayload: jest.fn(),
             handleFailure: jest.fn(),
           },
         },
@@ -35,9 +39,16 @@ describe('HttpWorker', () => {
           },
         },
         {
-          provide: MessagingService,
+          provide: CoordinatorFactoryService,
           useValue: {
-            publishTask: jest.fn(),
+            getCoordinator: jest.fn(),
+          },
+        },
+        {
+          provide: InvoiceCoordinatorService,
+          useValue: {
+            handleTaskCompletion: jest.fn(),
+            handleTaskFailure: jest.fn(),
           },
         },
       ],
@@ -46,6 +57,25 @@ describe('HttpWorker', () => {
     worker = module.get<HttpWorker>(HttpWorker);
     taskService = module.get(TaskService);
     coordinator = module.get(CoordinatorService);
+    coordinatorFactory = module.get(CoordinatorFactoryService);
+    invoiceCoordinator = module.get(InvoiceCoordinatorService);
+
+    // Set up coordinator factory to return appropriate coordinator
+    coordinatorFactory.getCoordinator.mockImplementation(
+      (taskType: TaskType) => {
+        const invoiceTaskTypes = [
+          TaskType.FETCH_ORDERS,
+          TaskType.CREATE_INVOICE,
+          TaskType.GENERATE_PDF,
+          TaskType.SEND_EMAIL,
+        ];
+
+        if (invoiceTaskTypes.includes(taskType)) {
+          return invoiceCoordinator;
+        }
+        return coordinator;
+      },
+    );
   });
 
   afterEach(() => {
@@ -159,7 +189,6 @@ describe('HttpWorker', () => {
         type: TaskType.HTTP_REQUEST,
         payload: {
           method: 'GET',
-          // url is missing
         },
       });
 

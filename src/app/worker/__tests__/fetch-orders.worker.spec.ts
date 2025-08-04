@@ -1,0 +1,242 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { TaskEntityMockFactory } from '@test/mocks';
+import { FetchOrdersWorker } from '../fetch-orders.worker';
+import { TaskService } from '../../task/task.service';
+import { CoordinatorService } from '../../workflow/coordinator.service';
+import { CoordinatorFactoryService } from '../../workflow/coordinator-factory.service';
+import { InvoiceCoordinatorService } from '../../invoice/invoice-coordinator.service';
+import { TaskType } from '../../task/types/task-type.enum';
+import { TaskStatus } from '../../task/types/task-status.enum';
+
+describe('FetchOrdersWorker', () => {
+  let worker: FetchOrdersWorker;
+  let taskService: jest.Mocked<TaskService>;
+  let coordinator: jest.Mocked<CoordinatorService>;
+  let coordinatorFactory: jest.Mocked<CoordinatorFactoryService>;
+  let invoiceCoordinator: jest.Mocked<InvoiceCoordinatorService>;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        FetchOrdersWorker,
+        {
+          provide: TaskService,
+          useValue: {
+            getTaskById: jest.fn(),
+            updateTaskStatus: jest.fn(),
+            updateTaskPayload: jest.fn(),
+            handleFailure: jest.fn(),
+          },
+        },
+        {
+          provide: CoordinatorService,
+          useValue: {
+            handleTaskCompletion: jest.fn(),
+            handleTaskFailure: jest.fn(),
+          },
+        },
+        {
+          provide: CoordinatorFactoryService,
+          useValue: {
+            getCoordinator: jest.fn(),
+          },
+        },
+        {
+          provide: InvoiceCoordinatorService,
+          useValue: {
+            handleTaskCompletion: jest.fn(),
+            handleTaskFailure: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
+
+    worker = module.get<FetchOrdersWorker>(FetchOrdersWorker);
+    taskService = module.get(TaskService);
+    coordinator = module.get(CoordinatorService);
+    coordinatorFactory = module.get(CoordinatorFactoryService);
+    invoiceCoordinator = module.get(InvoiceCoordinatorService);
+
+    // Set up coordinator factory to return invoice coordinator for invoice-related tasks
+    coordinatorFactory.getCoordinator.mockImplementation(
+      (taskType: TaskType) => {
+        const invoiceTaskTypes = [
+          TaskType.FETCH_ORDERS,
+          TaskType.CREATE_INVOICE,
+          TaskType.GENERATE_PDF,
+          TaskType.SEND_EMAIL,
+        ];
+
+        if (invoiceTaskTypes.includes(taskType)) {
+          return invoiceCoordinator;
+        }
+        return coordinator;
+      },
+    );
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('handleTask', () => {
+    it('should process fetch orders task successfully', async () => {
+      const taskId = 'task-123';
+      const mockTask = TaskEntityMockFactory.create({
+        id: taskId,
+        type: TaskType.FETCH_ORDERS,
+        payload: {
+          customerId: 'customer-123',
+          dateFrom: '2024-01-01',
+          dateTo: '2024-01-31',
+        },
+        status: TaskStatus.PENDING,
+      });
+
+      taskService.getTaskById.mockResolvedValue(mockTask as any);
+      taskService.updateTaskStatus.mockResolvedValue(mockTask as any);
+
+      const message = {
+        taskType: TaskType.FETCH_ORDERS,
+        taskId,
+        delay: undefined,
+        metadata: undefined,
+      };
+
+      await worker.handleTask(message);
+
+      expect(taskService.getTaskById).toHaveBeenCalledWith(taskId);
+      expect(taskService.updateTaskStatus).toHaveBeenCalledWith(
+        taskId,
+        TaskStatus.PROCESSING,
+      );
+      expect(invoiceCoordinator.handleTaskCompletion).toHaveBeenCalledWith(
+        taskId,
+      );
+    });
+
+    it('should handle missing customer ID', async () => {
+      const taskId = 'task-123';
+      const mockTask = TaskEntityMockFactory.create({
+        id: taskId,
+        type: TaskType.FETCH_ORDERS,
+        payload: {
+          dateFrom: '2024-01-01',
+        },
+        status: TaskStatus.PENDING,
+      });
+
+      taskService.getTaskById.mockResolvedValue(mockTask as any);
+      taskService.handleFailure.mockResolvedValue();
+
+      const message = {
+        taskType: TaskType.FETCH_ORDERS,
+        taskId,
+        delay: undefined,
+        metadata: undefined,
+      };
+
+      await worker.handleTask(message);
+
+      expect(taskService.getTaskById).toHaveBeenCalledWith(taskId);
+      expect(taskService.handleFailure).toHaveBeenCalledWith(
+        taskId,
+        expect.any(Error),
+      );
+      expect(invoiceCoordinator.handleTaskFailure).toHaveBeenCalledWith(
+        taskId,
+        expect.any(Error),
+      );
+    });
+
+    it('should handle task not found', async () => {
+      const taskId = 'non-existent-task';
+      taskService.getTaskById.mockResolvedValue(null);
+
+      const message = {
+        taskType: TaskType.FETCH_ORDERS,
+        taskId,
+        delay: undefined,
+        metadata: undefined,
+      };
+
+      await worker.handleTask(message);
+
+      expect(taskService.getTaskById).toHaveBeenCalledWith(taskId);
+      expect(coordinator.handleTaskCompletion).not.toHaveBeenCalled();
+      expect(invoiceCoordinator.handleTaskFailure).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('shouldProcessTaskType', () => {
+    it('should return true for FETCH_ORDERS task type', () => {
+      const result = (worker as any).shouldProcessTaskType(
+        TaskType.FETCH_ORDERS,
+      );
+      expect(result).toBe(true);
+    });
+
+    it('should return false for other task types', () => {
+      const result = (worker as any).shouldProcessTaskType(
+        TaskType.HTTP_REQUEST,
+      );
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('fetchOrdersFromExternalApi', () => {
+    it('should fetch orders for customer', async () => {
+      const customerId = 'customer-123';
+      const orders = await (worker as any).fetchOrdersFromExternalApi(
+        customerId,
+      );
+
+      expect(orders).toHaveLength(3);
+      expect(orders[0].customerId).toBe(customerId);
+      expect(orders[0].status).toBe('delivered');
+      expect(orders[0].invoiced).toBe(false);
+    });
+
+    it('should filter orders by date range', async () => {
+      const customerId = 'customer-123';
+      const dateFrom = '2024-01-16';
+      const dateTo = '2024-01-31';
+
+      const orders = await (worker as any).fetchOrdersFromExternalApi(
+        customerId,
+        dateFrom,
+        dateTo,
+      );
+
+      expect(orders).toHaveLength(1);
+      expect(orders[0].deliveryDate).toBe('2024-01-16');
+    });
+
+    it('should filter orders by date from', async () => {
+      const customerId = 'customer-123';
+      const dateFrom = '2024-01-16';
+
+      const orders = await (worker as any).fetchOrdersFromExternalApi(
+        customerId,
+        dateFrom,
+      );
+
+      expect(orders).toHaveLength(1);
+      expect(orders[0].deliveryDate).toBe('2024-01-16');
+    });
+
+    it('should filter orders by date to', async () => {
+      const customerId = 'customer-123';
+      const dateTo = '2024-01-15';
+
+      const orders = await (worker as any).fetchOrdersFromExternalApi(
+        customerId,
+        undefined,
+        dateTo,
+      );
+
+      expect(orders).toHaveLength(1);
+      expect(orders[0].deliveryDate).toBe('2024-01-15');
+    });
+  });
+});

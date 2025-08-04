@@ -1,0 +1,1061 @@
+{
+  "info": {
+    "_postman_id": "queue-worker-poc-collection",
+    "name": "Queue Worker POC API",
+    "description": "Complete API collection for the Queue Worker POC application. This includes all endpoints for task management, invoice workflows, scheduling, queue management, workflow management, health checks, and database seeding.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Check the health status of the application and its dependencies"
+          },
+          "response": []
+        }
+      ],
+      "description": "Health monitoring endpoints"
+    },
+    {
+      "name": "Database Seeder",
+      "item": [
+        {
+          "name": "Seed Database (Default)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/seeder/seed",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "seed"]
+            },
+            "description": "Seed the database with default configuration (3 workflows, 5 tasks per type, 10 customers)"
+          },
+          "response": []
+        },
+        {
+          "name": "Seed Database (Light)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflows\": 1,\n  \"tasksPerType\": 2,\n  \"customers\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/seeder/seed",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "seed"]
+            },
+            "description": "Seed the database with light configuration for quick testing (1 workflow, 2 tasks per type, 3 customers)"
+          },
+          "response": []
+        },
+        {
+          "name": "Seed Database (Heavy)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflows\": 5,\n  \"tasksPerType\": 10,\n  \"customers\": 20\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/seeder/seed",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "seed"]
+            },
+            "description": "Seed the database with heavy configuration for stress testing (5 workflows, 10 tasks per type, 20 customers)"
+          },
+          "response": []
+        },
+        {
+          "name": "Seed Database (Custom)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflows\": {{seederWorkflows}},\n  \"tasksPerType\": {{seederTasksPerType}},\n  \"customers\": {{seederCustomers}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/seeder/seed",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "seed"]
+            },
+            "description": "Seed the database with custom configuration using environment variables"
+          },
+          "response": []
+        },
+        {
+          "name": "Clear Database",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/seeder/clear",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "clear"]
+            },
+            "description": "Clear all seeded data from the database"
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Database (Default)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/seeder/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "reset"]
+            },
+            "description": "Clear the database and reseed with default configuration (3 workflows, 5 tasks per type, 10 customers)"
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Database (Light)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflows\": 1,\n  \"tasksPerType\": 2,\n  \"customers\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/seeder/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "reset"]
+            },
+            "description": "Clear the database and reseed with light configuration for quick testing"
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Database (Custom)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflows\": {{seederWorkflows}},\n  \"tasksPerType\": {{seederTasksPerType}},\n  \"customers\": {{seederCustomers}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/seeder/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["seeder", "reset"]
+            },
+            "description": "Clear the database and reseed with custom configuration using environment variables"
+          },
+          "response": []
+        }
+      ],
+      "description": "Database seeding operations for testing"
+    },
+    {
+      "name": "Task Management",
+      "item": [
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"http_request\",\n  \"payload\": {\n    \"url\": \"https://api.example.com/data\",\n    \"method\": \"GET\",\n    \"headers\": {\n      \"Authorization\": \"Bearer {{apiToken}}\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks"]
+            },
+            "description": "Create a new task with specified type and payload"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "{{taskId}}"]
+            },
+            "description": "Retrieve a specific task by its ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks"]
+            },
+            "description": "Get all tasks in the database"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task with Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}/logs",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "{{taskId}}", "logs"]
+            },
+            "description": "Get a task with its associated log entries"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task with Workflow",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}/workflow",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "{{taskId}}", "workflow"]
+            },
+            "description": "Get a task with its associated workflow information"
+          },
+          "response": []
+        },
+        {
+          "name": "Retry Task",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}/retry",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "{{taskId}}", "retry"]
+            },
+            "description": "Retry a failed task by setting it back to pending status"
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Task",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "{{taskId}}", "cancel"]
+            },
+            "description": "Cancel a pending task"
+          },
+          "response": []
+        },
+        {
+          "name": "Compensate Task",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}/compensate",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "{{taskId}}", "compensate"]
+            },
+            "description": "Create a compensation task for a failed task"
+          },
+          "response": []
+        }
+      ],
+      "description": "Task management operations"
+    },
+    {
+      "name": "Queue Manager",
+      "item": [
+        {
+          "name": "Get Queue Manager Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/queue-manager/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["queue-manager", "status"]
+            },
+            "description": "Get the current status of the queue manager including pending, processing, completed, and failed tasks"
+          },
+          "response": []
+        },
+        {
+          "name": "Enqueue Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"http_request\",\n  \"payload\": {\n    \"url\": \"https://api.example.com/data\",\n    \"method\": \"GET\",\n    \"headers\": {\n      \"Authorization\": \"Bearer {{apiToken}}\"\n    }\n  },\n  \"workflowId\": \"{{workflowId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/queue-manager/enqueue",
+              "host": ["{{baseUrl}}"],
+              "path": ["queue-manager", "enqueue"]
+            },
+            "description": "Enqueue a new task for processing"
+          },
+          "response": []
+        },
+        {
+          "name": "Retry Task via Queue Manager",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/queue-manager/retry/{{taskId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["queue-manager", "retry", "{{taskId}}"]
+            },
+            "description": "Retry a failed task through the queue manager"
+          },
+          "response": []
+        }
+      ],
+      "description": "Queue management operations"
+    },
+    {
+      "name": "Scheduler",
+      "item": [
+        {
+          "name": "Create Scheduled Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"http_request\",\n  \"payload\": {\n    \"url\": \"https://api.example.com/data\",\n    \"method\": \"GET\",\n    \"headers\": {\n      \"Authorization\": \"Bearer {{apiToken}}\"\n    }\n  },\n  \"scheduledAt\": \"2024-01-15T10:00:00Z\",\n  \"workflowId\": \"{{workflowId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/scheduler/scheduled",
+              "host": ["{{baseUrl}}"],
+              "path": ["scheduler", "scheduled"]
+            },
+            "description": "Create a task that will be executed at a specific time"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Recurring Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"http_request\",\n  \"payload\": {\n    \"url\": \"https://api.example.com/data\",\n    \"method\": \"GET\",\n    \"headers\": {\n      \"Authorization\": \"Bearer {{apiToken}}\"\n    }\n  },\n  \"cronExpression\": \"0 0 * * *\",\n  \"workflowId\": \"{{workflowId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/scheduler/recurring",
+              "host": ["{{baseUrl}}"],
+              "path": ["scheduler", "recurring"]
+            },
+            "description": "Create a task that will be executed on a recurring schedule using cron expression"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Scheduled Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/scheduler/tasks/scheduled",
+              "host": ["{{baseUrl}}"],
+              "path": ["scheduler", "tasks", "scheduled"]
+            },
+            "description": "Get all scheduled tasks"
+          },
+          "response": []
+        }
+      ],
+      "description": "Task scheduling operations"
+    },
+    {
+      "name": "Workflow Management",
+      "item": [
+        {
+          "name": "Create Workflow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Invoice Generation Workflow\",\n  \"definition\": {\n    \"initialTask\": {\n      \"type\": \"fetch_orders\",\n      \"payload\": {\n        \"customerId\": \"{{customerId}}\"\n      }\n    },\n    \"transitions\": {\n      \"fetch_orders\": {\n        \"type\": \"create_invoice\",\n        \"payload\": {\n          \"customerId\": \"{{customerId}}\"\n        }\n      },\n      \"create_invoice\": {\n        \"type\": \"generate_pdf\",\n        \"payload\": {\n          \"customerId\": \"{{customerId}}\"\n        }\n      },\n      \"generate_pdf\": {\n        \"type\": \"send_email\",\n        \"payload\": {\n          \"customerId\": \"{{customerId}}\"\n        }\n      }\n    }\n  },\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workflows",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows"]
+            },
+            "description": "Create a new workflow with task definitions and transitions"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Workflows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows"]
+            },
+            "description": "Get all workflows in the system"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Workflows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "active"]
+            },
+            "description": "Get only active workflows"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Workflow by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}"]
+            },
+            "description": "Get a specific workflow by its ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Workflow with Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}", "tasks"]
+            },
+            "description": "Get a workflow with all its associated tasks"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Workflow",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Invoice Workflow\",\n  \"isActive\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}"]
+            },
+            "description": "Update an existing workflow"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Workflow",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}"]
+            },
+            "description": "Delete a workflow"
+          },
+          "response": []
+        },
+        {
+          "name": "Start Workflow",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}", "start"]
+            },
+            "description": "Start a workflow execution"
+          },
+          "response": []
+        },
+        {
+          "name": "Activate Workflow",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}", "activate"]
+            },
+            "description": "Activate a workflow"
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Workflow",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}", "deactivate"]
+            },
+            "description": "Deactivate a workflow"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Workflow Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}", "status"]
+            },
+            "description": "Get detailed status information for a workflow including task statistics"
+          },
+          "response": []
+        }
+      ],
+      "description": "Workflow management operations"
+    },
+    {
+      "name": "Invoice Workflows",
+      "item": [
+        {
+          "name": "Start Invoice Workflow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"dateFrom\": \"2024-01-01T00:00:00Z\",\n  \"dateTo\": \"2024-01-31T23:59:59Z\",\n  \"workflowId\": \"{{workflowId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/invoice/workflow/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["invoice", "workflow", "start"]
+            },
+            "description": "Start an invoice generation workflow for a customer"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Scheduled Invoice Workflow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"scheduledAt\": \"2024-01-15T10:00:00Z\",\n  \"dateFrom\": \"2024-01-01T00:00:00Z\",\n  \"dateTo\": \"2024-01-31T23:59:59Z\",\n  \"workflowId\": \"{{workflowId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/invoice/workflow/scheduled",
+              "host": ["{{baseUrl}}"],
+              "path": ["invoice", "workflow", "scheduled"]
+            },
+            "description": "Schedule an invoice generation workflow for a specific date and time"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Recurring Invoice Workflow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"cronExpression\": \"0 0 * * *\",\n  \"dateFrom\": \"2024-01-01T00:00:00Z\",\n  \"dateTo\": \"2024-01-31T23:59:59Z\",\n  \"workflowId\": \"{{workflowId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/invoice/workflow/recurring",
+              "host": ["{{baseUrl}}"],
+              "path": ["invoice", "workflow", "recurring"]
+            },
+            "description": "Create a recurring invoice generation workflow using cron expression"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Scheduled Email Workflow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"invoiceId\": \"{{invoiceId}}\",\n  \"scheduledAt\": \"2024-01-15T10:00:00Z\",\n  \"workflowId\": \"{{workflowId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/invoice/email/scheduled",
+              "host": ["{{baseUrl}}"],
+              "path": ["invoice", "email", "scheduled"]
+            },
+            "description": "Schedule an email workflow for a specific invoice"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Customer Invoice Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invoice/tasks/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["invoice", "tasks", "{{customerId}}"]
+            },
+            "description": "Get all invoice-related tasks for a specific customer"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Invoice Workflow Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invoice/status/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["invoice", "status", "{{customerId}}"]
+            },
+            "description": "Get the status of invoice workflows for a specific customer"
+          },
+          "response": []
+        }
+      ],
+      "description": "Invoice workflow operations"
+    },
+    {
+      "name": "Example Workflows",
+      "item": [
+        {
+          "name": "Database Seeding Workflow (Default)",
+          "item": [
+            {
+              "name": "1. Seed Database (Default)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/seeder/seed",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["seeder", "seed"]
+                },
+                "description": "Step 1: Seed the database with default configuration (3 workflows, 5 tasks per type, 10 customers)"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Get All Tasks",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["tasks"]
+                },
+                "description": "Step 2: Verify that tasks were created"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Get All Workflows",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/workflows",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["workflows"]
+                },
+                "description": "Step 3: Verify that workflows were created"
+              },
+              "response": []
+            }
+          ],
+          "description": "Complete workflow example using default database seeding"
+        },
+        {
+          "name": "Task Management Workflow",
+          "item": [
+            {
+              "name": "1. Create Task",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"type\": \"data_processing\",\n  \"payload\": {\n    \"dataset\": \"sample-data\",\n    \"operation\": \"transform\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/tasks",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["tasks"]
+                },
+                "description": "Step 1: Create a new data processing task"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Get Task Status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/{{taskId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["tasks", "{{taskId}}"]
+                },
+                "description": "Step 2: Check the status of the created task"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Get Task with Logs",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/{{taskId}}/logs",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["tasks", "{{taskId}}", "logs"]
+                },
+                "description": "Step 3: Get the task with its log entries"
+              },
+              "response": []
+            }
+          ],
+          "description": "Complete workflow for task management operations"
+        },
+        {
+          "name": "Invoice Workflow Example",
+          "item": [
+            {
+              "name": "1. Start Invoice Workflow",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"dateFrom\": \"2024-01-01T00:00:00Z\",\n  \"dateTo\": \"2024-01-31T23:59:59Z\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/invoice/workflow/start",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["invoice", "workflow", "start"]
+                },
+                "description": "Step 1: Start an invoice generation workflow for a customer"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Get Customer Invoice Tasks",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/invoice/tasks/{{customerId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["invoice", "tasks", "{{customerId}}"]
+                },
+                "description": "Step 2: Check the tasks created for the invoice workflow"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Get Invoice Workflow Status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/invoice/status/{{customerId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["invoice", "status", "{{customerId}}"]
+                },
+                "description": "Step 3: Get the overall status of the invoice workflow"
+              },
+              "response": []
+            }
+          ],
+          "description": "Complete workflow for invoice generation and monitoring"
+        },
+        {
+          "name": "Scheduled Invoice Workflow Example",
+          "item": [
+            {
+              "name": "1. Create Scheduled Invoice Workflow",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"scheduledAt\": \"2024-01-15T10:00:00Z\",\n  \"dateFrom\": \"2024-01-01T00:00:00Z\",\n  \"dateTo\": \"2024-01-31T23:59:59Z\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/invoice/workflow/scheduled",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["invoice", "workflow", "scheduled"]
+                },
+                "description": "Step 1: Schedule an invoice generation workflow for a specific date and time"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Create Scheduled Email Workflow",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"invoiceId\": \"{{invoiceId}}\",\n  \"scheduledAt\": \"2024-01-15T10:00:00Z\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/invoice/email/scheduled",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["invoice", "email", "scheduled"]
+                },
+                "description": "Step 2: Schedule a weekly email reminder for an invoice"
+              },
+              "response": []
+            }
+          ],
+          "description": "Complete workflow example using scheduled invoice and email workflows"
+        },
+        {
+          "name": "Workflow Management Example",
+          "item": [
+            {
+              "name": "1. Create Workflow",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Test Invoice Workflow\",\n  \"definition\": {\n    \"initialTask\": {\n      \"type\": \"fetch_orders\",\n      \"payload\": {\n        \"customerId\": \"{{customerId}}\"\n      }\n    },\n    \"transitions\": {\n      \"fetch_orders\": {\n        \"type\": \"create_invoice\",\n        \"payload\": {\n          \"customerId\": \"{{customerId}}\"\n        }\n      }\n    }\n  },\n  \"isActive\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/workflows",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["workflows"]
+                },
+                "description": "Step 1: Create a new workflow"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Get Workflow Status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/workflows/{{workflowId}}/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["workflows", "{{workflowId}}", "status"]
+                },
+                "description": "Step 2: Check the status of the created workflow"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Start Workflow",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/workflows/{{workflowId}}/start",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["workflows", "{{workflowId}}", "start"]
+                },
+                "description": "Step 3: Start the workflow execution"
+              },
+              "response": []
+            },
+            {
+              "name": "4. Monitor Workflow Progress",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/workflows/{{workflowId}}/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["workflows", "{{workflowId}}", "status"]
+                },
+                "description": "Step 4: Monitor the workflow progress and task completion"
+              },
+              "response": []
+            }
+          ],
+          "description": "Complete workflow for creating, starting, and monitoring workflows"
+        }
+      ],
+      "description": "Example workflows demonstrating different use cases"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3030/api",
+      "type": "string"
+    }
+  ]
+}

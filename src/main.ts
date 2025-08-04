@@ -1,10 +1,6 @@
 import helmet from 'helmet';
-import { NestFactory, Reflector } from '@nestjs/core';
-import {
-  ClassSerializerInterceptor,
-  ValidationPipe,
-  VersioningType,
-} from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app/app.module';
 import logger from './logger';
@@ -30,7 +26,6 @@ async function bootstrap() {
     type: VersioningType.URI,
   });
 
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

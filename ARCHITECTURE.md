@@ -2,13 +2,15 @@
 
 ## Overview
 
-This document provides a detailed architectural overview of the Queue Worker PoC system, explaining how each component works together to create a scalable, fault-tolerant task processing system.
+This document provides a detailed architectural overview of the Queue Worker PoC system, explaining how each component works together to demonstrate task processing concepts and patterns. This is a proof-of-concept for learning and evaluation purposes.
 
 ## System Architecture
 
 ### High-Level Architecture
 
-The system follows a microservices-inspired architecture with clear separation of concerns:
+The system follows a microservices-inspired architecture with clear separation of concerns and optimized worker patterns. The current implementation demonstrates the worker patterns and workflow orchestration within a single application for PoC purposes. However, **RabbitMQ microservice transport requires separate microservice applications** - a single application cannot act as both server and client simultaneously.
+
+**Note**: This PoC demonstrates concepts and patterns. For production use, workers must be implemented as separate microservices to properly utilize RabbitMQ transport.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -33,6 +35,10 @@ The system follows a microservices-inspired architecture with clear separation o
 │                    Messaging Layer                              │
 │  ┌─────────────────────────────────────────────────────────────┐ │
 │  │              Messaging Service (RabbitMQ)                   │ │
+│  │  ┌─────────────────┐ ┌─────────────────┐                    │ │
+│  │  │ MessagePattern  │ │  EventPattern   │                    │ │
+│  │  │ (Quick Tasks)   │ │(Long-running)   │                    │ │
+│  │  └─────────────────┘ └─────────────────┘                    │ │
 │  └─────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
                                 │
@@ -42,6 +48,13 @@ The system follows a microservices-inspired architecture with clear separation o
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │
 │  │    HTTP     │ │    Data     │ │Compensation │ │   Base      │ │
 │  │   Worker    │ │   Worker    │ │   Worker    │ │   Worker    │ │
+│  │(MessagePattern)│(EventPattern)│(EventPattern)│             │ │
+│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │
+│  │   Fetch     │ │   Create    │ │  Generate   │ │   Send      │ │
+│  │   Orders    │ │   Invoice   │ │    PDF      │ │   Email     │ │
+│  │   Worker    │ │   Worker    │ │   Worker    │ │   Worker    │ │
+│  │(EventPattern)│(EventPattern)│(EventPattern)│(EventPattern)│ │
 │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
                                 │
@@ -66,7 +79,7 @@ The system follows a microservices-inspired architecture with clear separation o
 ```typescript
 interface TaskEntity {
   id: string;
-  type: TaskType; // HTTP_REQUEST | DATA_PROCESSING | COMPENSATION
+  type: TaskType; // HTTP_REQUEST | DATA_PROCESSING | COMPENSATION | FETCH_ORDERS | CREATE_INVOICE | GENERATE_PDF | SEND_EMAIL
   payload: Record<string, any>;
   status: TaskStatus; // PENDING | PROCESSING | COMPLETED | FAILED | RETRYING | CANCELLED
   retries: number;
@@ -110,34 +123,74 @@ abstract class BaseWorker {
   protected abstract processTask(taskId: string): Promise<void>;
   protected abstract shouldProcessTaskType(taskType: TaskType): boolean;
 }
+
+// Pattern Usage:
+// - @EventPattern: For all tasks with fire-and-forget semantics
 ```
 
 #### Worker Types
 
-**HTTP Worker**
+**HTTP Worker** (EventPattern)
 
-- Handles external API calls
+- Handles external API calls with immediate response requirements
 - Supports all HTTP methods (GET, POST, PUT, DELETE)
 - Configurable timeouts and retry policies
 - Handles authentication and headers
+- Uses EventPattern for fire-and-forget communication
 
-**Data Processing Worker**
+**Data Processing Worker** (EventPattern)
 
 - Processes data transformation tasks
-- Supports batch operations
+- Supports batch operations with extended processing times
 - Handles data validation and cleaning
 - Manages large dataset processing
+- Uses EventPattern for fire-and-forget communication
 
-**Compensation Worker**
+**Compensation Worker** (EventPattern)
 
 - Implements saga pattern for distributed transactions
-- Handles rollback operations
+- Handles rollback operations with cleanup delays
 - Ensures data consistency
 - Manages partial failure recovery
+- Uses EventPattern for asynchronous processing
+
+**Fetch Orders Worker** (EventPattern)
+
+- Fetches customer orders from external APIs
+- Handles date range filtering and data processing
+- Manages external service timeouts
+- Uses EventPattern for asynchronous processing
+
+**Create Invoice Worker** (EventPattern)
+
+- Processes business logic for invoice creation
+- Handles tax calculations and business rules
+- Manages complex data transformations
+- Uses EventPattern for asynchronous processing
+
+**Generate PDF Worker** (EventPattern)
+
+- Generates PDF documents via external services
+- Handles large document processing
+- Manages external service timeouts
+- Uses EventPattern for asynchronous processing
+
+**Send Email Worker** (EventPattern)
+
+- Sends emails via external email services
+- Handles email template processing
+- Manages external service timeouts
+- Uses EventPattern for asynchronous processing
 
 ### 3. Messaging System
 
 #### RabbitMQ Configuration
+
+The system uses RabbitMQ microservice transport for messaging between services. **Important limitation**: RabbitMQ microservice transport requires separate microservice applications - a single application cannot act as both server and client simultaneously.
+
+**Current Implementation**: Demonstrates worker patterns and workflow orchestration within a single application for PoC and learning purposes.
+
+**Production Considerations**: Workers must be implemented as separate microservices to properly utilize RabbitMQ transport.
 
 ```typescript
 interface RabbitMQConfig {
@@ -156,9 +209,15 @@ interface RabbitMQConfig {
 
 #### Message Patterns
 
+All tasks use EventPattern for fire-and-forget messaging:
+
 - **http.request**: HTTP API call tasks
 - **data.processing**: Data transformation tasks
 - **compensation**: Rollback and cleanup tasks
+- **fetch.orders**: External API calls to fetch customer orders
+- **create.invoice**: Business logic for invoice creation
+- **generate.pdf**: PDF generation via external services
+- **send.email**: Email sending via external services
 - **task.created**: Default fallback pattern
 
 #### Message Structure
@@ -269,10 +328,21 @@ const delay = Math.min(30000, 2000 * task.retries);
 
 ### Horizontal Scaling
 
-- **Multiple Worker Instances**: Deploy multiple instances of each worker type
+- **Multiple Worker Instances**: Deploy multiple instances of each worker type as separate microservices
 - **Queue Partitioning**: Distribute load across multiple queues
 - **Database Scaling**: Read replicas and connection pooling
 - **Message Broker Scaling**: RabbitMQ clustering support
+
+### Microservice Architecture Requirements
+
+**RabbitMQ Transport Limitation**: NestJS RabbitMQ microservice transport requires separate applications for client and server roles. A single application cannot act as both simultaneously.
+
+**Conceptual Production Architecture** (for reference):
+
+- **API Service**: Handles HTTP requests, task creation, and workflow orchestration
+- **Worker Services**: Separate microservices for each worker type (HTTP, Data, Compensation, Invoice, etc.)
+- **Shared Database**: PostgreSQL for task state and workflow definitions
+- **Message Broker**: RabbitMQ for inter-service communication
 
 ### Performance Optimization
 
@@ -371,36 +441,46 @@ const delay = Math.min(30000, 2000 * task.retries);
 
 ## Performance Characteristics
 
-### Throughput
+### Throughput (PoC Estimates)
 
-- **Task Processing**: 1000+ tasks per second per worker
-- **Concurrent Workers**: Support for 10+ worker instances
-- **Database Operations**: Optimized queries and indexing
-- **Message Processing**: Efficient RabbitMQ message handling
+- **Task Processing**: Demonstrates task processing patterns (not optimized for production)
+- **Concurrent Workers**: Shows worker scaling concepts
+- **Database Operations**: Basic query patterns and indexing
+- **Message Processing**: RabbitMQ message handling patterns
+- **Pattern Optimization**: EventPattern usage for task processing
 
-### Latency
+### Pattern Performance Benefits
 
-- **Task Creation**: < 100ms end-to-end
-- **Task Processing**: < 1s for simple tasks
-- **Database Queries**: < 50ms for indexed queries
-- **Message Publishing**: < 10ms for RabbitMQ operations
+- **EventPattern**: Optimized for all tasks with fire-and-forget semantics
+- **Queue Efficiency**: Consistent messaging pattern across all task types
+- **Scalability**: Better resource utilization through unified pattern approach
 
-### Reliability
+### Latency (PoC Estimates)
 
-- **Task Durability**: 99.9% task completion rate
-- **Data Consistency**: ACID compliance for critical operations
-- **Fault Tolerance**: Automatic recovery from failures
-- **High Availability**: 99.9% uptime target
+- **Task Creation**: Demonstrates task creation patterns
+- **Task Processing**: Shows processing time concepts
+- **Database Queries**: Basic query performance patterns
+- **Message Publishing**: RabbitMQ publishing patterns
+
+### Reliability (PoC Concepts)
+
+- **Task Durability**: Demonstrates task persistence patterns
+- **Data Consistency**: Shows basic ACID compliance concepts
+- **Fault Tolerance**: Illustrates error handling and retry patterns
+- **High Availability**: Shows availability concepts (not production-ready)
 
 ## Conclusion
 
-This Queue Worker PoC demonstrates a production-ready distributed task processing system that meets all the specified requirements. The architecture provides:
+This Queue Worker PoC demonstrates task processing concepts and patterns for learning and evaluation purposes. The architecture showcases:
 
-- **Scalability**: Horizontal scaling capabilities
-- **Reliability**: Fault tolerance and error handling
-- **Maintainability**: Clear separation of concerns
-- **Observability**: Comprehensive monitoring and logging
-- **Security**: Input validation and secure configuration
-- **Performance**: Optimized for high throughput
+- **Scalability Concepts**: Worker patterns and scaling approaches
+- **Reliability Patterns**: Error handling and retry mechanisms
+- **Maintainability**: Clear separation of concerns and pattern-based architecture
+- **Observability**: Basic monitoring and logging patterns
+- **Security Concepts**: Input validation and configuration management patterns
+- **Performance Patterns**: Task processing and messaging patterns
+- **Pattern Optimization**: Consistent use of EventPattern for all tasks
 
-The system is designed to handle high volumes of tasks, support long-running transactions, and ensure data consistency and reliability in a cloud environment.
+The system uses EventPattern for all tasks, providing consistent fire-and-forget messaging semantics. The current implementation demonstrates the patterns within a single application, but production deployment requires separate microservices to properly utilize RabbitMQ transport.
+
+**Note**: This PoC is designed for learning and evaluation purposes. It demonstrates concepts and patterns but is not intended for production use without significant modifications and additional features.

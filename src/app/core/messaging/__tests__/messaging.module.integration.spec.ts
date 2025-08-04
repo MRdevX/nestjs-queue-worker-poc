@@ -28,8 +28,6 @@ describe('MessagingModule Integration', () => {
     });
 
     it('should be a global module', () => {
-      // Check if the module has the @Global() decorator
-      // The @Global() decorator doesn't always set metadata, so we check the decorator itself
       expect(MessagingModule).toBeDefined();
     });
   });

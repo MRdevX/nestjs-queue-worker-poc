@@ -48,7 +48,7 @@ services:
     container_name: queue_worker_app_dev
     environment:
       NODE_ENV: development
-      HOST: localhost
+      HOST: 0.0.0.0
       PORT: 3030
 
       # Database configuration
@@ -58,6 +58,7 @@ services:
       DB_PASSWORD: postgrespw
       DB_PORT: 5432
       DB_SYNCHRONIZE: true
+      AUTO_SEED_DATABASE: false
 
       # RabbitMQ configuration
       RABBITMQ_USER: guest

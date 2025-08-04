@@ -3,6 +3,14 @@ import { BaseModel } from '../core/base/base.entity';
 import { TaskType } from '../task/types/task-type.enum';
 import { TaskEntity } from '../task/task.entity';
 
+export enum WorkflowStatus {
+  PENDING = 'pending',
+  RUNNING = 'running',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  CANCELLED = 'cancelled',
+}
+
 @Entity()
 export class WorkflowEntity extends BaseModel {
   @Column()
@@ -28,4 +36,14 @@ export class WorkflowEntity extends BaseModel {
 
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({
+    type: 'enum',
+    enum: WorkflowStatus,
+    default: WorkflowStatus.PENDING,
+  })
+  status: WorkflowStatus;
+
+  @Column({ nullable: true })
+  error: string;
 }
