@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TaskService } from '../task/task.service';
-import { CoordinatorService } from '../workflow/coordinator.service';
+import { CoordinatorFactoryService } from '../workflow/coordinator-factory.service';
 import { ITaskMessage } from '../core/messaging/types/task-message.interface';
 import { UtilsService } from '../core/utils/utils.service';
 import { TaskStatus } from '../task/types/task-status.enum';
@@ -12,7 +12,7 @@ export abstract class BaseWorker {
 
   constructor(
     protected readonly taskService: TaskService,
-    protected readonly coordinator: CoordinatorService,
+    protected readonly coordinatorFactory: CoordinatorFactoryService,
   ) {
     this.logger.log(`${this.constructor.name} initialized`);
     this.logger.log(`${this.constructor.name} listening for events`);
@@ -63,7 +63,8 @@ export abstract class BaseWorker {
       await this.taskService.updateTaskStatus(taskId, TaskStatus.COMPLETED);
 
       try {
-        await this.coordinator.handleTaskCompletion(taskId);
+        const coordinator = this.coordinatorFactory.getCoordinator(task.type);
+        await coordinator.handleTaskCompletion(taskId);
       } catch (workflowError) {
         this.logger.warn(
           `Workflow handling failed for task ${taskId}: ${workflowError.message}`,
@@ -76,7 +77,13 @@ export abstract class BaseWorker {
       await this.taskService.handleFailure(taskId, error);
 
       try {
-        await this.coordinator.handleTaskFailure(taskId, error);
+        const failedTask = await this.taskService.getTaskById(taskId);
+        if (failedTask) {
+          const coordinator = this.coordinatorFactory.getCoordinator(
+            failedTask.type,
+          );
+          await coordinator.handleTaskFailure(taskId, error);
+        }
       } catch (coordinatorError) {
         this.logger.warn(
           `Coordinator failure handling failed for task ${taskId}: ${coordinatorError.message}`,

@@ -2,15 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { BaseWorker } from './base.worker';
 import { TaskService } from '../task/task.service';
-import { CoordinatorService } from '../workflow/coordinator.service';
+import { CoordinatorFactoryService } from '../workflow/coordinator-factory.service';
 import { UtilsService } from '../core/utils/utils.service';
 import { TaskType } from '../task/types/task-type.enum';
 import { ITaskMessage } from '../core/messaging/types/task-message.interface';
 
 @Injectable()
 export class DataWorker extends BaseWorker {
-  constructor(taskService: TaskService, coordinator: CoordinatorService) {
-    super(taskService, coordinator);
+  constructor(
+    taskService: TaskService,
+    coordinatorFactory: CoordinatorFactoryService,
+  ) {
+    super(taskService, coordinatorFactory);
   }
 
   @EventPattern('data.processing')

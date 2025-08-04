@@ -60,13 +60,7 @@ export class InvoiceService {
       `✅ [START_INVOICE_WORKFLOW] FETCH_ORDERS task created with ID: ${task.id}`,
     );
 
-    await this.messagingService.emitEvent('fetch.orders', {
-      taskId: task.id,
-      taskType: task.type,
-      customerId: dto.customerId,
-      dateFrom: dto.dateFrom,
-      dateTo: dto.dateTo,
-    });
+    await this.messagingService.publishTask(TaskType.FETCH_ORDERS, task.id);
 
     this.logger.log(
       `📤 [START_INVOICE_WORKFLOW] FETCH_ORDERS task published to queue: ${task.id}`,
@@ -256,10 +250,11 @@ export class InvoiceService {
 
     // Use a more flexible query to find tasks with customerId in payload
     const allTasks = await this.taskService.findAll();
-    const tasks = allTasks.filter(task =>
-      task.payload &&
-      typeof task.payload === 'object' &&
-      task.payload.customerId === customerId
+    const tasks = allTasks.filter(
+      (task) =>
+        task.payload &&
+        typeof task.payload === 'object' &&
+        task.payload.customerId === customerId,
     );
 
     this.logger.log(
@@ -296,10 +291,11 @@ export class InvoiceService {
 
     // Use a more flexible query to find tasks with customerId in payload
     const allTasks = await this.taskService.findAll();
-    const tasks = allTasks.filter(task =>
-      task.payload &&
-      typeof task.payload === 'object' &&
-      task.payload.customerId === customerId
+    const tasks = allTasks.filter(
+      (task) =>
+        task.payload &&
+        typeof task.payload === 'object' &&
+        task.payload.customerId === customerId,
     );
 
     this.logger.log(

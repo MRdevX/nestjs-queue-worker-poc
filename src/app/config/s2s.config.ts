@@ -11,12 +11,6 @@ export default registerAs('s2s', (): RmqOptions => {
     transport: Transport.RMQ,
     options: {
       urls: [`amqp://${user}:${password}@${host}:${port}`],
-      noAck: true,
-      prefetchCount: 1,
-      persistent: true,
-      queueOptions: {
-        durable: true,
-      },
     },
   };
 });
