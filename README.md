@@ -1,6 +1,6 @@
 # Queue Worker PoC - NestJS-based Distributed Task Processing System
 
-A comprehensive proof-of-concept for a scalable, fault-tolerant queue/worker system built with NestJS, PostgreSQL, and RabbitMQ. This system demonstrates enterprise-grade task processing capabilities with workflow orchestration, retry mechanisms, and horizontal scalability.
+A proof-of-concept (PoC) demonstrating a queue/worker system built with NestJS, PostgreSQL, and RabbitMQ. This PoC showcases task processing patterns, workflow orchestration, retry mechanisms, and microservice communication concepts for learning and evaluation purposes.
 
 ## 🎯 Overview
 
@@ -11,7 +11,9 @@ This Queue Worker PoC demonstrates a distributed task processing system with:
 - **Coordinator**: Orchestrates workflows and manages task dependencies
 - **Database**: PostgreSQL for persistent task state and workflow definitions
 - **Message Broker**: RabbitMQ for reliable asynchronous task distribution
-- **Pattern Optimization**: Uses EventPattern for long-running tasks and MessagePattern for quick tasks
+- **Pattern Optimization**: Uses EventPattern for all tasks with fire-and-forget semantics
+
+**Note**: This is a PoC demonstrating concepts. RabbitMQ microservice transport requires separate microservice applications. A single application cannot act as both server and client simultaneously. For production use, workers should be implemented as separate microservices.
 
 For detailed architecture information, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -199,4 +201,4 @@ The system is containerized with Docker and includes:
 
 ---
 
-**This PoC demonstrates a queue/worker system that can handle high volumes of tasks, support long-running transactions, and ensure data consistency and reliability.**
+**This PoC demonstrates queue/worker concepts and patterns for learning and evaluation purposes. It is not intended for production use without significant modifications and additional features.**
