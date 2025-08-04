@@ -254,9 +254,13 @@ export class InvoiceService {
 
     this.logger.log(INVOICE_LOG_MESSAGES.FETCHING_TASKS(customerId));
 
-    const tasks = await this.taskService.findMany({
-      payload: { customerId },
-    });
+    // Use a more flexible query to find tasks with customerId in payload
+    const allTasks = await this.taskService.findAll();
+    const tasks = allTasks.filter(task =>
+      task.payload &&
+      typeof task.payload === 'object' &&
+      task.payload.customerId === customerId
+    );
 
     this.logger.log(
       `✅ [GET_CUSTOMER_INVOICE_TASKS] Found ${tasks.length} tasks for customer: ${customerId}`,
@@ -290,9 +294,13 @@ export class InvoiceService {
 
     this.logger.log(INVOICE_LOG_MESSAGES.FETCHING_STATUS(customerId));
 
-    const tasks = await this.taskService.findMany({
-      payload: { customerId },
-    });
+    // Use a more flexible query to find tasks with customerId in payload
+    const allTasks = await this.taskService.findAll();
+    const tasks = allTasks.filter(task =>
+      task.payload &&
+      typeof task.payload === 'object' &&
+      task.payload.customerId === customerId
+    );
 
     this.logger.log(
       `✅ [GET_INVOICE_WORKFLOW_STATUS] Found ${tasks.length} tasks for customer: ${customerId}`,

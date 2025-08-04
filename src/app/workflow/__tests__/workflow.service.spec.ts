@@ -11,7 +11,6 @@ import { ICreateWorkflowDto, IUpdateWorkflowDto } from '../types';
 describe('WorkflowService', () => {
   let service: WorkflowService;
   let workflowRepository: jest.Mocked<WorkflowRepository>;
-  let taskService: jest.Mocked<TaskService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -41,7 +40,6 @@ describe('WorkflowService', () => {
 
     service = module.get<WorkflowService>(WorkflowService);
     workflowRepository = module.get(WorkflowRepository);
-    taskService = module.get(TaskService);
   });
 
   afterEach(() => {

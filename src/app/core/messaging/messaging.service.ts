@@ -23,6 +23,7 @@ export class MessagingService implements OnModuleDestroy {
         noAck: s2sConfig.options.noAck,
         prefetchCount: s2sConfig.options.prefetchCount,
         persistent: s2sConfig.options.persistent,
+        queueOptions: s2sConfig.options.queueOptions,
       },
     } as RmqOptions);
   }

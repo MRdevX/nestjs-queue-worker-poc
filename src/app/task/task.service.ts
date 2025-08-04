@@ -137,6 +137,10 @@ export class TaskService {
     return this.taskRepo.findMany(where);
   }
 
+  async findAll(options?: any): Promise<TaskEntity[]> {
+    return this.taskRepo.findAll(options);
+  }
+
   async getTaskById(
     taskId: string,
     options?: { relations?: string[] },
