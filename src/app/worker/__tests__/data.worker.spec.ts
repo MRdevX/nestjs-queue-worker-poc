@@ -55,7 +55,6 @@ describe('DataWorker', () => {
     coordinatorFactory = module.get(CoordinatorFactoryService);
     invoiceCoordinator = module.get(InvoiceCoordinatorService);
 
-    // Set up coordinator factory to return appropriate coordinator
     coordinatorFactory.getCoordinator.mockImplementation(
       (taskType: TaskType) => {
         const invoiceTaskTypes = [

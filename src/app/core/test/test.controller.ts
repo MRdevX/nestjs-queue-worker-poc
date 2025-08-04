@@ -23,7 +23,6 @@ export class TestController {
 
     this.logger.log(`📤 Emitting test message: ${JSON.stringify(testMessage)}`);
 
-    // Test both RabbitMQ and EventEmitter
     await this.messagingService.emitEvent('simple.test', testMessage);
     await this.eventEmitterService.emitEvent('simple.test', testMessage);
 

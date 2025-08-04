@@ -248,7 +248,6 @@ export class InvoiceService {
 
     this.logger.log(INVOICE_LOG_MESSAGES.FETCHING_TASKS(customerId));
 
-    // Use a more flexible query to find tasks with customerId in payload
     const allTasks = await this.taskService.findAll();
     const tasks = allTasks.filter(
       (task) =>
@@ -289,7 +288,6 @@ export class InvoiceService {
 
     this.logger.log(INVOICE_LOG_MESSAGES.FETCHING_STATUS(customerId));
 
-    // Use a more flexible query to find tasks with customerId in payload
     const allTasks = await this.taskService.findAll();
     const tasks = allTasks.filter(
       (task) =>

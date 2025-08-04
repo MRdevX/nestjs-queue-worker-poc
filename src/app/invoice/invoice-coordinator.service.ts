@@ -26,7 +26,6 @@ export class InvoiceCoordinatorService {
         `Handling task completion for ${taskId} of type ${task.type}`,
       );
 
-      // Handle invoice workflow steps
       switch (task.type) {
         case TaskType.FETCH_ORDERS:
           await this.invoiceWorkflowService.handleFetchOrdersCompletion(taskId);

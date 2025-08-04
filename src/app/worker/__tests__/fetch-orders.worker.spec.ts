@@ -57,7 +57,6 @@ describe('FetchOrdersWorker', () => {
     coordinatorFactory = module.get(CoordinatorFactoryService);
     invoiceCoordinator = module.get(InvoiceCoordinatorService);
 
-    // Set up coordinator factory to return invoice coordinator for invoice-related tasks
     coordinatorFactory.getCoordinator.mockImplementation(
       (taskType: TaskType) => {
         const invoiceTaskTypes = [
