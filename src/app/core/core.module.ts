@@ -2,6 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import dbConfig from '@root/app/config/db.config';
 import s2sConfig from '@root/app/config/s2s.config';
 import appConfig from '@root/app/config/app.config';
@@ -17,6 +18,7 @@ import { SeederModule } from './database/seeder/seeder.module';
     HealthModule,
     SeederModule,
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',

@@ -6,6 +6,8 @@ import { FetchOrdersWorker } from './fetch-orders.worker';
 import { CreateInvoiceWorker } from './create-invoice.worker';
 import { GeneratePdfWorker } from './generate-pdf.worker';
 import { SendEmailWorker } from './send-email.worker';
+import { SimpleTestWorker } from './simple-test.worker';
+import { SimpleEventEmitterWorker } from './simple-event-emitter.worker';
 import { TaskModule } from '../task/task.module';
 import { WorkflowModule } from '../workflow/workflow.module';
 
@@ -19,6 +21,8 @@ import { WorkflowModule } from '../workflow/workflow.module';
     CreateInvoiceWorker,
     GeneratePdfWorker,
     SendEmailWorker,
+    SimpleTestWorker,
+    SimpleEventEmitterWorker,
   ],
   exports: [
     DataWorker,
@@ -28,6 +32,8 @@ import { WorkflowModule } from '../workflow/workflow.module';
     CreateInvoiceWorker,
     GeneratePdfWorker,
     SendEmailWorker,
+    SimpleTestWorker,
+    SimpleEventEmitterWorker,
   ],
 })
 export class WorkerModule {}
