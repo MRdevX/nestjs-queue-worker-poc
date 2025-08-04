@@ -20,8 +20,9 @@ export class MessagingService implements OnModuleDestroy {
       transport: s2sConfig.transport,
       options: {
         urls: s2sConfig.options.urls,
-        queue: s2sConfig.options.queue,
-        queueOptions: s2sConfig.options.queueOptions,
+        noAck: s2sConfig.options.noAck,
+        prefetchCount: s2sConfig.options.prefetchCount,
+        persistent: s2sConfig.options.persistent,
       },
     } as RmqOptions);
   }

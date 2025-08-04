@@ -11,12 +11,9 @@ export default registerAs('s2s', (): RmqOptions => {
     transport: Transport.RMQ,
     options: {
       urls: [`amqp://${user}:${password}@${host}:${port}`],
-      queue: 'task_queue',
-      queueOptions: {
-        durable: true,
-        deadLetterExchange: 'dlx',
-        deadLetterRoutingKey: 'failed',
-      },
+      noAck: false,
+      prefetchCount: 1,
+      persistent: true,
     },
   };
 });

@@ -15,10 +15,13 @@ export abstract class BaseWorker {
     protected readonly coordinator: CoordinatorService,
   ) {
     this.logger.log(`${this.constructor.name} initialized`);
+    this.logger.log(`${this.constructor.name} listening for events`);
   }
 
   async handleTask(data: ITaskMessage) {
-    this.logger.log(`Received task message: ${JSON.stringify(data)}`);
+    this.logger.log(
+      `[${this.constructor.name}] Received task message: ${JSON.stringify(data)}`,
+    );
 
     const { taskId, delay, metadata } = data;
 

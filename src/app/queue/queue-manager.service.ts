@@ -65,9 +65,9 @@ export class QueueManagerService {
     try {
       const [pending, processing, completed, failed] = await Promise.all([
         this.taskService.getPendingTasks(),
-        this.taskService.findMany({ status: 'PROCESSING' }),
-        this.taskService.findMany({ status: 'COMPLETED' }),
-        this.taskService.findMany({ status: 'FAILED' }),
+        this.taskService.findMany({ status: 'processing' }),
+        this.taskService.findMany({ status: 'completed' }),
+        this.taskService.findMany({ status: 'failed' }),
       ]);
 
       return {
