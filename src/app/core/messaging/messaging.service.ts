@@ -68,13 +68,8 @@ export class MessagingService implements OnModuleDestroy {
 
     this.logger.log(`Emitting event to: ${pattern}`);
 
-    try {
-      this.client.emit(pattern, message);
-      this.logger.log(`Event emitted to: ${pattern}`);
-    } catch (error) {
-      this.logger.error(`Failed to emit event to ${pattern}:`, error.stack);
-      throw new Error(`Event emit failed: ${error.message || 'Unknown error'}`);
-    }
+    this.client.emit(pattern, message);
+    this.logger.log(`Event emitted to: ${pattern}`);
   }
 
   async onModuleDestroy() {

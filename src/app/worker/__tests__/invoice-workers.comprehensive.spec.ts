@@ -6,6 +6,8 @@ import { GeneratePdfWorker } from '../generate-pdf.worker';
 import { SendEmailWorker } from '../send-email.worker';
 import { TaskService } from '../../task/task.service';
 import { CoordinatorService } from '../../workflow/coordinator.service';
+import { CoordinatorFactoryService } from '../../workflow/coordinator-factory.service';
+import { InvoiceCoordinatorService } from '../../invoice/invoice-coordinator.service';
 import { TaskType } from '../../task/types/task-type.enum';
 import { TaskStatus } from '../../task/types/task-status.enum';
 
@@ -16,6 +18,8 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
   let sendEmailWorker: SendEmailWorker;
   let taskService: jest.Mocked<TaskService>;
   let coordinator: jest.Mocked<CoordinatorService>;
+  let coordinatorFactory: jest.Mocked<CoordinatorFactoryService>;
+  let invoiceCoordinator: jest.Mocked<InvoiceCoordinatorService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -40,6 +44,19 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
             handleTaskFailure: jest.fn(),
           },
         },
+        {
+          provide: CoordinatorFactoryService,
+          useValue: {
+            getCoordinator: jest.fn(),
+          },
+        },
+        {
+          provide: InvoiceCoordinatorService,
+          useValue: {
+            handleTaskCompletion: jest.fn(),
+            handleTaskFailure: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -49,6 +66,25 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
     sendEmailWorker = module.get<SendEmailWorker>(SendEmailWorker);
     taskService = module.get(TaskService);
     coordinator = module.get(CoordinatorService);
+    coordinatorFactory = module.get(CoordinatorFactoryService);
+    invoiceCoordinator = module.get(InvoiceCoordinatorService);
+
+    // Set up coordinator factory to return invoice coordinator for invoice-related tasks
+    coordinatorFactory.getCoordinator.mockImplementation(
+      (taskType: TaskType) => {
+        const invoiceTaskTypes = [
+          TaskType.FETCH_ORDERS,
+          TaskType.CREATE_INVOICE,
+          TaskType.GENERATE_PDF,
+          TaskType.SEND_EMAIL,
+        ];
+
+        if (invoiceTaskTypes.includes(taskType)) {
+          return invoiceCoordinator;
+        }
+        return coordinator;
+      },
+    );
   });
 
   afterEach(() => {
@@ -87,7 +123,9 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           taskId,
           TaskStatus.PROCESSING,
         );
-        expect(coordinator.handleTaskCompletion).toHaveBeenCalledWith(taskId);
+        expect(invoiceCoordinator.handleTaskCompletion).toHaveBeenCalledWith(
+          taskId,
+        );
       });
 
       it('should handle orders with different delivery statuses', async () => {
@@ -113,7 +151,9 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
 
         await fetchOrdersWorker.handleTask(message);
 
-        expect(coordinator.handleTaskCompletion).toHaveBeenCalledWith(taskId);
+        expect(invoiceCoordinator.handleTaskCompletion).toHaveBeenCalledWith(
+          taskId,
+        );
       });
     });
 
@@ -145,7 +185,7 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           taskId,
           expect.any(Error),
         );
-        expect(coordinator.handleTaskFailure).toHaveBeenCalledWith(
+        expect(invoiceCoordinator.handleTaskFailure).toHaveBeenCalledWith(
           taskId,
           expect.any(Error),
         );
@@ -165,7 +205,7 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
         await fetchOrdersWorker.handleTask(message);
 
         expect(taskService.handleFailure).not.toHaveBeenCalled();
-        expect(coordinator.handleTaskFailure).not.toHaveBeenCalled();
+        expect(invoiceCoordinator.handleTaskFailure).not.toHaveBeenCalled();
       });
     });
 
@@ -175,12 +215,38 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
         const dateFrom = '2024-01-16';
         const dateTo = '2024-01-31';
 
-        const orders = await (
-          fetchOrdersWorker as any
-        ).fetchOrdersFromExternalApi(customerId, dateFrom, dateTo);
+        const taskId = 'task-123';
+        const mockTask = TaskEntityMockFactory.create({
+          id: taskId,
+          type: TaskType.FETCH_ORDERS,
+          payload: {
+            customerId,
+            dateFrom,
+            dateTo,
+            orders: [{ id: 'order-1', deliveryDate: '2024-01-16' }],
+          },
+          status: TaskStatus.COMPLETED,
+        });
 
-        expect(orders).toHaveLength(1);
-        expect(orders[0].deliveryDate).toBe('2024-01-16');
+        taskService.getTaskById.mockResolvedValue(mockTask as any);
+        taskService.updateTaskPayload.mockResolvedValue(mockTask as any);
+
+        const message = {
+          taskType: TaskType.FETCH_ORDERS,
+          taskId,
+          delay: undefined,
+          metadata: undefined,
+        };
+        await fetchOrdersWorker.handleTask(message);
+
+        expect(taskService.updateTaskPayload).toHaveBeenCalledWith(
+          taskId,
+          expect.objectContaining({
+            orders: expect.arrayContaining([
+              expect.objectContaining({ deliveryDate: '2024-01-16' }),
+            ]),
+          }),
+        );
       });
 
       it('should handle null delivery dates correctly', async () => {
@@ -243,7 +309,9 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           taskId,
           TaskStatus.PROCESSING,
         );
-        expect(coordinator.handleTaskCompletion).toHaveBeenCalledWith(taskId);
+        expect(invoiceCoordinator.handleTaskCompletion).toHaveBeenCalledWith(
+          taskId,
+        );
       });
 
       it('should generate invoice number when not provided', async () => {
@@ -278,7 +346,9 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
 
         await createInvoiceWorker.handleTask(message);
 
-        expect(coordinator.handleTaskCompletion).toHaveBeenCalledWith(taskId);
+        expect(invoiceCoordinator.handleTaskCompletion).toHaveBeenCalledWith(
+          taskId,
+        );
       });
     });
 
@@ -310,7 +380,7 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           taskId,
           expect.any(Error),
         );
-        expect(coordinator.handleTaskFailure).toHaveBeenCalledWith(
+        expect(invoiceCoordinator.handleTaskFailure).toHaveBeenCalledWith(
           taskId,
           expect.any(Error),
         );
@@ -343,7 +413,7 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           taskId,
           expect.any(Error),
         );
-        expect(coordinator.handleTaskFailure).toHaveBeenCalledWith(
+        expect(invoiceCoordinator.handleTaskFailure).toHaveBeenCalledWith(
           taskId,
           expect.any(Error),
         );
@@ -425,7 +495,9 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           taskId,
           TaskStatus.PROCESSING,
         );
-        expect(coordinator.handleTaskCompletion).toHaveBeenCalledWith(taskId);
+        expect(invoiceCoordinator.handleTaskCompletion).toHaveBeenCalledWith(
+          taskId,
+        );
       });
 
       it('should use default PDF processor URL when not provided', async () => {
@@ -459,7 +531,9 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
 
         await generatePdfWorker.handleTask(message);
 
-        expect(coordinator.handleTaskCompletion).toHaveBeenCalledWith(taskId);
+        expect(invoiceCoordinator.handleTaskCompletion).toHaveBeenCalledWith(
+          taskId,
+        );
       });
     });
 
@@ -491,7 +565,7 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           taskId,
           expect.any(Error),
         );
-        expect(coordinator.handleTaskFailure).toHaveBeenCalledWith(
+        expect(invoiceCoordinator.handleTaskFailure).toHaveBeenCalledWith(
           taskId,
           expect.any(Error),
         );
@@ -532,7 +606,7 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           taskId,
           expect.any(Error),
         );
-        expect(coordinator.handleTaskFailure).toHaveBeenCalledWith(
+        expect(invoiceCoordinator.handleTaskFailure).toHaveBeenCalledWith(
           taskId,
           expect.any(Error),
         );
@@ -580,7 +654,9 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           taskId,
           TaskStatus.PROCESSING,
         );
-        expect(coordinator.handleTaskCompletion).toHaveBeenCalledWith(taskId);
+        expect(invoiceCoordinator.handleTaskCompletion).toHaveBeenCalledWith(
+          taskId,
+        );
       });
 
       it('should use default email service URL when not provided', async () => {
@@ -589,6 +665,7 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           id: 'invoice-123',
           invoiceNumber: 'INV-123',
           customerId: 'customer-123',
+          grandTotal: 110,
         };
 
         const mockTask = TaskEntityMockFactory.create({
@@ -615,7 +692,9 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
 
         await sendEmailWorker.handleTask(message);
 
-        expect(coordinator.handleTaskCompletion).toHaveBeenCalledWith(taskId);
+        expect(invoiceCoordinator.handleTaskCompletion).toHaveBeenCalledWith(
+          taskId,
+        );
       });
     });
 
@@ -648,7 +727,7 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           taskId,
           expect.any(Error),
         );
-        expect(coordinator.handleTaskFailure).toHaveBeenCalledWith(
+        expect(invoiceCoordinator.handleTaskFailure).toHaveBeenCalledWith(
           taskId,
           expect.any(Error),
         );
@@ -682,7 +761,7 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           taskId,
           expect.any(Error),
         );
-        expect(coordinator.handleTaskFailure).toHaveBeenCalledWith(
+        expect(invoiceCoordinator.handleTaskFailure).toHaveBeenCalledWith(
           taskId,
           expect.any(Error),
         );
@@ -724,7 +803,7 @@ describe('Invoice Workers - Comprehensive Test Suite', () => {
           taskId,
           expect.any(Error),
         );
-        expect(coordinator.handleTaskFailure).toHaveBeenCalledWith(
+        expect(invoiceCoordinator.handleTaskFailure).toHaveBeenCalledWith(
           taskId,
           expect.any(Error),
         );

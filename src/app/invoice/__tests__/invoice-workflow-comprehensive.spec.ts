@@ -217,7 +217,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           { ...sendEmailTask, status: TaskStatus.COMPLETED },
         ];
 
-        taskService.findMany.mockResolvedValue(mockTasks as any);
+        taskService.findAll.mockResolvedValue(mockTasks as any);
 
         const status = await controller.getInvoiceWorkflowStatus(customerId);
 
@@ -732,6 +732,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
             id: 'task-1',
             type: TaskType.FETCH_ORDERS,
             status: TaskStatus.COMPLETED,
+            payload: { customerId },
             createdAt: new Date('2024-01-15T10:00:00Z'),
             updatedAt: new Date('2024-01-15T10:05:00Z'),
           }),
@@ -739,11 +740,12 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
             id: 'task-2',
             type: TaskType.CREATE_INVOICE,
             status: TaskStatus.PENDING,
+            payload: { customerId },
             createdAt: new Date('2024-01-15T10:06:00Z'),
           }),
         ];
 
-        taskService.findMany.mockResolvedValue(mockTasks as any);
+        taskService.findAll.mockResolvedValue(mockTasks as any);
 
         const result = await controller.getCustomerInvoiceTasks(customerId);
 
@@ -762,29 +764,33 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
             id: 'task-1',
             type: TaskType.FETCH_ORDERS,
             status: TaskStatus.COMPLETED,
+            payload: { customerId },
             workflow: { id: 'workflow-123' },
           }),
           TaskEntityMockFactory.create({
             id: 'task-2',
             type: TaskType.CREATE_INVOICE,
             status: TaskStatus.PROCESSING,
+            payload: { customerId },
             workflow: { id: 'workflow-123' },
           }),
           TaskEntityMockFactory.create({
             id: 'task-3',
             type: TaskType.GENERATE_PDF,
             status: TaskStatus.FAILED,
+            payload: { customerId },
             workflow: { id: 'workflow-123' },
           }),
           TaskEntityMockFactory.create({
             id: 'task-4',
             type: TaskType.SEND_EMAIL,
             status: TaskStatus.PENDING,
+            payload: { customerId },
             workflow: null,
           }),
         ];
 
-        taskService.findMany.mockResolvedValue(mockTasks as any);
+        taskService.findAll.mockResolvedValue(mockTasks as any);
 
         const result = await controller.getInvoiceWorkflowStatus(customerId);
 
@@ -805,7 +811,7 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
       it('should handle customer with no tasks', async () => {
         const customerId = 'customer-123';
 
-        taskService.findMany.mockResolvedValue([]);
+        taskService.findAll.mockResolvedValue([]);
 
         const result = await controller.getCustomerInvoiceTasks(customerId);
 
@@ -961,12 +967,9 @@ describe('Invoice Workflow - Comprehensive Test Suite', () => {
           { customerId, dateFrom: undefined, dateTo: undefined },
           undefined,
         );
-        expect(messagingService.emitEvent).toHaveBeenCalledWith(
-          'fetch.orders',
-          expect.objectContaining({
-            taskId: 'task-1',
-            taskType: TaskType.FETCH_ORDERS,
-          }),
+        expect(messagingService.publishTask).toHaveBeenCalledWith(
+          TaskType.FETCH_ORDERS,
+          'task-1',
         );
       });
     });

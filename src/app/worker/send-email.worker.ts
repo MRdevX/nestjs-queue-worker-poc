@@ -35,6 +35,12 @@ export class SendEmailWorker extends BaseWorker {
       );
     }
 
+    if (!invoice.invoiceNumber || !invoice.grandTotal) {
+      throw new Error(
+        'Invoice must contain invoiceNumber and grandTotal properties',
+      );
+    }
+
     const emailResult = await this.sendEmail(
       customerId,
       invoice,

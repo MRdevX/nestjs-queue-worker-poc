@@ -29,6 +29,7 @@ describe('Invoice Workflow Integration', () => {
             createTask: jest.fn(),
             getTaskById: jest.fn(),
             findMany: jest.fn(),
+            findAll: jest.fn(),
             updateTaskStatus: jest.fn(),
           },
         },
@@ -259,7 +260,7 @@ describe('Invoice Workflow Integration', () => {
         { ...sendEmailTask, status: TaskStatus.COMPLETED },
       ];
 
-      taskService.findMany.mockResolvedValue(mockTasks as any);
+      taskService.findAll.mockResolvedValue(mockTasks as any);
 
       const status = await controller.getInvoiceWorkflowStatus(customerId);
 

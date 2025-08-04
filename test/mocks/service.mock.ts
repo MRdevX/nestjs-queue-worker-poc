@@ -8,6 +8,7 @@ export class TaskServiceMockFactory {
       createTask: jest.fn(),
       getTaskById: jest.fn(),
       findMany: jest.fn(),
+      findAll: jest.fn(),
       updateTaskStatus: jest.fn(),
       handleFailure: jest.fn(),
       getPendingTasks: jest.fn(),
@@ -32,6 +33,7 @@ export class TaskServiceMockFactory {
 
     mock.getTaskById.mockResolvedValue(null);
     mock.findMany.mockResolvedValue([]);
+    mock.findAll.mockResolvedValue([]);
     mock.updateTaskStatus.mockResolvedValue(null);
     mock.handleFailure.mockResolvedValue(undefined);
     mock.getPendingTasks.mockResolvedValue([]);

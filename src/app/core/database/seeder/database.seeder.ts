@@ -81,7 +81,12 @@ export class DatabaseSeeder {
   }
 
   private async hasExistingData(): Promise<boolean> {
-    return (await this.taskRepository.count()) > 0;
+    const [taskCount, workflowCount, taskLogCount] = await Promise.all([
+      this.taskRepository.count(),
+      this.workflowRepository.count(),
+      this.taskLogRepository.count(),
+    ]);
+    return taskCount > 0 || workflowCount > 0 || taskLogCount > 0;
   }
 
   private async seedWorkflows(): Promise<WorkflowEntity[]> {

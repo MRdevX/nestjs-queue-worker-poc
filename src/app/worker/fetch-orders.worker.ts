@@ -40,6 +40,12 @@ export class FetchOrdersWorker extends BaseWorker {
       dateTo,
     );
 
+    if (!Array.isArray(orders)) {
+      throw new Error(
+        'Invalid response from external API: orders must be an array',
+      );
+    }
+
     const deliverableOrders = orders.filter(
       (order) => order.status === 'delivered' && !order.invoiced,
     );

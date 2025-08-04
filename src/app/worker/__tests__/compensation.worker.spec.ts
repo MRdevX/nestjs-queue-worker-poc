@@ -3,12 +3,16 @@ import { TaskEntityMockFactory } from '@test/mocks';
 import { CompensationWorker } from '../compensation.worker';
 import { TaskService } from '../../task/task.service';
 import { CoordinatorService } from '../../workflow/coordinator.service';
+import { CoordinatorFactoryService } from '../../workflow/coordinator-factory.service';
+import { InvoiceCoordinatorService } from '../../invoice/invoice-coordinator.service';
 import { TaskType } from '../../task/types/task-type.enum';
 
 describe('CompensationWorker', () => {
   let worker: CompensationWorker;
   let taskService: jest.Mocked<TaskService>;
   let coordinator: jest.Mocked<CoordinatorService>;
+  let coordinatorFactory: jest.Mocked<CoordinatorFactoryService>;
+  let invoiceCoordinator: jest.Mocked<InvoiceCoordinatorService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -29,12 +33,44 @@ describe('CompensationWorker', () => {
             handleTaskFailure: jest.fn(),
           },
         },
+        {
+          provide: CoordinatorFactoryService,
+          useValue: {
+            getCoordinator: jest.fn(),
+          },
+        },
+        {
+          provide: InvoiceCoordinatorService,
+          useValue: {
+            handleTaskCompletion: jest.fn(),
+            handleTaskFailure: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     worker = module.get<CompensationWorker>(CompensationWorker);
     taskService = module.get(TaskService);
     coordinator = module.get(CoordinatorService);
+    coordinatorFactory = module.get(CoordinatorFactoryService);
+    invoiceCoordinator = module.get(InvoiceCoordinatorService);
+
+    // Set up coordinator factory to return appropriate coordinator
+    coordinatorFactory.getCoordinator.mockImplementation(
+      (taskType: TaskType) => {
+        const invoiceTaskTypes = [
+          TaskType.FETCH_ORDERS,
+          TaskType.CREATE_INVOICE,
+          TaskType.GENERATE_PDF,
+          TaskType.SEND_EMAIL,
+        ];
+
+        if (invoiceTaskTypes.includes(taskType)) {
+          return invoiceCoordinator;
+        }
+        return coordinator;
+      },
+    );
   });
 
   afterEach(() => {

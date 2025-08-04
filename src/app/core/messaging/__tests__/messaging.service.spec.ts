@@ -127,7 +127,7 @@ describe('MessagingService', () => {
       });
 
       await expect(service.emitEvent(pattern, payload)).rejects.toThrow(
-        'Event emit failed: Emit failed',
+        'Emit failed',
       );
     });
   });
