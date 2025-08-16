@@ -7,14 +7,14 @@ import { CoordinatorFactoryService } from './coordinator-factory.service';
 import { WorkflowController } from './workflow.controller';
 import { WorkflowService } from './workflow.service';
 import { TaskModule } from '../task/task.module';
-import { MessagingModule } from '../core/messaging/messaging.module';
+import { QueueManagerModule } from '../queue/queue.module';
 import { InvoiceModule } from '../invoice/invoice.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([WorkflowEntity]),
     TaskModule,
-    MessagingModule,
+    QueueManagerModule,
     InvoiceModule,
   ],
   providers: [

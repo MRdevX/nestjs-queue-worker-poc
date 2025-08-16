@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TaskService } from '../task/task.service';
+import { TaskQueueService } from '../queue/task-queue.service';
 import { MessagingService } from '../core/messaging/messaging.service';
 import { SchedulerService } from '../scheduler/scheduler.service';
 import { UtilsService } from '../core/utils/utils.service';
@@ -26,6 +27,7 @@ export class InvoiceService {
 
   constructor(
     private readonly taskService: TaskService,
+    private readonly taskQueueService: TaskQueueService,
     private readonly messagingService: MessagingService,
     private readonly schedulerService: SchedulerService,
     private readonly configService: ConfigService,
@@ -60,7 +62,11 @@ export class InvoiceService {
       `✅ [START_INVOICE_WORKFLOW] FETCH_ORDERS task created with ID: ${task.id}`,
     );
 
-    await this.messagingService.publishTask(TaskType.FETCH_ORDERS, task.id);
+    await this.taskQueueService.enqueueTask(
+      TaskType.FETCH_ORDERS,
+      task.payload,
+      dto.workflowId,
+    );
 
     this.logger.log(
       `📤 [START_INVOICE_WORKFLOW] FETCH_ORDERS task published to queue: ${task.id}`,
@@ -84,55 +90,39 @@ export class InvoiceService {
     dto: CreateScheduledInvoiceWorkflowDto,
   ): Promise<InvoiceWorkflowResponseDto> {
     this.logger.log(
-      `⏰ [SCHEDULED_INVOICE_WORKFLOW] Creating scheduled invoice workflow for customer: ${dto.customerId}`,
-    );
-    this.logger.log(
-      `📅 [SCHEDULED_INVOICE_WORKFLOW] Scheduled at: ${dto.scheduledAt}`,
-    );
-    this.logger.log(
-      `📅 [SCHEDULED_INVOICE_WORKFLOW] Date range: ${dto.dateFrom || 'N/A'} to ${dto.dateTo || 'N/A'}`,
-    );
-    this.logger.log(
-      `🆔 [SCHEDULED_INVOICE_WORKFLOW] Workflow ID: ${dto.workflowId || 'auto-generated'}`,
+      `📅 [CREATE_SCHEDULED_INVOICE_WORKFLOW] Creating scheduled invoice workflow for customer: ${dto.customerId}`,
     );
 
-    this.logger.log(
-      INVOICE_LOG_MESSAGES.CREATING_SCHEDULED_WORKFLOW(dto.customerId),
-    );
-
-    const scheduledAt = UtilsService.validateAndParseDate(dto.scheduledAt);
-    this.logger.log(
-      `✅ [SCHEDULED_INVOICE_WORKFLOW] Date validation passed. Scheduled at: ${scheduledAt.toISOString()}`,
-    );
-
-    const task = await this.schedulerService.createScheduledTask(
+    const task = await this.taskService.createTask(
       TaskType.FETCH_ORDERS,
       {
         customerId: dto.customerId,
         dateFrom: dto.dateFrom,
         dateTo: dto.dateTo,
       },
-      scheduledAt,
       dto.workflowId,
     );
 
-    this.logger.log(
-      `✅ [SCHEDULED_INVOICE_WORKFLOW] Scheduled task created with ID: ${task.id}`,
+    await this.taskQueueService.enqueueTask(
+      TaskType.FETCH_ORDERS,
+      task.payload,
+      dto.workflowId,
+      {
+        delay: this.calculateDelay(dto.scheduledAt),
+        metadata: { scheduledAt: dto.scheduledAt },
+      },
     );
-    this.logger.log(INVOICE_LOG_MESSAGES.SCHEDULED_WORKFLOW_CREATED(task.id));
 
-    const response = {
+    this.logger.log(
+      `📅 [CREATE_SCHEDULED_INVOICE_WORKFLOW] Scheduled invoice workflow created: ${task.id}`,
+    );
+
+    return {
       message: INVOICE_MESSAGES.SCHEDULED_WORKFLOW_CREATED,
       taskId: task.id,
-      scheduledAt: scheduledAt.toISOString(),
       workflowId: dto.workflowId,
+      scheduledAt: dto.scheduledAt,
     };
-
-    this.logger.log(
-      `🎯 [SCHEDULED_INVOICE_WORKFLOW] Scheduled workflow created successfully. Response: ${JSON.stringify(response)}`,
-    );
-
-    return response;
   }
 
   async createRecurringInvoiceWorkflow(
@@ -406,5 +396,11 @@ export class InvoiceService {
           t.status === TaskStatus.COMPLETED || t.status === TaskStatus.FAILED,
       ),
     };
+  }
+
+  private calculateDelay(scheduledAt: string): number {
+    const scheduledTime = new Date(scheduledAt).getTime();
+    const now = Date.now();
+    return Math.max(0, scheduledTime - now);
   }
 }

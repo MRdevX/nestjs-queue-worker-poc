@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { TaskService } from '../task/task.service';
-import { MessagingService } from '../core/messaging/messaging.service';
+import { TaskQueueService } from '../queue/task-queue.service';
 import { WorkflowEntity, WorkflowStatus } from './workflow.entity';
 import { TaskStatus } from '../task/types/task-status.enum';
 import { WorkflowService } from './workflow.service';
@@ -11,7 +11,7 @@ export class CoordinatorService {
 
   constructor(
     private taskService: TaskService,
-    private messagingService: MessagingService,
+    private taskQueueService: TaskQueueService,
     private workflowService: WorkflowService,
   ) {}
 
@@ -28,7 +28,11 @@ export class CoordinatorService {
         workflow.id,
       );
 
-      await this.messagingService.publishTask(task.type, task.id);
+      await this.taskQueueService.enqueueTask(
+        task.type,
+        task.payload,
+        workflow.id,
+      );
 
       this.logger.log(
         `Workflow ${workflow.id} started with initial task ${task.id}`,
@@ -78,7 +82,11 @@ export class CoordinatorService {
           transition.payload,
           task.workflow.id,
         );
-        await this.messagingService.publishTask(nextTask.type, nextTask.id);
+        await this.taskQueueService.enqueueTask(
+          nextTask.type,
+          nextTask.payload,
+          task.workflow.id,
+        );
         this.logger.log(
           `Created next task ${nextTask.id} for workflow ${task.workflow.id}`,
         );

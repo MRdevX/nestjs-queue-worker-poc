@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TaskService } from '../task/task.service';
 import { TaskType } from '../task/types/task-type.enum';
-import { MessagingService } from '../core/messaging/messaging.service';
-import { getWorkerForTaskType } from './config/queue.config';
+import { TaskQueueService } from './task-queue.service';
 import { IQueueStatus } from './types/queue.types';
 
 @Injectable()
@@ -11,7 +10,7 @@ export class QueueManagerService {
 
   constructor(
     private readonly taskService: TaskService,
-    private readonly messagingService: MessagingService,
+    private readonly taskQueueService: TaskQueueService,
   ) {}
 
   async enqueueTask(
@@ -19,46 +18,11 @@ export class QueueManagerService {
     payload: any,
     workflowId?: string,
   ): Promise<string> {
-    try {
-      const task = await this.taskService.createTask(type, payload, workflowId);
-      this.logger.log(`Task ${task.id} created and queued for processing`);
-
-      await this.messagingService.publishTask(task.type, task.id, {
-        metadata: {
-          workflowId,
-          createdAt: new Date().toISOString(),
-        },
-      });
-
-      this.logger.log(
-        `Task ${task.id} published to queue: ${getWorkerForTaskType(type)}`,
-      );
-      return task.id;
-    } catch (error) {
-      this.logger.error('Failed to enqueue task', error.stack);
-      throw error;
-    }
+    return this.taskQueueService.enqueueTask(type, payload, workflowId);
   }
 
   async retryTask(taskId: string): Promise<void> {
-    const task = await this.taskService.getTaskById(taskId);
-    if (!task) {
-      throw new Error(`Task ${taskId} not found`);
-    }
-
-    if (task.retries >= 3) {
-      this.logger.warn(`Task ${taskId} has exceeded max retries`);
-      return;
-    }
-
-    await this.messagingService.publishTask(task.type, task.id, {
-      metadata: {
-        retryCount: task.retries + 1,
-        originalTaskId: taskId,
-      },
-    });
-
-    this.logger.log(`Retrying task ${taskId}`);
+    return this.taskQueueService.retryTask(taskId);
   }
 
   async getQueueStatus(): Promise<IQueueStatus> {

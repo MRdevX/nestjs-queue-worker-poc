@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { TaskService } from '../task/task.service';
-import { MessagingService } from '../core/messaging/messaging.service';
+import { TaskQueueService } from '../queue/task-queue.service';
 import { TaskType } from '../task/types/task-type.enum';
 import { TaskRepository } from '../task/task.repository';
 import { TaskStatus } from '../task/types/task-status.enum';
@@ -12,7 +12,7 @@ export class SchedulerService {
 
   constructor(
     private readonly taskService: TaskService,
-    private readonly messagingService: MessagingService,
+    private readonly taskQueueService: TaskQueueService,
     private readonly taskRepository: TaskRepository,
   ) {}
 
@@ -87,7 +87,11 @@ export class SchedulerService {
         scheduledAt: null,
       });
 
-      await this.messagingService.publishTask(task.type, task.id);
+      await this.taskQueueService.enqueueTask(
+        task.type,
+        task.payload,
+        task.workflowId,
+      );
 
       this.logger.log(`Scheduled task queued: ${task.id}`);
     } catch (error) {

@@ -86,6 +86,10 @@ export class MessagingService
       taskType,
       delay: options?.delay,
       metadata: options?.metadata,
+      retryCount: options?.metadata?.retryCount,
+      originalTaskId: options?.metadata?.originalTaskId,
+      workflowId: options?.metadata?.workflowId,
+      scheduledAt: options?.metadata?.scheduledAt,
     };
 
     this.logger.log(`Publishing task: ${taskType} - ${taskId}`);
