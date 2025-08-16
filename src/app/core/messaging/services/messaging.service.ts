@@ -61,9 +61,7 @@ export class MessagingService
       scheduledAt: options?.metadata?.scheduledAt,
     };
 
-    this.logger.log(`Publishing task: ${taskType} - ${taskId}`);
     await this.emitEvent(pattern, message);
-    this.logger.log(`Task published: ${taskType} - ${taskId}`);
   }
 
   async emitEvent(
@@ -78,9 +76,7 @@ export class MessagingService
         payload.metadata !== undefined ? payload.metadata : options?.metadata,
     };
 
-    this.logger.log(`Emitting event to: ${pattern}`);
     await this.provider.emit(pattern, message);
-    this.logger.log(`Event emitted to: ${pattern}`);
   }
 
   isConnected(): boolean {

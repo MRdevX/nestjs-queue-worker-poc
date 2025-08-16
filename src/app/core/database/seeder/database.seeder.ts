@@ -46,7 +46,7 @@ export class DatabaseSeeder {
   ) {}
 
   async seed(config?: Partial<ISeederConfig>): Promise<ISeederResult> {
-    this.logger.log('🌱 Starting database seeding...');
+    this.logger.log('Starting database seeding...');
 
     if (config) {
       this.config = { ...this.config, ...config };
@@ -54,7 +54,7 @@ export class DatabaseSeeder {
 
     try {
       if (await this.hasExistingData()) {
-        this.logger.log('📊 Database already contains data, skipping seeding');
+        this.logger.log('Database already contains data, skipping seeding');
         return { workflows: 0, tasks: 0, taskLogs: 0 };
       }
 
@@ -72,10 +72,10 @@ export class DatabaseSeeder {
         taskLogs: taskLogs.length,
       };
 
-      this.logger.log('✅ Database seeding completed successfully', result);
+      this.logger.log('Database seeding completed successfully', result);
       return result;
     } catch (error) {
-      this.logger.error('❌ Database seeding failed:', error);
+      this.logger.error('Database seeding failed:', error);
       throw error;
     }
   }
@@ -90,7 +90,7 @@ export class DatabaseSeeder {
   }
 
   private async seedWorkflows(): Promise<WorkflowEntity[]> {
-    this.logger.log('📋 Seeding workflows...');
+    this.logger.log('Seeding workflows...');
 
     const workflowTemplates = [
       {
@@ -174,12 +174,12 @@ export class DatabaseSeeder {
       }),
     );
 
-    this.logger.log(`✅ Created ${workflows.length} workflows`);
+    this.logger.log(`Created ${workflows.length} workflows`);
     return workflows;
   }
 
   private async seedTasks(workflows: WorkflowEntity[]): Promise<TaskEntity[]> {
-    this.logger.log('📝 Seeding tasks...');
+    this.logger.log('Seeding tasks...');
 
     const taskTypes = Object.values(TaskType);
     const taskStatuses = Object.values(TaskStatus);
@@ -197,7 +197,7 @@ export class DatabaseSeeder {
 
     await this.createParentChildRelationships(allTasks);
 
-    this.logger.log(`✅ Created ${allTasks.length} tasks total`);
+    this.logger.log(`Created ${allTasks.length} tasks total`);
     return allTasks;
   }
 
@@ -378,7 +378,7 @@ export class DatabaseSeeder {
   }
 
   private async seedTaskLogs(tasks: TaskEntity[]): Promise<TaskLogEntity[]> {
-    this.logger.log('📋 Seeding task logs...');
+    this.logger.log('Seeding task logs...');
 
     const logEntries: Partial<TaskLogEntity>[] = [];
 
@@ -444,7 +444,7 @@ export class DatabaseSeeder {
     }
 
     const createdLogs = await this.taskLogRepository.save(logEntries);
-    this.logger.log(`✅ Created ${createdLogs.length} log entries`);
+    this.logger.log(`Created ${createdLogs.length} log entries`);
     return createdLogs;
   }
 
@@ -453,7 +453,7 @@ export class DatabaseSeeder {
   }
 
   async clear(): Promise<void> {
-    this.logger.log('🧹 Clearing database...');
+    this.logger.log('Clearing database...');
 
     try {
       await this.taskLogRepository.clear();
@@ -461,9 +461,9 @@ export class DatabaseSeeder {
       await this.workflowRepository.clear();
       this.customers = [];
 
-      this.logger.log('✅ Database cleared successfully');
+      this.logger.log('Database cleared successfully');
     } catch (error) {
-      this.logger.error('❌ Database clearing failed:', error);
+      this.logger.error('Database clearing failed:', error);
       throw error;
     }
   }

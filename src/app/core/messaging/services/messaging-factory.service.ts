@@ -11,7 +11,7 @@ export class MessagingFactoryService {
     const s2sConfig = this.configService.get('s2s');
     const transport = s2sConfig?.transport || 'rmq';
     const config = {
-      transport: transport,
+      transport,
       options: s2sConfig?.options || {},
     };
 
