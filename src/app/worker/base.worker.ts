@@ -42,7 +42,9 @@ export class BaseWorker {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected async processTask(taskId: string): Promise<void> {
+    // taskId parameter is required by interface but not used in base implementation
     throw new Error('processTask must be implemented');
   }
 

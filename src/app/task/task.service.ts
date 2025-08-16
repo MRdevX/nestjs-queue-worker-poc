@@ -56,7 +56,7 @@ export class TaskService {
       throw new BadRequestException('Status is required');
     }
 
-    const task = await this.findTaskOrThrow(taskId);
+    await this.findTaskOrThrow(taskId);
     await this.taskRepository.updateTaskStatus(taskId, status, error);
 
     const updatedTask = await this.taskRepository.findById(taskId);
@@ -69,7 +69,7 @@ export class TaskService {
   }
 
   async handleFailure(taskId: string, error: Error): Promise<void> {
-    const task = await this.findTaskOrThrow(taskId);
+    await this.findTaskOrThrow(taskId);
 
     await this.taskRepository.incrementRetryCount(taskId);
     const updatedTask = await this.taskRepository.findById(taskId);

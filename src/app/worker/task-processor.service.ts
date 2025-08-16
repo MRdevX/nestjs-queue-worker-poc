@@ -126,11 +126,15 @@ export class TaskProcessorService {
     await this.sendEmail(customerId, invoice, pdfUrl, emailServiceUrl);
   }
 
+
   private async fetchOrdersFromExternalApi(
     customerId: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     dateFrom?: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     dateTo?: string,
   ) {
+    // dateFrom and dateTo parameters are not used in current mock implementation
     await UtilsService.sleep(1000);
 
     const mockOrders = [

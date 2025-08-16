@@ -17,7 +17,7 @@ import { MessagingFactoryService } from './messaging-factory.service';
 
 @Injectable()
 export class MessagingService
-  implements IMessagingService, OnModuleInit, OnModuleDestroy
+implements IMessagingService, OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(MessagingService.name);
   private provider: IMessagingProvider;
