@@ -119,11 +119,7 @@ describe('InvoiceService', () => {
   });
 
   describe('handleTaskCompletion', () => {
-    it('should create next task in workflow chain', async () => {
-      // Test FETCH_ORDERS completion → CREATE_INVOICE
-      // Test CREATE_INVOICE completion → GENERATE_PDF
-      // Test GENERATE_PDF completion → SEND_EMAIL
-    });
+    it('should create next task in workflow chain', async () => {});
   });
 });
 ```
@@ -157,7 +153,6 @@ describe('InvoiceController', () => {
 ```typescript
 describe('Invoice Workflow Integration', () => {
   it('should complete full invoice workflow', async () => {
-    // 1. Start workflow
     const workflowResponse = await request(app)
       .post('/invoice/workflow/start')
       .send({
@@ -168,13 +163,11 @@ describe('Invoice Workflow Integration', () => {
 
     const taskId = workflowResponse.body.taskId;
 
-    // 2. Simulate task completion
     await simulateTaskCompletion(taskId, 'FETCH_ORDERS');
     await simulateTaskCompletion(taskId, 'CREATE_INVOICE');
     await simulateTaskCompletion(taskId, 'GENERATE_PDF');
     await simulateTaskCompletion(taskId, 'SEND_EMAIL');
 
-    // 3. Verify final status
     const status = await request(app)
       .get(`/invoice/status/customer-123`)
       .expect(200);
@@ -270,18 +263,9 @@ describe('Invoice Performance', () => {
 
 ```typescript
 describe('Invoice Error Handling', () => {
-  it('should handle task failures gracefully', async () => {
-    // Test network failures
-    // Test invalid customer data
-    // Test missing required fields
-    // Test compensation task creation
-  });
+  it('should handle task failures gracefully', async () => {});
 
-  it('should retry failed tasks', async () => {
-    // Test retry mechanism
-    // Test max retry limits
-    // Test exponential backoff
-  });
+  it('should retry failed tasks', async () => {});
 });
 ```
 
@@ -290,7 +274,6 @@ describe('Invoice Error Handling', () => {
 ### Database Seeding
 
 ```typescript
-// Use the existing DatabaseSeeder
 const seederConfig = {
   workflows: 5,
   tasksPerType: 10,
@@ -303,14 +286,12 @@ await databaseSeeder.seed(seederConfig);
 ### Mock External Services
 
 ```typescript
-// Mock PDF processor
 jest.mock('axios', () => ({
   post: jest.fn().mockResolvedValue({
     data: { pdfUrl: 'https://storage.example.com/invoice.pdf' },
   }),
 }));
 
-// Mock email service
 jest.mock('@nestjs/config', () => ({
   get: jest.fn().mockReturnValue('https://mock-email-service.com/send'),
 }));
@@ -353,7 +334,6 @@ jest.mock('@nestjs/config', () => ({
 ### Logs to Monitor
 
 ```typescript
-// Key log messages to track
 'Starting invoice workflow for customer: ${customerId}';
 'Handling task completion for ${taskId} of type ${task.type}';
 'Invoice workflow completed for customer: ${customerId}';

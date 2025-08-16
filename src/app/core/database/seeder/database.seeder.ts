@@ -484,7 +484,8 @@ export class DatabaseSeeder {
         this.logger.log('Database cleared using DELETE fallback');
       } catch (deleteError) {
         this.logger.error('DELETE fallback also failed:', deleteError);
-        throw error;
+
+        throw deleteError;
       }
     }
   }

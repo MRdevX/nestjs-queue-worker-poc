@@ -127,17 +127,19 @@ export class TestUtils {
     maxAttempts: number = 3,
     delayMs: number = 1000,
   ): Promise<T> {
-    let lastError: Error;
+    let lastError: Error | undefined;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         return await fn();
       } catch (error) {
         lastError = error as Error;
-        console.log(`⚠️ Attempt ${attempt} failed:`, error.message);
+        console.log(`⚠️ Attempt ${attempt} failed:`, lastError?.message);
 
         if (attempt < maxAttempts) {
-          await this.wait(delayMs);
+          const backoff = delayMs * Math.pow(2, attempt - 1);
+          const jitter = Math.floor(Math.random() * Math.floor(backoff * 0.2));
+          await this.wait(backoff + jitter);
         }
       }
     }
