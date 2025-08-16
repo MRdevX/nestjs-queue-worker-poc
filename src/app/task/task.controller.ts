@@ -8,7 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { TaskService } from './task.service';
-import { MessagingService } from '../core/messaging/messaging.service';
+import { MessagingService } from '../core/messaging/services/messaging.service';
 import { TaskType } from './types/task-type.enum';
 import { TaskStatus } from './types/task-status.enum';
 

@@ -3,19 +3,18 @@ import {
   Logger,
   OnModuleDestroy,
   OnModuleInit,
-  Inject,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { TaskType } from '../../task/types/task-type.enum';
-import { ITaskMessage } from './types/task-message.interface';
+import { TaskType } from '../../../task/types/task-type.enum';
+import { ITaskMessage } from '../types/task-message.interface';
 import {
   IMessagingService,
   IMessagingProvider,
   IMessagingConfig,
   IMessagingOptions,
-  IMessagingSetupService,
-} from './types/messaging.interface';
-import { getEventPattern } from './constants/event-patterns.constants';
+} from '../types/messaging.interface';
+import { getEventPattern } from '../constants/event-patterns.constants';
+import { MessagingFactoryService } from './messaging-factory.service';
 
 @Injectable()
 export class MessagingService
@@ -26,10 +25,7 @@ export class MessagingService
 
   constructor(
     private readonly configService: ConfigService,
-    @Inject('ACTIVE_PROVIDER')
-    private readonly providerInstance: IMessagingProvider,
-    @Inject('ACTIVE_SETUP_SERVICE')
-    private readonly setupServiceInstance: IMessagingSetupService,
+    private readonly messagingFactory: MessagingFactoryService,
   ) {}
 
   async onModuleInit() {
@@ -47,7 +43,8 @@ export class MessagingService
       const transport = s2sConfig?.transport || 'rmq';
       this.logger.log(`Setting up ${transport} infrastructure...`);
 
-      await this.setupServiceInstance.setup();
+      const setupService = this.messagingFactory.createSetupService();
+      await setupService.setup();
 
       this.logger.log(`${transport} infrastructure setup completed`);
     } catch {
@@ -56,7 +53,7 @@ export class MessagingService
   }
 
   private async initializeProvider(): Promise<void> {
-    this.provider = this.providerInstance;
+    this.provider = this.messagingFactory.createProvider();
     await this.connect();
   }
 

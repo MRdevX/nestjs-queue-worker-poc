@@ -10,8 +10,8 @@ export abstract class BaseSetupService implements OnModuleInit {
     await this.setup();
   }
 
-  protected abstract setup(): Promise<void>;
-  protected abstract getServiceName(): string;
+  public abstract setup(): Promise<void>;
+  public abstract getServiceName(): string;
 
   protected logSetupStart(): void {
     this.logger.log(`Setting up ${this.getServiceName()}...`);

@@ -4,7 +4,7 @@ import { BaseSetupService } from './base-setup.service';
 
 @Injectable()
 export class NatsSetupService extends BaseSetupService {
-  protected async setup(): Promise<void> {
+  public async setup(): Promise<void> {
     let nc: any = null;
     try {
       this.logSetupStart();
@@ -76,7 +76,7 @@ export class NatsSetupService extends BaseSetupService {
     }
   }
 
-  protected getServiceName(): string {
+  public getServiceName(): string {
     return 'NATS streams and subjects';
   }
 }

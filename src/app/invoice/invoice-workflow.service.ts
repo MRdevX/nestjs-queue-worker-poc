@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TaskService } from '../task/task.service';
-import { MessagingService } from '../core/messaging/messaging.service';
+import { MessagingService } from '../core/messaging/services/messaging.service';
 import { TaskType } from '../task/types/task-type.enum';
 import {
   INVOICE_ERROR_MESSAGES,

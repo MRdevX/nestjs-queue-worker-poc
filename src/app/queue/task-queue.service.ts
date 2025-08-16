@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TaskService } from '../task/task.service';
-import { MessagingService } from '../core/messaging/messaging.service';
+import { MessagingService } from '../core/messaging/services/messaging.service';
 import { TaskType } from '../task/types/task-type.enum';
 
 @Injectable()

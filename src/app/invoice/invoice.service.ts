@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TaskService } from '../task/task.service';
 import { TaskQueueService } from '../queue/task-queue.service';
-import { MessagingService } from '../core/messaging/messaging.service';
+import { MessagingService } from '../core/messaging/services/messaging.service';
 import { SchedulerService } from '../scheduler/scheduler.service';
 import { UtilsService } from '../core/utils/utils.service';
 import { TaskType } from '../task/types/task-type.enum';

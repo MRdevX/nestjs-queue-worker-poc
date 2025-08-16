@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TaskEntityMockFactory } from '@test/mocks';
 import { QueueManagerService } from '../queue-manager.service';
 import { TaskService } from '../../task/task.service';
-import { MessagingService } from '../../core/messaging/messaging.service';
+import { MessagingService } from '../../core/messaging/services/messaging.service';
 import { TaskStatus } from '../../task/types/task-status.enum';
 import { TaskType } from '../../task/types/task-type.enum';
 

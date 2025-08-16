@@ -1,5 +1,5 @@
 import { MessagingModule } from '../messaging.module';
-import { MessagingService } from '../messaging.service';
+import { MessagingService } from '../services/messaging.service';
 
 describe('MessagingModule Integration', () => {
   describe('Module Structure', () => {

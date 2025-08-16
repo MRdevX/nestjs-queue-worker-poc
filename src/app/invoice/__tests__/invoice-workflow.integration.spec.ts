@@ -5,7 +5,7 @@ import { InvoiceController } from '../invoice.controller';
 import { InvoiceService } from '../invoice.service';
 import { InvoiceWorkflowService } from '../invoice-workflow.service';
 import { TaskService } from '../../task/task.service';
-import { MessagingService } from '../../core/messaging/messaging.service';
+import { MessagingService } from '../../core/messaging/services/messaging.service';
 import { SchedulerService } from '../../scheduler/scheduler.service';
 import { TaskType } from '../../task/types/task-type.enum';
 import { TaskStatus } from '../../task/types/task-status.enum';

@@ -1,15 +1,15 @@
 import * as amqp from 'amqplib';
 import { Injectable } from '@nestjs/common';
-import { BaseSetupService } from './base-setup.service';
 import {
-  QUEUE_NAMES,
   EXCHANGE_NAMES,
+  QUEUE_NAMES,
   ROUTING_KEYS,
-} from './constants/queue-names.constants';
+} from '../constants/queue-names.constants';
+import { BaseSetupService } from './base-setup.service';
 
 @Injectable()
 export class RabbitMQSetupService extends BaseSetupService {
-  protected async setup(): Promise<void> {
+  public async setup(): Promise<void> {
     try {
       this.logSetupStart();
 
@@ -57,7 +57,7 @@ export class RabbitMQSetupService extends BaseSetupService {
     }
   }
 
-  protected getServiceName(): string {
+  public getServiceName(): string {
     return 'RabbitMQ exchanges and queues';
   }
 }

@@ -4,7 +4,7 @@ import { BaseSetupService } from './base-setup.service';
 
 @Injectable()
 export class RedisSetupService extends BaseSetupService {
-  protected async setup(): Promise<void> {
+  public async setup(): Promise<void> {
     try {
       this.logSetupStart();
 
@@ -55,7 +55,7 @@ export class RedisSetupService extends BaseSetupService {
     }
   }
 
-  protected getServiceName(): string {
+  public getServiceName(): string {
     return 'Redis streams';
   }
 }
