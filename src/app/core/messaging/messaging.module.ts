@@ -7,43 +7,66 @@ import { RedisSetupService } from './redis-setup.service';
 import { RabbitMQProvider } from './providers/rabbitmq.provider';
 import { NatsProvider } from './providers/nats.provider';
 import { RedisProvider } from './providers/redis.provider';
+import { IMessagingConfig } from './types/messaging.interface';
 
 @Global()
 @Module({
   imports: [ConfigModule],
   providers: [
     MessagingService,
+    RabbitMQSetupService,
+    NatsSetupService,
+    RedisSetupService,
+    RabbitMQProvider,
+    NatsProvider,
+    RedisProvider,
     {
       provide: 'ACTIVE_PROVIDER',
       useFactory: (configService: ConfigService) => {
         const transport = configService.get('s2s.transport');
+        const config: IMessagingConfig = {
+          transport: configService.get('s2s.transport') || 'rmq',
+          options: configService.get('s2s.options') || {},
+        };
+
         switch (transport) {
           case 'nats':
-            return NatsProvider;
+            return new NatsProvider(config);
           case 'redis':
-            return RedisProvider;
+            return new RedisProvider(config);
           case 'rmq':
           default:
-            return RabbitMQProvider;
+            return new RabbitMQProvider(config);
         }
       },
       inject: [ConfigService],
     },
     {
       provide: 'ACTIVE_SETUP_SERVICE',
-      useFactory: (configService: ConfigService) => {
+      useFactory: (
+        configService: ConfigService,
+        rabbitMQSetupService: RabbitMQSetupService,
+        natsSetupService: NatsSetupService,
+        redisSetupService: RedisSetupService,
+      ) => {
         const transport = configService.get('s2s.transport');
+
         switch (transport) {
           case 'nats':
-            return NatsSetupService;
+            return natsSetupService;
           case 'redis':
-            return RedisSetupService;
+            return redisSetupService;
           case 'rmq':
           default:
-            return RabbitMQSetupService;
+            return rabbitMQSetupService;
         }
       },
-      inject: [ConfigService],
+      inject: [
+        ConfigService,
+        RabbitMQSetupService,
+        NatsSetupService,
+        RedisSetupService,
+      ],
     },
   ],
   exports: [MessagingService],

@@ -13,6 +13,7 @@ import {
   IMessagingProvider,
   IMessagingConfig,
   MessagingOptions,
+  IMessagingSetupService,
 } from './types/messaging.interface';
 import { getEventPattern } from './constants/event-patterns.constants';
 
@@ -25,8 +26,10 @@ export class MessagingService
 
   constructor(
     private readonly configService: ConfigService,
-    @Inject('ACTIVE_PROVIDER') private readonly ProviderClass: any,
-    @Inject('ACTIVE_SETUP_SERVICE') private readonly SetupServiceClass: any,
+    @Inject('ACTIVE_PROVIDER')
+    private readonly providerInstance: IMessagingProvider,
+    @Inject('ACTIVE_SETUP_SERVICE')
+    private readonly setupServiceInstance: IMessagingSetupService,
   ) {}
 
   async onModuleInit() {
@@ -43,8 +46,7 @@ export class MessagingService
       const transport = this.configService.get('s2s.transport');
       this.logger.log(`Setting up ${transport} infrastructure...`);
 
-      const setupService = new this.SetupServiceClass(this.configService);
-      await setupService.setup();
+      await this.setupServiceInstance.setup();
 
       this.logger.log(`${transport} infrastructure setup completed`);
     } catch (error) {
@@ -53,8 +55,7 @@ export class MessagingService
   }
 
   private async initializeProvider(): Promise<void> {
-    const config = this.getMessagingConfig();
-    this.provider = new this.ProviderClass(config);
+    this.provider = this.providerInstance;
     await this.connect();
   }
 

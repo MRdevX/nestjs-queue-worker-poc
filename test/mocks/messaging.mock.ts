@@ -111,11 +111,11 @@ export class MessagingModuleMockFactory {
       providers: [
         {
           provide: 'ACTIVE_PROVIDER',
-          useValue: jest.fn().mockImplementation(() => mockProvider),
+          useValue: mockProvider,
         },
         {
           provide: 'ACTIVE_SETUP_SERVICE',
-          useValue: jest.fn().mockImplementation(() => mockSetupService),
+          useValue: mockSetupService,
         },
         {
           provide: ConfigService,
