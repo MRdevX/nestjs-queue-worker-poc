@@ -195,8 +195,6 @@ export class DatabaseSeeder {
       allTasks.push(...createdTasks);
     }
 
-    await this.createParentChildRelationships(allTasks);
-
     this.logger.log(`Created ${allTasks.length} tasks total`);
     return allTasks;
   }
@@ -230,24 +228,6 @@ export class DatabaseSeeder {
     }
 
     return baseTask;
-  }
-
-  private async createParentChildRelationships(
-    tasks: TaskEntity[],
-  ): Promise<void> {
-    const parentTasks = tasks.filter((task) =>
-      [TaskType.FETCH_ORDERS, TaskType.CREATE_INVOICE].includes(task.type),
-    );
-
-    const childTasks = tasks.filter((task) =>
-      [
-        TaskType.GENERATE_PDF,
-        TaskType.SEND_EMAIL,
-        TaskType.COMPENSATION,
-      ].includes(task.type),
-    );
-
-    console.log('Parent-child task relationships are no longer supported');
   }
 
   private generatePayload(
@@ -474,7 +454,19 @@ export class DatabaseSeeder {
       this.logger.log('Database cleared successfully');
     } catch (error) {
       this.logger.error('Database clearing failed:', error);
-      throw error;
+
+      try {
+        this.logger.log('Trying DELETE fallback...');
+        await this.taskLogRepository.delete({});
+        await this.taskRepository.delete({});
+        await this.workflowRepository.delete({});
+        this.customers = [];
+        this.logger.log('Database cleared using DELETE fallback');
+      } catch (deleteError) {
+        this.logger.error('DELETE fallback also failed:', deleteError);
+
+        throw deleteError;
+      }
     }
   }
 }
