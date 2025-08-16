@@ -394,6 +394,93 @@ describe('Invoice Workflow E2E Tests (Simplified)', () => {
 
       console.log('✅ Error handling tests completed');
     });
+
+    it('should handle task failures and create compensation tasks', async () => {
+      console.log('📋 Testing: Task Failure and Compensation Logic');
+
+      const customerId = 'customer-compensation-simple-test';
+      const workflowData = TestDataGenerator.generateStartWorkflowData();
+      workflowData.customerId = customerId;
+
+      console.log('📤 Starting workflow for compensation test...');
+      const response = await request(app.getHttpServer())
+        .post('/api/invoice/workflow/start')
+        .send(workflowData)
+        .expect(201);
+
+      const taskId = response.body.taskId;
+      console.log(`✅ Workflow started with task ID: ${taskId}`);
+
+      console.log('🔍 Verifying initial task creation...');
+      const initialTask = await TestUtils.retryTaskRetrieval(
+        taskService,
+        taskId,
+      );
+      expect(initialTask.status).toBe(TaskStatus.PENDING);
+      expect(initialTask.type).toBe(TaskType.FETCH_ORDERS);
+
+      console.log('💥 Simulating task failure...');
+      await invoiceService.handleTaskFailure(
+        taskId,
+        new Error('Database connection timeout'),
+      );
+
+      console.log('🔍 Verifying compensation task creation...');
+      const allTasks = await taskService.findTasks();
+      const compensationTask = allTasks.find(
+        (t) =>
+          t.type === TaskType.COMPENSATION &&
+          t.payload.customerId === customerId,
+      );
+
+      expect(compensationTask).toBeDefined();
+      expect(compensationTask!.payload.originalTaskId).toBe(taskId);
+      expect(compensationTask!.payload.originalTaskType).toBe(
+        TaskType.FETCH_ORDERS,
+      );
+      expect(compensationTask!.payload.reason).toBe(
+        'Database connection timeout',
+      );
+
+      console.log('📊 Compensation task created successfully');
+      console.log('✅ Compensation logic test completed');
+    });
+
+    it('should handle retry mechanism for failed tasks', async () => {
+      console.log('📋 Testing: Task Retry Mechanism');
+
+      const customerId = 'customer-retry-simple-test';
+      const workflowData = TestDataGenerator.generateStartWorkflowData();
+      workflowData.customerId = customerId;
+
+      console.log('📤 Starting workflow for retry test...');
+      const response = await request(app.getHttpServer())
+        .post('/api/invoice/workflow/start')
+        .send(workflowData)
+        .expect(201);
+
+      const taskId = response.body.taskId;
+      console.log(`✅ Workflow started with task ID: ${taskId}`);
+
+      console.log('🔄 Simulating failures until max retries...');
+
+      for (let i = 1; i <= 3; i++) {
+        await taskService.handleFailure(
+          taskId,
+          new Error(`Failure attempt ${i}`),
+        );
+        const updatedTask = await taskService.getTaskById(taskId);
+        console.log(
+          `📊 After failure ${i}: retries=${updatedTask.retries}, status=${updatedTask.status}`,
+        );
+      }
+
+      const finalTask = await taskService.getTaskById(taskId);
+      expect(finalTask.retries).toBe(3);
+      expect(finalTask.status).toBe(TaskStatus.FAILED);
+
+      console.log('✅ Retry mechanism test completed');
+    });
   });
 
   describe('Performance and Concurrency', () => {
