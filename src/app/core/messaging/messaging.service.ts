@@ -43,7 +43,8 @@ export class MessagingService
 
   private async setupInfrastructure(): Promise<void> {
     try {
-      const transport = this.configService.get('s2s.transport');
+      const s2sConfig = this.configService.get('s2s');
+      const transport = s2sConfig?.transport || 'rmq';
       this.logger.log(`Setting up ${transport} infrastructure...`);
 
       await this.setupServiceInstance.setup();

@@ -14,19 +14,14 @@ import { IMessagingConfig } from './types/messaging.interface';
   imports: [ConfigModule],
   providers: [
     MessagingService,
-    RabbitMQSetupService,
-    NatsSetupService,
-    RedisSetupService,
-    RabbitMQProvider,
-    NatsProvider,
-    RedisProvider,
     {
       provide: 'ACTIVE_PROVIDER',
       useFactory: (configService: ConfigService) => {
-        const transport = configService.get('s2s.transport');
+        const s2sConfig = configService.get('s2s');
+        const transport = s2sConfig?.transport || 'rmq';
         const config: IMessagingConfig = {
-          transport: configService.get('s2s.transport') || 'rmq',
-          options: configService.get('s2s.options') || {},
+          transport: transport,
+          options: s2sConfig?.options || {},
         };
 
         switch (transport) {
@@ -43,30 +38,21 @@ import { IMessagingConfig } from './types/messaging.interface';
     },
     {
       provide: 'ACTIVE_SETUP_SERVICE',
-      useFactory: (
-        configService: ConfigService,
-        rabbitMQSetupService: RabbitMQSetupService,
-        natsSetupService: NatsSetupService,
-        redisSetupService: RedisSetupService,
-      ) => {
-        const transport = configService.get('s2s.transport');
+      useFactory: (configService: ConfigService) => {
+        const s2sConfig = configService.get('s2s');
+        const transport = s2sConfig?.transport || 'rmq';
 
         switch (transport) {
           case 'nats':
-            return natsSetupService;
+            return new NatsSetupService(configService);
           case 'redis':
-            return redisSetupService;
+            return new RedisSetupService(configService);
           case 'rmq':
           default:
-            return rabbitMQSetupService;
+            return new RabbitMQSetupService(configService);
         }
       },
-      inject: [
-        ConfigService,
-        RabbitMQSetupService,
-        NatsSetupService,
-        RedisSetupService,
-      ],
+      inject: [ConfigService],
     },
   ],
   exports: [MessagingService],
