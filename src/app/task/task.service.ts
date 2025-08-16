@@ -11,7 +11,7 @@ import { TaskFiltersDto } from './types/task.dto';
 
 @Injectable()
 export class TaskService {
-  constructor(private taskRepo: TaskRepository) {}
+  constructor(private taskRepository: TaskRepository) {}
 
   private validateTaskId(taskId: string): void {
     if (!taskId?.trim()) {
@@ -21,7 +21,7 @@ export class TaskService {
 
   private async findTaskOrThrow(taskId: string): Promise<TaskEntity> {
     this.validateTaskId(taskId);
-    const task = await this.taskRepo.findById(taskId);
+    const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new NotFoundException(`Task with id ${taskId} not found`);
     }
@@ -44,7 +44,7 @@ export class TaskService {
       workflow: workflowId ? { id: workflowId } : undefined,
     };
 
-    return this.taskRepo.create(taskData);
+    return this.taskRepository.create(taskData);
   }
 
   async updateTaskStatus(
@@ -57,9 +57,9 @@ export class TaskService {
     }
 
     const task = await this.findTaskOrThrow(taskId);
-    await this.taskRepo.updateTaskStatus(taskId, status, error);
+    await this.taskRepository.updateTaskStatus(taskId, status, error);
 
-    const updatedTask = await this.taskRepo.findById(taskId);
+    const updatedTask = await this.taskRepository.findById(taskId);
     if (!updatedTask) {
       throw new NotFoundException(
         `Task with id ${taskId} not found after update`,
@@ -71,8 +71,8 @@ export class TaskService {
   async handleFailure(taskId: string, error: Error): Promise<void> {
     const task = await this.findTaskOrThrow(taskId);
 
-    await this.taskRepo.incrementRetryCount(taskId);
-    const updatedTask = await this.taskRepo.findById(taskId);
+    await this.taskRepository.incrementRetryCount(taskId);
+    const updatedTask = await this.taskRepository.findById(taskId);
 
     if (!updatedTask) {
       throw new NotFoundException(
@@ -102,7 +102,7 @@ export class TaskService {
     this.validateTaskId(taskId);
 
     if (relations?.length) {
-      const task = await this.taskRepo.findByIdWithRelations(taskId, relations);
+      const task = await this.taskRepository.findByIdWithRelations(taskId, relations);
       if (!task) {
         throw new NotFoundException(`Task with id ${taskId} not found`);
       }
@@ -119,11 +119,11 @@ export class TaskService {
     if (filters?.type) where.type = filters.type;
     if (filters?.workflowId) where.workflow = { id: filters.workflowId };
 
-    return this.taskRepo.findMany(where);
+    return this.taskRepository.findMany(where);
   }
 
   async getPendingTasks(limit = 100): Promise<TaskEntity[]> {
-    return this.taskRepo.findPendingTasks(limit);
+    return this.taskRepository.findPendingTasks(limit);
   }
 
   async updateTaskPayload(
@@ -131,7 +131,7 @@ export class TaskService {
     payload: Record<string, any>,
   ): Promise<TaskEntity> {
     this.validateTaskId(taskId);
-    await this.taskRepo.update(taskId, { payload });
+    await this.taskRepository.update(taskId, { payload });
     return this.findTaskOrThrow(taskId);
   }
 }
