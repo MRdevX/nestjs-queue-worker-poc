@@ -3,7 +3,7 @@ import { TaskEntityMockFactory } from '@test/mocks';
 import { DataWorker } from '../data.worker';
 import { TaskService } from '../../task/task.service';
 import { CoordinatorService } from '../../workflow/coordinator.service';
-import { CoordinatorFactoryService } from '../../workflow/coordinator-factory.service';
+import { CoordinatorFactoryService } from '../../workflow/services/coordinator-factory.service';
 import { InvoiceCoordinatorService } from '../../invoice/invoice-coordinator.service';
 import { TaskType } from '../../task/types/task-type.enum';
 

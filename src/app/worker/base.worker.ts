@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TaskService } from '../task/task.service';
-import { CoordinatorFactoryService } from '../workflow/coordinator-factory.service';
+import { CoordinatorFactoryService } from '../workflow/services/coordinator-factory.service';
 import { ITaskMessage } from '../core/messaging/types/task-message.interface';
 import { UtilsService } from '../core/utils/utils.service';
 import { TaskStatus } from '../task/types/task-status.enum';

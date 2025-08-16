@@ -9,44 +9,38 @@ import {
   NotFoundException,
   Query,
 } from '@nestjs/common';
-import { WorkflowService } from './workflow.service';
-import { CoordinatorService } from './coordinator.service';
+import { WorkflowResponseService } from './services/workflow-response.service';
 import { ICreateWorkflowDto, IUpdateWorkflowDto } from './types';
+import { WorkflowService } from './services/workflow.service';
+import { CoordinatorService } from './services/coordinator.service';
 
 @Controller('workflows')
 export class WorkflowController {
   constructor(
     private readonly workflowService: WorkflowService,
     private readonly coordinatorService: CoordinatorService,
+    private readonly responseService: WorkflowResponseService,
   ) {}
 
   @Post()
   async createWorkflow(@Body() createWorkflowDto: ICreateWorkflowDto) {
     const workflow =
       await this.workflowService.createWorkflow(createWorkflowDto);
-    return this.createSuccessResponse('Workflow created successfully', {
-      workflow,
-    });
+    return this.responseService.createWorkflowResponse(workflow);
   }
 
   @Get()
   async getAllWorkflows(@Query('active') active?: boolean) {
     const workflows = await this.workflowService.getAllWorkflows(active);
-    return this.createSuccessResponse('Workflows retrieved successfully', {
-      workflows,
-      total: workflows.length,
-    });
+    return this.responseService.createWorkflowListResponse(workflows);
   }
 
   @Get('active')
   async getActiveWorkflows() {
     const workflows = await this.workflowService.getActiveWorkflows();
-    return this.createSuccessResponse(
+    return this.responseService.createWorkflowListResponse(
+      workflows,
       'Active workflows retrieved successfully',
-      {
-        workflows,
-        total: workflows.length,
-      },
     );
   }
 
@@ -80,9 +74,7 @@ export class WorkflowController {
     if (!workflow) {
       throw new NotFoundException('Workflow not found');
     }
-    return this.createSuccessResponse('Workflow updated successfully', {
-      workflow,
-    });
+    return this.responseService.createWorkflowResponse(workflow);
   }
 
   @Delete(':id')
@@ -91,7 +83,9 @@ export class WorkflowController {
     if (!deleted) {
       throw new NotFoundException('Workflow not found');
     }
-    return this.createSuccessResponse('Workflow deleted successfully');
+    return this.responseService.createSuccessResponse(
+      'Workflow deleted successfully',
+    );
   }
 
   @Post(':id/start')
@@ -106,9 +100,12 @@ export class WorkflowController {
     }
 
     await this.coordinatorService.startWorkflow(workflow);
-    return this.createSuccessResponse('Workflow started successfully', {
-      workflowId: id,
-    });
+    return this.responseService.createSuccessResponse(
+      'Workflow started successfully',
+      {
+        workflowId: id,
+      },
+    );
   }
 
   @Post(':id/activate')
@@ -119,9 +116,7 @@ export class WorkflowController {
     if (!workflow) {
       throw new NotFoundException('Workflow not found');
     }
-    return this.createSuccessResponse('Workflow activated successfully', {
-      workflow,
-    });
+    return this.responseService.createWorkflowResponse(workflow);
   }
 
   @Post(':id/deactivate')
@@ -132,9 +127,7 @@ export class WorkflowController {
     if (!workflow) {
       throw new NotFoundException('Workflow not found');
     }
-    return this.createSuccessResponse('Workflow deactivated successfully', {
-      workflow,
-    });
+    return this.responseService.createWorkflowResponse(workflow);
   }
 
   @Get(':id/status')
@@ -144,12 +137,5 @@ export class WorkflowController {
       throw new NotFoundException('Workflow not found');
     }
     return status;
-  }
-
-  private createSuccessResponse(message: string, data?: any) {
-    return {
-      message,
-      ...data,
-    };
   }
 }

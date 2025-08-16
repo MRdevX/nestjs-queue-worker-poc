@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { BaseWorker } from './base.worker';
 import { TaskService } from '../task/task.service';
-import { CoordinatorFactoryService } from '../workflow/coordinator-factory.service';
+import { CoordinatorFactoryService } from '../workflow/services/coordinator-factory.service';
 import { TaskType } from '../task/types/task-type.enum';
 import { ITaskMessage } from '../core/messaging/types/task-message.interface';
 

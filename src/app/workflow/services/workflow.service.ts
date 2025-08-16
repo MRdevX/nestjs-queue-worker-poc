@@ -1,13 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { WorkflowRepository } from './workflow.repository';
-import { TaskService } from '../task/task.service';
-import { TaskStatus } from '../task/types/task-status.enum';
-import { WorkflowEntity, WorkflowStatus } from './workflow.entity';
+import { WorkflowRepository } from '../workflow.repository';
+import { TaskService } from '../../task/task.service';
+import { TaskStatisticsService } from './task-statistics.service';
 import {
   ICreateWorkflowDto,
   IUpdateWorkflowDto,
   IWorkflowStatusResponse,
-} from './types';
+} from '../types';
+import { TaskStatus } from '../../task/types/task-status.enum';
+import { WorkflowEntity, WorkflowStatus } from '../workflow.entity';
 
 @Injectable()
 export class WorkflowService {
@@ -16,6 +17,7 @@ export class WorkflowService {
   constructor(
     private readonly workflowRepository: WorkflowRepository,
     private readonly taskService: TaskService,
+    private readonly taskStatisticsService: TaskStatisticsService,
   ) {}
 
   async createWorkflow(
@@ -102,7 +104,7 @@ export class WorkflowService {
     }
 
     const tasks = workflow.tasks || [];
-    const taskStats = this.calculateTaskStats(tasks);
+    const taskStats = this.taskStatisticsService.calculateTaskStats(tasks);
 
     return {
       workflowId: id,
@@ -140,39 +142,5 @@ export class WorkflowService {
     this.logger.log(`Workflow ${id} status updated to ${status}`);
 
     return updatedWorkflow;
-  }
-
-  private calculateTaskStats(tasks: any[]) {
-    const totalTasks = tasks.length;
-    const completedTasks = tasks.filter(
-      (task) => task.status === TaskStatus.COMPLETED,
-    ).length;
-    const failedTasks = tasks.filter(
-      (task) => task.status === TaskStatus.FAILED,
-    ).length;
-    const pendingTasks = tasks.filter(
-      (task) => task.status === TaskStatus.PENDING,
-    ).length;
-    const processingTasks = tasks.filter(
-      (task) => task.status === TaskStatus.PROCESSING,
-    ).length;
-
-    const isComplete = totalTasks > 0 && completedTasks === totalTasks;
-    const hasFailures = failedTasks > 0;
-    const isInProgress = processingTasks > 0 || pendingTasks > 0;
-    const progress =
-      totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-    return {
-      totalTasks,
-      completedTasks,
-      failedTasks,
-      pendingTasks,
-      processingTasks,
-      isComplete,
-      hasFailures,
-      isInProgress,
-      progress,
-    };
   }
 }

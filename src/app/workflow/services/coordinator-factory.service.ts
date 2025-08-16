@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { TaskType } from '../task/types/task-type.enum';
+import { TaskType } from '../../task/types/task-type.enum';
 import { CoordinatorService } from './coordinator.service';
-import { InvoiceCoordinatorService } from '../invoice/invoice-coordinator.service';
+import { InvoiceCoordinatorService } from '../../invoice/invoice-coordinator.service';
 
 @Injectable()
 export class CoordinatorFactoryService {
