@@ -35,14 +35,17 @@ export class QueueManagerService {
         this.taskService.findTasks({ status: TaskStatus.FAILED }),
       ]);
 
+      const total =
+        pending.length + processing.length + completed.length + failed.length;
+      const isHealthy = failed.length < 50 && pending.length < 500;
+
       return {
         pending: pending.length,
         processing: processing.length,
         completed: completed.length,
         failed: failed.length,
-        total:
-          pending.length + processing.length + completed.length + failed.length,
-        isHealthy: failed.length < 50 && pending.length < 500,
+        total,
+        isHealthy,
       };
     } catch (error) {
       this.logger.error('Error getting queue status', error.stack);

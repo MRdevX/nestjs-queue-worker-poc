@@ -1,20 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
-import { BaseWorker } from './base.worker';
 import { TaskService } from '../task/task.service';
-import { CoordinatorFactoryService } from '../workflow/services/coordinator-factory.service';
+import { InvoiceCoordinatorService } from '../invoice/invoice-coordinator.service';
 import { TaskType } from '../task/types/task-type.enum';
 import { ITaskMessage } from '../core/messaging/types/task-message.interface';
 import { TaskProcessorService } from './task-processor.service';
+import { BaseWorker } from './base.worker';
 
 @Injectable()
 export class UnifiedWorker extends BaseWorker {
   constructor(
     taskService: TaskService,
-    coordinatorFactory: CoordinatorFactoryService,
+    invoiceCoordinator: InvoiceCoordinatorService,
     private readonly taskProcessor: TaskProcessorService,
   ) {
-    super(taskService, coordinatorFactory);
+    super(taskService, invoiceCoordinator);
   }
 
   @EventPattern('http.request')
@@ -83,9 +83,5 @@ export class UnifiedWorker extends BaseWorker {
       default:
         throw new Error(`Unsupported task type: ${task.type}`);
     }
-  }
-
-  protected shouldProcessTaskType(taskType: TaskType): boolean {
-    return Object.values(TaskType).includes(taskType);
   }
 }

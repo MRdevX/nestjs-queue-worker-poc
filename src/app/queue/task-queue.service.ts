@@ -18,25 +18,18 @@ export class TaskQueueService {
     workflowId?: string,
     options?: { delay?: number; metadata?: Record<string, any> },
   ): Promise<string> {
-    try {
-      const task = await this.taskService.createTask(type, payload, workflowId);
-      this.logger.log(`Task ${task.id} created and queued for processing`);
+    const task = await this.taskService.createTask(type, payload, workflowId);
 
-      await this.messagingService.publishTask(task.type, task.id, {
-        delay: options?.delay,
-        metadata: {
-          workflowId,
-          createdAt: new Date().toISOString(),
-          ...options?.metadata,
-        },
-      });
+    await this.messagingService.publishTask(task.type, task.id, {
+      delay: options?.delay,
+      metadata: {
+        workflowId,
+        createdAt: new Date().toISOString(),
+        ...options?.metadata,
+      },
+    });
 
-      this.logger.log(`Task ${task.id} published to queue`);
-      return task.id;
-    } catch (error) {
-      this.logger.error('Failed to enqueue task', error.stack);
-      throw error;
-    }
+    return task.id;
   }
 
   async retryTask(taskId: string): Promise<void> {
@@ -56,7 +49,5 @@ export class TaskQueueService {
         originalTaskId: taskId,
       },
     });
-
-    this.logger.log(`Retrying task ${taskId}`);
   }
 }

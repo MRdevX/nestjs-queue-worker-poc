@@ -48,8 +48,3 @@ export interface IMessagingConfig {
     [key: string]: any;
   };
 }
-
-export interface IMessagingSetupService {
-  setup(): Promise<void>;
-  getServiceName(): string;
-}

@@ -10,7 +10,6 @@ import { ITaskMessage } from '../types/task-message.interface';
 import {
   IMessagingService,
   IMessagingProvider,
-  IMessagingConfig,
   IMessagingOptions,
 } from '../types/messaging.interface';
 import { getEventPattern } from '../constants/event-patterns.constants';
@@ -29,40 +28,12 @@ export class MessagingService
   ) {}
 
   async onModuleInit() {
-    await this.setupInfrastructure();
-    await this.initializeProvider();
-  }
-
-  async onModuleDestroy() {
-    await this.disconnect();
-  }
-
-  private async setupInfrastructure(): Promise<void> {
-    try {
-      const s2sConfig = this.configService.get('s2s');
-      const transport = s2sConfig?.transport || 'rmq';
-      this.logger.log(`Setting up ${transport} infrastructure...`);
-
-      const setupService = this.messagingFactory.createSetupService();
-      await setupService.setup();
-
-      this.logger.log(`${transport} infrastructure setup completed`);
-    } catch {
-      this.logger.warn('Infrastructure setup failed, continuing without setup');
-    }
-  }
-
-  private async initializeProvider(): Promise<void> {
     this.provider = this.messagingFactory.createProvider();
     await this.connect();
   }
 
-  private getMessagingConfig(): IMessagingConfig {
-    const s2sConfig = this.configService.get('s2s');
-    return {
-      transport: s2sConfig.transport,
-      options: s2sConfig.options,
-    };
+  async onModuleDestroy() {
+    await this.disconnect();
   }
 
   async connect(): Promise<void> {

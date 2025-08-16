@@ -1,18 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TaskService } from '../task/task.service';
-import { CoordinatorFactoryService } from '../workflow/services/coordinator-factory.service';
+import { InvoiceCoordinatorService } from '../invoice/invoice-coordinator.service';
 import { ITaskMessage } from '../core/messaging/types/task-message.interface';
 import { UtilsService } from '../core/utils/utils.service';
 import { TaskStatus } from '../task/types/task-status.enum';
 import { TaskType } from '../task/types/task-type.enum';
 
 @Injectable()
-export abstract class BaseWorker {
+export class BaseWorker {
   protected readonly logger = new Logger(this.constructor.name);
 
   constructor(
     protected readonly taskService: TaskService,
-    protected readonly coordinatorFactory: CoordinatorFactoryService,
+    protected readonly invoiceCoordinator: InvoiceCoordinatorService,
   ) {}
 
   async handleTask(data: ITaskMessage): Promise<void> {
@@ -22,11 +22,6 @@ export abstract class BaseWorker {
       const task = await this.taskService.getTaskById(taskId);
       if (!task) {
         this.logger.warn(`Task ${taskId} not found`);
-        return;
-      }
-
-      if (!this.shouldProcessTaskType(task.type)) {
-        this.logger.debug(`Skipping task ${taskId} of type ${task.type}`);
         return;
       }
 
@@ -47,16 +42,26 @@ export abstract class BaseWorker {
     }
   }
 
-  protected abstract processTask(taskId: string): Promise<void>;
-  protected abstract shouldProcessTaskType(taskType: TaskType): boolean;
+  protected async processTask(taskId: string): Promise<void> {
+    // Override in subclasses
+    throw new Error('processTask must be implemented');
+  }
 
   private async handleWorkflowCoordination(
     taskId: string,
     taskType: TaskType,
   ): Promise<void> {
     try {
-      const coordinator = this.coordinatorFactory.getCoordinator(taskType);
-      await coordinator.handleTaskCompletion(taskId);
+      const invoiceTaskTypes = [
+        TaskType.FETCH_ORDERS,
+        TaskType.CREATE_INVOICE,
+        TaskType.GENERATE_PDF,
+        TaskType.SEND_EMAIL,
+      ];
+
+      if (invoiceTaskTypes.includes(taskType)) {
+        await this.invoiceCoordinator.handleTaskCompletion(taskId);
+      }
     } catch (error) {
       this.logger.warn(
         `Workflow coordination failed for task ${taskId}: ${error.message}`,
@@ -71,12 +76,20 @@ export abstract class BaseWorker {
     try {
       const task = await this.taskService.getTaskById(taskId);
       if (task) {
-        const coordinator = this.coordinatorFactory.getCoordinator(task.type);
-        await coordinator.handleTaskFailure(taskId, error);
+        const invoiceTaskTypes = [
+          TaskType.FETCH_ORDERS,
+          TaskType.CREATE_INVOICE,
+          TaskType.GENERATE_PDF,
+          TaskType.SEND_EMAIL,
+        ];
+
+        if (invoiceTaskTypes.includes(task.type)) {
+          await this.invoiceCoordinator.handleTaskFailure(taskId, error);
+        }
       }
     } catch (coordinatorError) {
       this.logger.warn(
-        `Failure coordination failed for task ${taskId}: ${coordinatorError.message}`,
+        `Workflow failure coordination failed for task ${taskId}: ${coordinatorError.message}`,
       );
     }
   }

@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TaskService } from '../task/task.service';
-import { MessagingService } from '../core/messaging/services/messaging.service';
 import { TaskType } from '../task/types/task-type.enum';
-import { InvoiceWorkflowService } from './invoice-workflow.service';
+import { InvoiceService } from './invoice.service';
 
 @Injectable()
 export class InvoiceCoordinatorService {
@@ -10,8 +9,7 @@ export class InvoiceCoordinatorService {
 
   constructor(
     private readonly taskService: TaskService,
-    private readonly messagingService: MessagingService,
-    private readonly invoiceWorkflowService: InvoiceWorkflowService,
+    private readonly invoiceService: InvoiceService,
   ) {}
 
   async handleTaskCompletion(taskId: string) {
@@ -28,18 +26,10 @@ export class InvoiceCoordinatorService {
 
       switch (task.type) {
         case TaskType.FETCH_ORDERS:
-          await this.invoiceWorkflowService.handleFetchOrdersCompletion(taskId);
-          break;
         case TaskType.CREATE_INVOICE:
-          await this.invoiceWorkflowService.handleCreateInvoiceCompletion(
-            taskId,
-          );
-          break;
         case TaskType.GENERATE_PDF:
-          await this.invoiceWorkflowService.handleGeneratePdfCompletion(taskId);
-          break;
         case TaskType.SEND_EMAIL:
-          await this.invoiceWorkflowService.handleSendEmailCompletion(taskId);
+          await this.invoiceService.handleTaskCompletion(taskId);
           break;
         default:
           this.logger.debug(
@@ -67,7 +57,7 @@ export class InvoiceCoordinatorService {
         `Handling task failure for ${taskId} of type ${task.type}`,
       );
 
-      await this.invoiceWorkflowService.handleTaskFailure(taskId, error);
+      await this.invoiceService.handleTaskFailure(taskId, error);
     } catch (coordinatorError) {
       this.logger.error(
         `Failed to handle task failure for ${taskId}:`,
