@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.4](https://github.com/MRdevX/nestjs-queue-worker-poc/compare/v0.0.3...v0.0.4) (2025-08-16)
+
+
+### Features
+
+* **docs:** add invoice testing documentation and quick start guide ([fbf7842](https://github.com/MRdevX/nestjs-queue-worker-poc/commit/fbf78422a08c71a93c1e827724172b5381a552bc))
+* **messaging:** add NATS support and refactor messaging services ([ff5e288](https://github.com/MRdevX/nestjs-queue-worker-poc/commit/ff5e2883f38c0f4f1584b70dcf198509ac2d03cc))
+* **messaging:** add Redis transport support and refactor messaging module ([7342bb4](https://github.com/MRdevX/nestjs-queue-worker-poc/commit/7342bb4bc9f949b66abb7d6dcd04a3240fbe6c80))
+* **tests:** add comprehensive tests for task failure handling, compensation logic, and retry mechanisms in invoice workflows ([c6772a7](https://github.com/MRdevX/nestjs-queue-worker-poc/commit/c6772a7dae72263a6fc824b16355fb5e98ee71ed))
+
 ### 0.0.3 (2025-08-04)
 
 
