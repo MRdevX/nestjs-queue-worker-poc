@@ -1,27 +1,58 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ClientProxy, ClientProxyFactory } from '@nestjs/microservices';
-import { RmqOptions } from '@nestjs/microservices/interfaces';
 import { TaskType } from '../../task/types/task-type.enum';
 import { ITaskMessage } from './types/task-message.interface';
+import {
+  IMessagingService,
+  IMessagingProvider,
+  IMessagingConfig,
+} from './types/messaging.interface';
+import { MessagingProviderFactory } from './providers/messaging-provider.factory';
 
 @Injectable()
-export class MessagingService implements OnModuleDestroy {
+export class MessagingService
+  implements IMessagingService, OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(MessagingService.name);
-  private readonly client: ClientProxy;
+  private provider: IMessagingProvider;
 
-  constructor(private readonly configService: ConfigService) {
-    this.client = this.createClient();
+  constructor(private readonly configService: ConfigService) {}
+
+  async onModuleInit() {
+    const config = this.getMessagingConfig();
+    this.provider = MessagingProviderFactory.createProvider(config);
+    await this.connect();
   }
 
-  private createClient(): ClientProxy {
+  async onModuleDestroy() {
+    await this.disconnect();
+  }
+
+  private getMessagingConfig(): IMessagingConfig {
     const s2sConfig = this.configService.get('s2s');
-    return ClientProxyFactory.create({
-      transport: s2sConfig.transport,
+    return {
+      transport: s2sConfig.transport === 'nats' ? 'nats' : 'rmq',
       options: {
         urls: s2sConfig.options.urls,
+        servers: s2sConfig.options.servers,
+        queue: s2sConfig.options.queue,
+        queueOptions: s2sConfig.options.queueOptions,
+        ...s2sConfig.options,
       },
-    } as RmqOptions);
+    };
+  }
+
+  async connect(): Promise<void> {
+    await this.provider.connect();
+  }
+
+  async disconnect(): Promise<void> {
+    await this.provider.disconnect();
   }
 
   private getEventPattern(taskType: TaskType): string {
@@ -62,22 +93,17 @@ export class MessagingService implements OnModuleDestroy {
   ): Promise<void> {
     const message = {
       ...payload,
-      delay: options?.delay,
-      metadata: options?.metadata,
+      delay: payload.delay !== undefined ? payload.delay : options?.delay,
+      metadata:
+        payload.metadata !== undefined ? payload.metadata : options?.metadata,
     };
 
     this.logger.log(`Emitting event to: ${pattern}`);
-
-    this.client.emit(pattern, message);
+    await this.provider.emit(pattern, message);
     this.logger.log(`Event emitted to: ${pattern}`);
   }
 
-  async onModuleDestroy() {
-    try {
-      await this.client.close();
-      this.logger.log('Disconnected from RabbitMQ');
-    } catch (error) {
-      this.logger.error('Failed to disconnect from RabbitMQ:', error.stack);
-    }
+  isConnected(): boolean {
+    return this.provider.isConnected();
   }
 }

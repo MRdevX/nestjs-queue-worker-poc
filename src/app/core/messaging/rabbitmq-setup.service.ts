@@ -1,20 +1,12 @@
 import * as amqp from 'amqplib';
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
+import { BaseSetupService } from './base-setup.service';
 
 @Injectable()
-export class RabbitMQSetupService implements OnModuleInit {
-  private readonly logger = new Logger(RabbitMQSetupService.name);
-
-  constructor(private readonly configService: ConfigService) {}
-
-  async onModuleInit() {
-    await this.setupRabbitMQ();
-  }
-
-  private async setupRabbitMQ() {
+export class RabbitMQSetupService extends BaseSetupService {
+  protected async setup(): Promise<void> {
     try {
-      this.logger.log('Setting up RabbitMQ exchanges and queues...');
+      this.logSetupStart();
 
       const s2sConfig = this.configService.get('s2s');
       const connection = await amqp.connect(s2sConfig.options.urls[0]);
@@ -46,13 +38,13 @@ export class RabbitMQSetupService implements OnModuleInit {
 
       await channel.close();
       await connection.close();
-      this.logger.log('RabbitMQ setup completed successfully');
+      this.logSetupSuccess();
     } catch (error) {
-      this.logger.error('Failed to setup RabbitMQ:', error.stack);
-
-      this.logger.warn(
-        'Continuing without RabbitMQ setup - queues may not be properly configured',
-      );
+      this.logSetupError(error);
     }
+  }
+
+  protected getServiceName(): string {
+    return 'RabbitMQ exchanges and queues';
   }
 }

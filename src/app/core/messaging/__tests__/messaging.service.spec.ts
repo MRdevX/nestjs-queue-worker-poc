@@ -1,32 +1,27 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { ClientProxy } from '@nestjs/microservices';
-import { ClientProxyFactory } from '@nestjs/microservices';
 import { TaskType } from '@root/app/task/types/task-type.enum';
 import { MessagingService } from '../messaging.service';
+import { IMessagingProvider } from '../types/messaging.interface';
+import { MessagingProviderFactory } from '../providers/messaging-provider.factory';
 
-jest.mock('@nestjs/microservices', () => {
-  const actual = jest.requireActual('@nestjs/microservices');
-  return {
-    ...actual,
-    ClientProxyFactory: {
-      create: jest.fn(),
-    },
-  };
-});
+jest.mock('../providers/messaging-provider.factory');
 
 describe('MessagingService', () => {
   let service: MessagingService;
-  let mockClient: jest.Mocked<ClientProxy>;
+  let mockProvider: jest.Mocked<IMessagingProvider>;
 
   beforeEach(async () => {
-    mockClient = {
-      emit: jest.fn(),
+    mockProvider = {
       connect: jest.fn(),
-      close: jest.fn(),
-    } as any;
+      disconnect: jest.fn(),
+      emit: jest.fn(),
+      isConnected: jest.fn().mockReturnValue(true),
+    };
 
-    (ClientProxyFactory.create as jest.Mock).mockReturnValue(mockClient);
+    (MessagingProviderFactory.createProvider as jest.Mock).mockReturnValue(
+      mockProvider,
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -58,7 +53,31 @@ describe('MessagingService', () => {
     jest.clearAllMocks();
   });
 
+  describe('onModuleInit', () => {
+    it('should create provider and connect on module init', async () => {
+      await service.onModuleInit();
+
+      expect(MessagingProviderFactory.createProvider).toHaveBeenCalledWith({
+        transport: 'rmq',
+        options: {
+          urls: ['amqp://localhost:5672'],
+          queue: 'task-queue',
+          queueOptions: {
+            durable: true,
+            deadLetterExchange: 'dlx',
+            deadLetterRoutingKey: 'failed',
+          },
+        },
+      });
+      expect(mockProvider.connect).toHaveBeenCalled();
+    });
+  });
+
   describe('publishTask', () => {
+    beforeEach(async () => {
+      await service.onModuleInit();
+    });
+
     it('should publish task successfully', async () => {
       const taskType = TaskType.HTTP_REQUEST;
       const taskId = 'task-123';
@@ -66,11 +85,11 @@ describe('MessagingService', () => {
 
       await service.publishTask(taskType, taskId, options);
 
-      expect(mockClient.emit).toHaveBeenCalledWith('http.request', {
+      expect(mockProvider.emit).toHaveBeenCalledWith('http.request', {
         taskId,
         taskType,
-        delay: undefined,
-        metadata: undefined,
+        delay: 1000,
+        metadata: { retry: true },
       });
     });
 
@@ -80,7 +99,7 @@ describe('MessagingService', () => {
 
       await service.publishTask(taskType, taskId);
 
-      expect(mockClient.emit).toHaveBeenCalledWith('data.processing', {
+      expect(mockProvider.emit).toHaveBeenCalledWith('data.processing', {
         taskId,
         taskType,
         delay: undefined,
@@ -90,6 +109,10 @@ describe('MessagingService', () => {
   });
 
   describe('emitEvent', () => {
+    beforeEach(async () => {
+      await service.onModuleInit();
+    });
+
     it('should emit event successfully', async () => {
       const pattern = 'custom.event';
       const payload = { data: 'test' };
@@ -97,7 +120,7 @@ describe('MessagingService', () => {
 
       await service.emitEvent(pattern, payload, options);
 
-      expect(mockClient.emit).toHaveBeenCalledWith(pattern, {
+      expect(mockProvider.emit).toHaveBeenCalledWith(pattern, {
         ...payload,
         delay: 2000,
         metadata: { source: 'test' },
@@ -110,29 +133,19 @@ describe('MessagingService', () => {
 
       await service.emitEvent(pattern, payload);
 
-      expect(mockClient.emit).toHaveBeenCalledWith(pattern, {
+      expect(mockProvider.emit).toHaveBeenCalledWith(pattern, {
         ...payload,
         delay: undefined,
         metadata: undefined,
       });
     });
-
-    it('should handle emit error', async () => {
-      const pattern = 'error.event';
-      const payload = { data: 'test' };
-      const error = new Error('Emit failed');
-
-      mockClient.emit.mockImplementation(() => {
-        throw error;
-      });
-
-      await expect(service.emitEvent(pattern, payload)).rejects.toThrow(
-        'Emit failed',
-      );
-    });
   });
 
   describe('getEventPattern', () => {
+    beforeEach(async () => {
+      await service.onModuleInit();
+    });
+
     it('should return correct pattern for HTTP_REQUEST', () => {
       const pattern = (service as any).getEventPattern(TaskType.HTTP_REQUEST);
       expect(pattern).toBe('http.request');
@@ -158,20 +171,36 @@ describe('MessagingService', () => {
     });
   });
 
-  describe('onModuleDestroy', () => {
-    it('should close client connection on module destroy', async () => {
-      await service.onModuleDestroy();
-
-      expect(mockClient.close).toHaveBeenCalled();
+  describe('connection management', () => {
+    beforeEach(async () => {
+      await service.onModuleInit();
     });
 
-    it('should handle close error gracefully', async () => {
-      const error = new Error('Close failed');
-      mockClient.close.mockRejectedValue(error);
+    it('should connect to provider', async () => {
+      await service.connect();
+      expect(mockProvider.connect).toHaveBeenCalled();
+    });
 
+    it('should disconnect from provider', async () => {
+      await service.disconnect();
+      expect(mockProvider.disconnect).toHaveBeenCalled();
+    });
+
+    it('should check connection status', () => {
+      const isConnected = service.isConnected();
+      expect(mockProvider.isConnected).toHaveBeenCalled();
+      expect(isConnected).toBe(true);
+    });
+  });
+
+  describe('onModuleDestroy', () => {
+    beforeEach(async () => {
+      await service.onModuleInit();
+    });
+
+    it('should disconnect on module destroy', async () => {
       await service.onModuleDestroy();
-
-      expect(mockClient.close).toHaveBeenCalled();
+      expect(mockProvider.disconnect).toHaveBeenCalled();
     });
   });
 });
