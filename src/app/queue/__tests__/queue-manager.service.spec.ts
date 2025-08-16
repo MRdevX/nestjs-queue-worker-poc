@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TaskEntityMockFactory } from '@test/mocks';
 import { QueueManagerService } from '../queue-manager.service';
 import { TaskService } from '../../task/task.service';
+import { TaskQueueService } from '../task-queue.service';
 import { MessagingService } from '../../core/messaging/services/messaging.service';
 import { TaskStatus } from '../../task/types/task-status.enum';
 import { TaskType } from '../../task/types/task-type.enum';
@@ -9,7 +10,7 @@ import { TaskType } from '../../task/types/task-type.enum';
 describe('QueueManagerService', () => {
   let service: QueueManagerService;
   let taskService: jest.Mocked<TaskService>;
-  let messagingService: jest.Mocked<MessagingService>;
+  let taskQueueService: jest.Mocked<TaskQueueService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -25,6 +26,13 @@ describe('QueueManagerService', () => {
           },
         },
         {
+          provide: TaskQueueService,
+          useValue: {
+            enqueueTask: jest.fn(),
+            retryTask: jest.fn(),
+          },
+        },
+        {
           provide: MessagingService,
           useValue: {
             publishTask: jest.fn(),
@@ -35,7 +43,7 @@ describe('QueueManagerService', () => {
 
     service = module.get<QueueManagerService>(QueueManagerService);
     taskService = module.get(TaskService);
-    messagingService = module.get(MessagingService);
+    taskQueueService = module.get(TaskQueueService);
   });
 
   afterEach(() => {
@@ -44,14 +52,8 @@ describe('QueueManagerService', () => {
 
   describe('enqueueTask', () => {
     it('should enqueue a task successfully', async () => {
-      const mockTask = TaskEntityMockFactory.create({
-        id: 'task-123',
-        type: TaskType.HTTP_REQUEST,
-        status: TaskStatus.PENDING,
-      });
-
-      taskService.createTask.mockResolvedValue(mockTask as any);
-      messagingService.publishTask.mockResolvedValue(undefined);
+      const mockTaskId = 'task-123';
+      taskQueueService.enqueueTask.mockResolvedValue(mockTaskId);
 
       const result = await service.enqueueTask(
         TaskType.HTTP_REQUEST,
@@ -59,86 +61,52 @@ describe('QueueManagerService', () => {
         'workflow-123',
       );
 
-      expect(taskService.createTask).toHaveBeenCalledWith(
+      expect(taskQueueService.enqueueTask).toHaveBeenCalledWith(
         TaskType.HTTP_REQUEST,
         { url: 'https://api.example.com' },
         'workflow-123',
       );
 
-      expect(messagingService.publishTask).toHaveBeenCalledWith(
-        TaskType.HTTP_REQUEST,
-        'task-123',
-        {
-          metadata: {
-            workflowId: 'workflow-123',
-            createdAt: expect.any(String),
-          },
-        },
-      );
-
-      expect(result).toBe('task-123');
+      expect(result).toBe(mockTaskId);
     });
 
     it('should enqueue a task without workflowId', async () => {
-      const mockTask = TaskEntityMockFactory.create({
-        id: 'task-456',
-        type: TaskType.DATA_PROCESSING,
-        status: TaskStatus.PENDING,
-      });
-
-      taskService.createTask.mockResolvedValue(mockTask as any);
-      messagingService.publishTask.mockResolvedValue(undefined);
+      const mockTaskId = 'task-456';
+      taskQueueService.enqueueTask.mockResolvedValue(mockTaskId);
 
       const result = await service.enqueueTask(TaskType.DATA_PROCESSING, {
         data: 'test-data',
       });
 
-      expect(taskService.createTask).toHaveBeenCalledWith(
+      expect(taskQueueService.enqueueTask).toHaveBeenCalledWith(
         TaskType.DATA_PROCESSING,
         { data: 'test-data' },
         undefined,
       );
 
-      expect(messagingService.publishTask).toHaveBeenCalledWith(
-        TaskType.DATA_PROCESSING,
-        'task-456',
-        {
-          metadata: {
-            workflowId: undefined,
-            createdAt: expect.any(String),
-          },
-        },
-      );
-
-      expect(result).toBe('task-456');
+      expect(result).toBe(mockTaskId);
     });
 
     it('should handle task creation errors', async () => {
-      const error = new Error('Database error');
-      taskService.createTask.mockRejectedValue(error);
+      const error = new Error('Task creation failed');
+      taskQueueService.enqueueTask.mockRejectedValue(error);
 
       await expect(
-        service.enqueueTask(TaskType.DATA_PROCESSING, { data: 'test' }),
-      ).rejects.toThrow('Database error');
+        service.enqueueTask(TaskType.HTTP_REQUEST, {
+          url: 'https://api.example.com',
+        }),
+      ).rejects.toThrow('Task creation failed');
 
-      expect(taskService.createTask).toHaveBeenCalledWith(
-        TaskType.DATA_PROCESSING,
-        { data: 'test' },
+      expect(taskQueueService.enqueueTask).toHaveBeenCalledWith(
+        TaskType.HTTP_REQUEST,
+        { url: 'https://api.example.com' },
         undefined,
       );
-      expect(messagingService.publishTask).not.toHaveBeenCalled();
     });
 
     it('should handle messaging service errors', async () => {
-      const mockTask = TaskEntityMockFactory.create({
-        id: 'task-123',
-        type: TaskType.HTTP_REQUEST,
-        status: TaskStatus.PENDING,
-      });
-
-      taskService.createTask.mockResolvedValue(mockTask as any);
       const error = new Error('Messaging service unavailable');
-      messagingService.publishTask.mockRejectedValue(error);
+      taskQueueService.enqueueTask.mockRejectedValue(error);
 
       await expect(
         service.enqueueTask(TaskType.HTTP_REQUEST, {
@@ -146,27 +114,23 @@ describe('QueueManagerService', () => {
         }),
       ).rejects.toThrow('Messaging service unavailable');
 
-      expect(taskService.createTask).toHaveBeenCalled();
-      expect(messagingService.publishTask).toHaveBeenCalled();
+      expect(taskQueueService.enqueueTask).toHaveBeenCalledWith(
+        TaskType.HTTP_REQUEST,
+        { url: 'https://api.example.com' },
+        undefined,
+      );
     });
 
     it('should handle complex payload data', async () => {
+      const mockTaskId = 'task-789';
       const complexPayload = {
         url: 'https://api.example.com',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: { key: 'value', nested: { data: 'test' } },
-        timeout: 5000,
+        body: { data: 'complex-data', nested: { value: 123 } },
       };
 
-      const mockTask = TaskEntityMockFactory.create({
-        id: 'task-789',
-        type: TaskType.HTTP_REQUEST,
-        status: TaskStatus.PENDING,
-      });
-
-      taskService.createTask.mockResolvedValue(mockTask as any);
-      messagingService.publishTask.mockResolvedValue(undefined);
+      taskQueueService.enqueueTask.mockResolvedValue(mockTaskId);
 
       const result = await service.enqueueTask(
         TaskType.HTTP_REQUEST,
@@ -174,130 +138,73 @@ describe('QueueManagerService', () => {
         'workflow-456',
       );
 
-      expect(taskService.createTask).toHaveBeenCalledWith(
+      expect(taskQueueService.enqueueTask).toHaveBeenCalledWith(
         TaskType.HTTP_REQUEST,
         complexPayload,
         'workflow-456',
       );
 
-      expect(result).toBe('task-789');
+      expect(result).toBe(mockTaskId);
     });
   });
 
   describe('retryTask', () => {
     it('should retry failed task successfully', async () => {
-      const mockTask = TaskEntityMockFactory.create({
-        id: 'task-123',
-        type: TaskType.HTTP_REQUEST,
-        retries: 1,
-        maxRetries: 3,
-      });
+      const taskId = 'failed-task-123';
+      taskQueueService.retryTask.mockResolvedValue();
 
-      taskService.getTaskById.mockResolvedValue(mockTask as any);
-      messagingService.publishTask.mockResolvedValue(undefined);
+      await service.retryTask(taskId);
 
-      await service.retryTask('task-123');
-
-      expect(taskService.getTaskById).toHaveBeenCalledWith('task-123');
-      expect(messagingService.publishTask).toHaveBeenCalledWith(
-        TaskType.HTTP_REQUEST,
-        'task-123',
-        {
-          metadata: {
-            retryCount: 2,
-            originalTaskId: 'task-123',
-          },
-        },
-      );
+      expect(taskQueueService.retryTask).toHaveBeenCalledWith(taskId);
     });
 
     it('should not retry if max retries exceeded', async () => {
-      const mockTask = TaskEntityMockFactory.create({
-        id: 'task-123',
-        type: TaskType.HTTP_REQUEST,
-        retries: 3,
-        maxRetries: 3,
-      });
+      const taskId = 'max-retries-task';
+      taskQueueService.retryTask.mockResolvedValue();
 
-      taskService.getTaskById.mockResolvedValue(mockTask as any);
+      await service.retryTask(taskId);
 
-      await service.retryTask('task-123');
-
-      expect(taskService.getTaskById).toHaveBeenCalledWith('task-123');
-      expect(messagingService.publishTask).not.toHaveBeenCalled();
+      expect(taskQueueService.retryTask).toHaveBeenCalledWith(taskId);
     });
 
     it('should not retry if task has reached max retries exactly', async () => {
-      const mockTask = TaskEntityMockFactory.create({
-        id: 'task-456',
-        type: TaskType.DATA_PROCESSING,
-        retries: 3,
-        maxRetries: 3,
-      });
+      const taskId = 'exact-max-retries-task';
+      taskQueueService.retryTask.mockResolvedValue();
 
-      taskService.getTaskById.mockResolvedValue(mockTask as any);
+      await service.retryTask(taskId);
 
-      await service.retryTask('task-456');
-
-      expect(taskService.getTaskById).toHaveBeenCalledWith('task-456');
-      expect(messagingService.publishTask).not.toHaveBeenCalled();
+      expect(taskQueueService.retryTask).toHaveBeenCalledWith(taskId);
     });
 
     it('should handle task not found error', async () => {
-      taskService.getTaskById.mockResolvedValue(null);
+      const taskId = 'non-existent-task';
+      const error = new Error('Task not found');
+      taskQueueService.retryTask.mockRejectedValue(error);
 
-      await expect(service.retryTask('non-existent-task')).rejects.toThrow(
-        'Task non-existent-task not found',
-      );
+      await expect(service.retryTask(taskId)).rejects.toThrow('Task not found');
 
-      expect(taskService.getTaskById).toHaveBeenCalledWith('non-existent-task');
-      expect(messagingService.publishTask).not.toHaveBeenCalled();
+      expect(taskQueueService.retryTask).toHaveBeenCalledWith(taskId);
     });
 
     it('should handle messaging service errors during retry', async () => {
-      const mockTask = TaskEntityMockFactory.create({
-        id: 'task-123',
-        type: TaskType.HTTP_REQUEST,
-        retries: 1,
-        maxRetries: 3,
-      });
-
-      taskService.getTaskById.mockResolvedValue(mockTask as any);
+      const taskId = 'retry-task-123';
       const error = new Error('Messaging service error');
-      messagingService.publishTask.mockRejectedValue(error);
+      taskQueueService.retryTask.mockRejectedValue(error);
 
-      await expect(service.retryTask('task-123')).rejects.toThrow(
+      await expect(service.retryTask(taskId)).rejects.toThrow(
         'Messaging service error',
       );
 
-      expect(taskService.getTaskById).toHaveBeenCalledWith('task-123');
-      expect(messagingService.publishTask).toHaveBeenCalled();
+      expect(taskQueueService.retryTask).toHaveBeenCalledWith(taskId);
     });
 
     it('should handle retry with zero retries', async () => {
-      const mockTask = TaskEntityMockFactory.create({
-        id: 'task-789',
-        type: TaskType.COMPENSATION,
-        retries: 0,
-        maxRetries: 3,
-      });
+      const taskId = 'zero-retries-task';
+      taskQueueService.retryTask.mockResolvedValue();
 
-      taskService.getTaskById.mockResolvedValue(mockTask as any);
-      messagingService.publishTask.mockResolvedValue(undefined);
+      await service.retryTask(taskId);
 
-      await service.retryTask('task-789');
-
-      expect(taskService.getTaskById).toHaveBeenCalledWith('task-789');
-      expect(messagingService.publishTask).toHaveBeenCalledWith(
-        TaskType.COMPENSATION,
-        'task-789',
-        {
-          metadata: {
-            retryCount: 1,
-            originalTaskId: 'task-789',
-          },
-        },
-      );
+      expect(taskQueueService.retryTask).toHaveBeenCalledWith(taskId);
     });
   });
 

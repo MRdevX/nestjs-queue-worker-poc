@@ -13,43 +13,33 @@ export abstract class BaseWorker {
   constructor(
     protected readonly taskService: TaskService,
     protected readonly coordinatorFactory: CoordinatorFactoryService,
-  ) {
-    this.logger.log(`${this.constructor.name} initialized`);
-  }
+  ) {}
 
-  async handleTask(data: ITaskMessage) {
-    const { taskId, delay, metadata } = data;
-
-    this.logger.log(`[${this.constructor.name}] Processing task: ${taskId}`);
+  async handleTask(data: ITaskMessage): Promise<void> {
+    const { taskId, delay } = data;
 
     try {
       const task = await this.taskService.getTaskById(taskId);
       if (!task) {
-        this.logger.warn(`Task ${taskId} not found, skipping processing`);
+        this.logger.warn(`Task ${taskId} not found`);
         return;
       }
 
       if (!this.shouldProcessTaskType(task.type)) {
-        this.logger.debug(
-          `Worker ${this.constructor.name} skipping task ${taskId} of type ${task.type}`,
-        );
+        this.logger.debug(`Skipping task ${taskId} of type ${task.type}`);
         return;
       }
 
       if (delay && delay > 0) {
-        this.logger.log(`Delaying task ${taskId} by ${delay}ms`);
         await UtilsService.sleep(delay);
       }
 
       await this.taskService.updateTaskStatus(taskId, TaskStatus.PROCESSING);
-
       await this.processTask(taskId);
-
       await this.taskService.updateTaskStatus(taskId, TaskStatus.COMPLETED);
-
       await this.handleWorkflowCoordination(taskId, task.type);
 
-      this.logger.log(`Task completed successfully: ${taskId}`);
+      this.logger.log(`Task completed: ${taskId}`);
     } catch (error) {
       this.logger.error(`Task failed: ${taskId}`, error.stack);
       await this.taskService.handleFailure(taskId, error);
@@ -58,7 +48,6 @@ export abstract class BaseWorker {
   }
 
   protected abstract processTask(taskId: string): Promise<void>;
-
   protected abstract shouldProcessTaskType(taskType: TaskType): boolean;
 
   private async handleWorkflowCoordination(
@@ -68,9 +57,9 @@ export abstract class BaseWorker {
     try {
       const coordinator = this.coordinatorFactory.getCoordinator(taskType);
       await coordinator.handleTaskCompletion(taskId);
-    } catch (workflowError) {
+    } catch (error) {
       this.logger.warn(
-        `Workflow handling failed for task ${taskId}: ${workflowError.message}`,
+        `Workflow coordination failed for task ${taskId}: ${error.message}`,
       );
     }
   }
@@ -87,7 +76,7 @@ export abstract class BaseWorker {
       }
     } catch (coordinatorError) {
       this.logger.warn(
-        `Coordinator failure handling failed for task ${taskId}: ${coordinatorError.message}`,
+        `Failure coordination failed for task ${taskId}: ${coordinatorError.message}`,
       );
     }
   }

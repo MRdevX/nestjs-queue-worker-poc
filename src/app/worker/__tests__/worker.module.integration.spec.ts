@@ -1,11 +1,6 @@
 import { WorkerModule } from '../worker.module';
-import { DataWorker } from '../data.worker';
-import { HttpWorker } from '../http.worker';
-import { CompensationWorker } from '../compensation.worker';
-import { FetchOrdersWorker } from '../fetch-orders.worker';
-import { CreateInvoiceWorker } from '../create-invoice.worker';
-import { GeneratePdfWorker } from '../generate-pdf.worker';
-import { SendEmailWorker } from '../send-email.worker';
+import { UnifiedWorker } from '../unified.worker';
+import { TaskProcessorService } from '../task-processor.service';
 
 describe('WorkerModule Integration', () => {
   describe('Module Structure', () => {
@@ -23,26 +18,16 @@ describe('WorkerModule Integration', () => {
       expect(exports).toBeDefined();
     });
 
-    it('should export all workers', () => {
+    it('should export unified worker and task processor', () => {
       const exports = Reflect.getMetadata('exports', WorkerModule);
-      expect(exports).toContain(DataWorker);
-      expect(exports).toContain(HttpWorker);
-      expect(exports).toContain(CompensationWorker);
-      expect(exports).toContain(FetchOrdersWorker);
-      expect(exports).toContain(CreateInvoiceWorker);
-      expect(exports).toContain(GeneratePdfWorker);
-      expect(exports).toContain(SendEmailWorker);
+      expect(exports).toContain(UnifiedWorker);
+      expect(exports).toContain(TaskProcessorService);
     });
 
     it('should have required providers', () => {
       const providers = Reflect.getMetadata('providers', WorkerModule);
-      expect(providers).toContain(DataWorker);
-      expect(providers).toContain(HttpWorker);
-      expect(providers).toContain(CompensationWorker);
-      expect(providers).toContain(FetchOrdersWorker);
-      expect(providers).toContain(CreateInvoiceWorker);
-      expect(providers).toContain(GeneratePdfWorker);
-      expect(providers).toContain(SendEmailWorker);
+      expect(providers).toContain(UnifiedWorker);
+      expect(providers).toContain(TaskProcessorService);
     });
   });
 });

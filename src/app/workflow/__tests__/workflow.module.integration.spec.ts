@@ -1,8 +1,8 @@
 import { WorkflowModule } from '../workflow.module';
-import { CoordinatorService } from '../coordinator.service';
 import { WorkflowRepository } from '../workflow.repository';
-import { WorkflowService } from '../workflow.service';
 import { WorkflowController } from '../workflow.controller';
+import { CoordinatorService } from '../services/coordinator.service';
+import { WorkflowService } from '../services/workflow.service';
 
 describe('WorkflowModule Integration', () => {
   describe('Module Structure', () => {

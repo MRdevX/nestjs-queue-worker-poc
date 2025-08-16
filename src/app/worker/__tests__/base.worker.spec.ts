@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TaskEntityMockFactory } from '@test/mocks';
 import { BaseWorker } from '../base.worker';
 import { TaskService } from '../../task/task.service';
-import { CoordinatorService } from '../../workflow/coordinator.service';
+import { CoordinatorService } from '../../workflow/services/coordinator.service';
 import { CoordinatorFactoryService } from '../../workflow/services/coordinator-factory.service';
 import { InvoiceCoordinatorService } from '../../invoice/invoice-coordinator.service';
 import { TaskType } from '../../task/types/task-type.enum';

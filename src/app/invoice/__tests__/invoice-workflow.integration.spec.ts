@@ -5,6 +5,7 @@ import { InvoiceController } from '../invoice.controller';
 import { InvoiceService } from '../invoice.service';
 import { InvoiceWorkflowService } from '../invoice-workflow.service';
 import { TaskService } from '../../task/task.service';
+import { TaskQueueService } from '../../queue/task-queue.service';
 import { MessagingService } from '../../core/messaging/services/messaging.service';
 import { SchedulerService } from '../../scheduler/scheduler.service';
 import { TaskType } from '../../task/types/task-type.enum';
@@ -14,6 +15,7 @@ describe('Invoice Workflow Integration', () => {
   let controller: InvoiceController;
   let workflowService: InvoiceWorkflowService;
   let taskService: jest.Mocked<TaskService>;
+  let taskQueueService: jest.Mocked<TaskQueueService>;
   let messagingService: jest.Mocked<MessagingService>;
   let schedulerService: jest.Mocked<SchedulerService>;
 
@@ -31,6 +33,13 @@ describe('Invoice Workflow Integration', () => {
             findMany: jest.fn(),
             findAll: jest.fn(),
             updateTaskStatus: jest.fn(),
+          },
+        },
+        {
+          provide: TaskQueueService,
+          useValue: {
+            enqueueTask: jest.fn(),
+            retryTask: jest.fn(),
           },
         },
         {
@@ -69,6 +78,7 @@ describe('Invoice Workflow Integration', () => {
       InvoiceWorkflowService,
     );
     taskService = module.get(TaskService);
+    taskQueueService = module.get(TaskQueueService);
     messagingService = module.get(MessagingService);
     schedulerService = module.get(SchedulerService);
   });

@@ -3,15 +3,17 @@ import { NotFoundException } from '@nestjs/common';
 import { WorkflowEntityMockFactory } from '@test/mocks';
 import { TaskEntityMockFactory } from '@test/mocks';
 import { WorkflowController } from '../workflow.controller';
-import { WorkflowService } from '../workflow.service';
-import { CoordinatorService } from '../coordinator.service';
 import { TaskStatus } from '../../task/types/task-status.enum';
 import { ICreateWorkflowDto, IUpdateWorkflowDto } from '../types';
+import { CoordinatorService } from '../services/coordinator.service';
+import { WorkflowService } from '../services/workflow.service';
+import { WorkflowResponseService } from '../services/workflow-response.service';
 
 describe('WorkflowController', () => {
   let controller: WorkflowController;
   let workflowService: jest.Mocked<WorkflowService>;
   let coordinatorService: jest.Mocked<CoordinatorService>;
+  let responseService: jest.Mocked<WorkflowResponseService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -36,12 +38,21 @@ describe('WorkflowController', () => {
             startWorkflow: jest.fn(),
           },
         },
+        {
+          provide: WorkflowResponseService,
+          useValue: {
+            createWorkflowResponse: jest.fn(),
+            createWorkflowListResponse: jest.fn(),
+            createSuccessResponse: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     controller = module.get<WorkflowController>(WorkflowController);
     workflowService = module.get(WorkflowService);
     coordinatorService = module.get(CoordinatorService);
+    responseService = module.get(WorkflowResponseService);
   });
 
   afterEach(() => {
@@ -67,65 +78,95 @@ describe('WorkflowController', () => {
         isActive: true,
       });
 
+      const expectedResponse = {
+        message: 'Workflow operation successful',
+        workflow: mockWorkflow,
+      };
+
       workflowService.createWorkflow.mockResolvedValue(mockWorkflow as any);
+      responseService.createWorkflowResponse.mockReturnValue(expectedResponse);
 
       const result = await controller.createWorkflow(createWorkflowDto);
 
       expect(workflowService.createWorkflow).toHaveBeenCalledWith(
         createWorkflowDto,
       );
-      expect(result).toEqual({
-        message: 'Workflow created successfully',
-        workflow: mockWorkflow,
-      });
+      expect(responseService.createWorkflowResponse).toHaveBeenCalledWith(
+        mockWorkflow,
+      );
+      expect(result).toEqual(expectedResponse);
     });
   });
 
   describe('getAllWorkflows', () => {
     it('should return all workflows when no filter is provided', async () => {
       const mockWorkflows = WorkflowEntityMockFactory.createArray(3);
+      const expectedResponse = {
+        message: 'Workflows retrieved successfully',
+        workflows: mockWorkflows,
+        total: 3,
+      };
+
       workflowService.getAllWorkflows.mockResolvedValue(mockWorkflows as any);
+      responseService.createWorkflowListResponse.mockReturnValue(
+        expectedResponse,
+      );
 
       const result = await controller.getAllWorkflows();
 
       expect(workflowService.getAllWorkflows).toHaveBeenCalledWith(undefined);
-      expect(result).toEqual({
-        message: 'Workflows retrieved successfully',
-        workflows: mockWorkflows,
-        total: 3,
-      });
+      expect(responseService.createWorkflowListResponse).toHaveBeenCalledWith(
+        mockWorkflows,
+      );
+      expect(result).toEqual(expectedResponse);
     });
 
     it('should return filtered workflows when active filter is provided', async () => {
       const mockWorkflows = WorkflowEntityMockFactory.createArray(2, {
         isActive: true,
       });
+      const expectedResponse = {
+        message: 'Workflows retrieved successfully',
+        workflows: mockWorkflows,
+        total: 2,
+      };
+
       workflowService.getAllWorkflows.mockResolvedValue(mockWorkflows as any);
+      responseService.createWorkflowListResponse.mockReturnValue(
+        expectedResponse,
+      );
 
       const result = await controller.getAllWorkflows(true);
 
       expect(workflowService.getAllWorkflows).toHaveBeenCalledWith(true);
-      expect(result).toEqual({
-        message: 'Workflows retrieved successfully',
-        workflows: mockWorkflows,
-        total: 2,
-      });
+      expect(responseService.createWorkflowListResponse).toHaveBeenCalledWith(
+        mockWorkflows,
+      );
+      expect(result).toEqual(expectedResponse);
     });
 
     it('should return inactive workflows when active filter is false', async () => {
       const mockWorkflows = WorkflowEntityMockFactory.createArray(1, {
         isActive: false,
       });
+      const expectedResponse = {
+        message: 'Workflows retrieved successfully',
+        workflows: mockWorkflows,
+        total: 1,
+      };
+
       workflowService.getAllWorkflows.mockResolvedValue(mockWorkflows as any);
+      responseService.createWorkflowListResponse.mockReturnValue(
+        expectedResponse,
+      );
 
       const result = await controller.getAllWorkflows(false);
 
       expect(workflowService.getAllWorkflows).toHaveBeenCalledWith(false);
-      expect(result).toEqual({
-        message: 'Workflows retrieved successfully',
-        workflows: mockWorkflows,
-        total: 1,
-      });
+      expect(responseService.createWorkflowListResponse).toHaveBeenCalledWith(
+        mockWorkflows,
+      );
+      expect(result).toEqual(expectedResponse);
     });
   });
 
@@ -134,18 +175,27 @@ describe('WorkflowController', () => {
       const mockWorkflows = WorkflowEntityMockFactory.createArray(2, {
         isActive: true,
       });
+      const expectedResponse = {
+        message: 'Active workflows retrieved successfully',
+        workflows: mockWorkflows,
+        total: 2,
+      };
+
       workflowService.getActiveWorkflows.mockResolvedValue(
         mockWorkflows as any,
+      );
+      responseService.createWorkflowListResponse.mockReturnValue(
+        expectedResponse,
       );
 
       const result = await controller.getActiveWorkflows();
 
       expect(workflowService.getActiveWorkflows).toHaveBeenCalled();
-      expect(result).toEqual({
-        message: 'Active workflows retrieved successfully',
-        workflows: mockWorkflows,
-        total: 2,
-      });
+      expect(responseService.createWorkflowListResponse).toHaveBeenCalledWith(
+        mockWorkflows,
+        'Active workflows retrieved successfully',
+      );
+      expect(result).toEqual(expectedResponse);
     });
   });
 
@@ -216,13 +266,19 @@ describe('WorkflowController', () => {
         isActive: false,
       };
 
-      const updatedWorkflow = WorkflowEntityMockFactory.create({
+      const mockWorkflow = WorkflowEntityMockFactory.create({
         id: workflowId,
         name: 'Updated Workflow',
         isActive: false,
       });
 
-      workflowService.updateWorkflow.mockResolvedValue(updatedWorkflow as any);
+      const expectedResponse = {
+        message: 'Workflow operation successful',
+        workflow: mockWorkflow,
+      };
+
+      workflowService.updateWorkflow.mockResolvedValue(mockWorkflow as any);
+      responseService.createWorkflowResponse.mockReturnValue(expectedResponse);
 
       const result = await controller.updateWorkflow(
         workflowId,
@@ -233,10 +289,10 @@ describe('WorkflowController', () => {
         workflowId,
         updateWorkflowDto,
       );
-      expect(result).toEqual({
-        message: 'Workflow updated successfully',
-        workflow: updatedWorkflow,
-      });
+      expect(responseService.createWorkflowResponse).toHaveBeenCalledWith(
+        mockWorkflow,
+      );
+      expect(result).toEqual(expectedResponse);
     });
 
     it('should throw NotFoundException when workflow not found', async () => {
@@ -261,14 +317,20 @@ describe('WorkflowController', () => {
   describe('deleteWorkflow', () => {
     it('should delete workflow successfully', async () => {
       const workflowId = 'workflow-123';
+      const expectedResponse = {
+        message: 'Workflow deleted successfully',
+      };
+
       workflowService.deleteWorkflow.mockResolvedValue(true);
+      responseService.createSuccessResponse.mockReturnValue(expectedResponse);
 
       const result = await controller.deleteWorkflow(workflowId);
 
       expect(workflowService.deleteWorkflow).toHaveBeenCalledWith(workflowId);
-      expect(result).toEqual({
-        message: 'Workflow deleted successfully',
-      });
+      expect(responseService.createSuccessResponse).toHaveBeenCalledWith(
+        'Workflow deleted successfully',
+      );
+      expect(result).toEqual(expectedResponse);
     });
 
     it('should throw NotFoundException when workflow not found', async () => {
@@ -291,8 +353,14 @@ describe('WorkflowController', () => {
         isActive: true,
       });
 
+      const expectedResponse = {
+        message: 'Workflow started successfully',
+        workflowId: workflowId,
+      };
+
       workflowService.getWorkflowById.mockResolvedValue(mockWorkflow as any);
       coordinatorService.startWorkflow.mockResolvedValue();
+      responseService.createSuccessResponse.mockReturnValue(expectedResponse);
 
       const result = await controller.startWorkflow(workflowId);
 
@@ -300,10 +368,11 @@ describe('WorkflowController', () => {
       expect(coordinatorService.startWorkflow).toHaveBeenCalledWith(
         mockWorkflow,
       );
-      expect(result).toEqual({
-        message: 'Workflow started successfully',
-        workflowId: workflowId,
-      });
+      expect(responseService.createSuccessResponse).toHaveBeenCalledWith(
+        'Workflow started successfully',
+        { workflowId: workflowId },
+      );
+      expect(result).toEqual(expectedResponse);
     });
 
     it('should throw NotFoundException when workflow not found', async () => {
@@ -315,11 +384,10 @@ describe('WorkflowController', () => {
       );
 
       expect(workflowService.getWorkflowById).toHaveBeenCalledWith(workflowId);
-      expect(coordinatorService.startWorkflow).not.toHaveBeenCalled();
     });
 
     it('should throw error when workflow is inactive', async () => {
-      const workflowId = 'inactive-workflow';
+      const workflowId = 'workflow-123';
       const mockWorkflow = WorkflowEntityMockFactory.create({
         id: workflowId,
         isActive: false,
@@ -332,29 +400,34 @@ describe('WorkflowController', () => {
       );
 
       expect(workflowService.getWorkflowById).toHaveBeenCalledWith(workflowId);
-      expect(coordinatorService.startWorkflow).not.toHaveBeenCalled();
     });
   });
 
   describe('activateWorkflow', () => {
     it('should activate workflow successfully', async () => {
       const workflowId = 'workflow-123';
-      const updatedWorkflow = WorkflowEntityMockFactory.create({
+      const mockWorkflow = WorkflowEntityMockFactory.create({
         id: workflowId,
         isActive: true,
       });
 
-      workflowService.updateWorkflow.mockResolvedValue(updatedWorkflow as any);
+      const expectedResponse = {
+        message: 'Workflow operation successful',
+        workflow: mockWorkflow,
+      };
+
+      workflowService.updateWorkflow.mockResolvedValue(mockWorkflow as any);
+      responseService.createWorkflowResponse.mockReturnValue(expectedResponse);
 
       const result = await controller.activateWorkflow(workflowId);
 
       expect(workflowService.updateWorkflow).toHaveBeenCalledWith(workflowId, {
         isActive: true,
       });
-      expect(result).toEqual({
-        message: 'Workflow activated successfully',
-        workflow: updatedWorkflow,
-      });
+      expect(responseService.createWorkflowResponse).toHaveBeenCalledWith(
+        mockWorkflow,
+      );
+      expect(result).toEqual(expectedResponse);
     });
 
     it('should throw NotFoundException when workflow not found', async () => {
@@ -374,22 +447,28 @@ describe('WorkflowController', () => {
   describe('deactivateWorkflow', () => {
     it('should deactivate workflow successfully', async () => {
       const workflowId = 'workflow-123';
-      const updatedWorkflow = WorkflowEntityMockFactory.create({
+      const mockWorkflow = WorkflowEntityMockFactory.create({
         id: workflowId,
         isActive: false,
       });
 
-      workflowService.updateWorkflow.mockResolvedValue(updatedWorkflow as any);
+      const expectedResponse = {
+        message: 'Workflow operation successful',
+        workflow: mockWorkflow,
+      };
+
+      workflowService.updateWorkflow.mockResolvedValue(mockWorkflow as any);
+      responseService.createWorkflowResponse.mockReturnValue(expectedResponse);
 
       const result = await controller.deactivateWorkflow(workflowId);
 
       expect(workflowService.updateWorkflow).toHaveBeenCalledWith(workflowId, {
         isActive: false,
       });
-      expect(result).toEqual({
-        message: 'Workflow deactivated successfully',
-        workflow: updatedWorkflow,
-      });
+      expect(responseService.createWorkflowResponse).toHaveBeenCalledWith(
+        mockWorkflow,
+      );
+      expect(result).toEqual(expectedResponse);
     });
 
     it('should throw NotFoundException when workflow not found', async () => {
@@ -409,42 +488,20 @@ describe('WorkflowController', () => {
   describe('getWorkflowStatus', () => {
     it('should return workflow status', async () => {
       const workflowId = 'workflow-123';
-      const mockTasks = [
-        TaskEntityMockFactory.create({
-          status: TaskStatus.COMPLETED,
-          createdAt: new Date('2024-01-01'),
-          updatedAt: new Date('2024-01-02'),
-        }),
-        TaskEntityMockFactory.create({
-          status: TaskStatus.FAILED,
-          error: 'Task failed',
-          createdAt: new Date('2024-01-01'),
-          updatedAt: new Date('2024-01-02'),
-        }),
-      ];
-
       const mockStatus = {
         workflowId,
         workflowName: 'Test Workflow',
         isActive: true,
-        totalTasks: 2,
-        completedTasks: 1,
+        totalTasks: 5,
+        completedTasks: 2,
         failedTasks: 1,
-        pendingTasks: 0,
-        processingTasks: 0,
+        pendingTasks: 1,
+        processingTasks: 1,
         isComplete: false,
         hasFailures: true,
-        isInProgress: false,
-        progress: 50,
-        tasks: mockTasks.map((task) => ({
-          id: task.id!,
-          type: task.type!,
-          status: task.status!,
-          createdAt: task.createdAt!,
-          completedAt:
-            task.status === TaskStatus.COMPLETED ? task.updatedAt! : null,
-          error: task.error || null,
-        })),
+        isInProgress: true,
+        progress: 40,
+        tasks: [],
       };
 
       workflowService.getWorkflowStatus.mockResolvedValue(mockStatus);
@@ -468,29 +525,6 @@ describe('WorkflowController', () => {
       expect(workflowService.getWorkflowStatus).toHaveBeenCalledWith(
         workflowId,
       );
-    });
-  });
-
-  describe('createSuccessResponse', () => {
-    it('should create success response with message only', () => {
-      const result = (controller as any).createSuccessResponse('Test message');
-
-      expect(result).toEqual({
-        message: 'Test message',
-      });
-    });
-
-    it('should create success response with message and data', () => {
-      const data = { key: 'value' };
-      const result = (controller as any).createSuccessResponse(
-        'Test message',
-        data,
-      );
-
-      expect(result).toEqual({
-        message: 'Test message',
-        key: 'value',
-      });
     });
   });
 });

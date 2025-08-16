@@ -1,16 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkflowEntityMockFactory } from '@test/mocks';
 import { TaskEntityMockFactory } from '@test/mocks';
-import { WorkflowService } from '../workflow.service';
+import { WorkflowService } from '../services/workflow.service';
 import { WorkflowRepository } from '../workflow.repository';
 import { TaskService } from '../../task/task.service';
+import { TaskStatisticsService } from '../services/task-statistics.service';
 import { TaskStatus } from '../../task/types/task-status.enum';
-import { WorkflowStatus } from '../workflow.entity';
 import { ICreateWorkflowDto, IUpdateWorkflowDto } from '../types';
+import { WorkflowStatus } from '../workflow.entity';
 
 describe('WorkflowService', () => {
   let service: WorkflowService;
   let workflowRepository: jest.Mocked<WorkflowRepository>;
+  let taskStatisticsService: jest.Mocked<TaskStatisticsService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -20,8 +22,8 @@ describe('WorkflowService', () => {
           provide: WorkflowRepository,
           useValue: {
             create: jest.fn(),
-            findAll: jest.fn(),
             findMany: jest.fn(),
+            findAll: jest.fn(),
             findActiveWorkflows: jest.fn(),
             findById: jest.fn(),
             findWithTasks: jest.fn(),
@@ -32,7 +34,14 @@ describe('WorkflowService', () => {
         {
           provide: TaskService,
           useValue: {
-            getTaskByIdWithWorkflow: jest.fn(),
+            findMany: jest.fn(),
+            getTaskById: jest.fn(),
+          },
+        },
+        {
+          provide: TaskStatisticsService,
+          useValue: {
+            calculateTaskStats: jest.fn(),
           },
         },
       ],
@@ -40,6 +49,7 @@ describe('WorkflowService', () => {
 
     service = module.get<WorkflowService>(WorkflowService);
     workflowRepository = module.get(WorkflowRepository);
+    taskStatisticsService = module.get(TaskStatisticsService);
   });
 
   afterEach(() => {
@@ -326,20 +336,24 @@ describe('WorkflowService', () => {
       const workflowId = 'workflow-123';
       const mockTasks = [
         TaskEntityMockFactory.create({
+          id: 'task-1',
+          type: 'http_request' as any,
           status: TaskStatus.COMPLETED,
           createdAt: new Date('2024-01-01'),
           updatedAt: new Date('2024-01-02'),
         }),
         TaskEntityMockFactory.create({
+          id: 'task-2',
+          type: 'data_processing' as any,
           status: TaskStatus.FAILED,
-          error: 'Task failed',
           createdAt: new Date('2024-01-01'),
-          updatedAt: new Date('2024-01-02'),
+          error: 'Task failed',
         }),
         TaskEntityMockFactory.create({
+          id: 'task-3',
+          type: 'send_email' as any,
           status: TaskStatus.PENDING,
           createdAt: new Date('2024-01-01'),
-          updatedAt: new Date('2024-01-01'),
         }),
       ];
 
@@ -350,15 +364,7 @@ describe('WorkflowService', () => {
         tasks: mockTasks,
       });
 
-      workflowRepository.findWithTasks.mockResolvedValue(mockWorkflow as any);
-
-      const result = await service.getWorkflowStatus(workflowId);
-
-      expect(workflowRepository.findWithTasks).toHaveBeenCalledWith(workflowId);
-      expect(result).toEqual({
-        workflowId,
-        workflowName: 'Test Workflow',
-        isActive: true,
+      const mockTaskStats = {
         totalTasks: 3,
         completedTasks: 1,
         failedTasks: 1,
@@ -368,6 +374,22 @@ describe('WorkflowService', () => {
         hasFailures: true,
         isInProgress: true,
         progress: 33,
+      };
+
+      workflowRepository.findWithTasks.mockResolvedValue(mockWorkflow as any);
+      taskStatisticsService.calculateTaskStats.mockReturnValue(mockTaskStats);
+
+      const result = await service.getWorkflowStatus(workflowId);
+
+      expect(workflowRepository.findWithTasks).toHaveBeenCalledWith(workflowId);
+      expect(taskStatisticsService.calculateTaskStats).toHaveBeenCalledWith(
+        mockTasks,
+      );
+      expect(result).toEqual({
+        workflowId,
+        workflowName: 'Test Workflow',
+        isActive: true,
+        ...mockTaskStats,
         tasks: mockTasks.map((task) => ({
           id: task.id,
           type: task.type,
@@ -400,14 +422,7 @@ describe('WorkflowService', () => {
         tasks: [],
       });
 
-      workflowRepository.findWithTasks.mockResolvedValue(mockWorkflow as any);
-
-      const result = await service.getWorkflowStatus(workflowId);
-
-      expect(result).toEqual({
-        workflowId,
-        workflowName: 'Test Workflow',
-        isActive: true,
+      const mockTaskStats = {
         totalTasks: 0,
         completedTasks: 0,
         failedTasks: 0,
@@ -417,6 +432,19 @@ describe('WorkflowService', () => {
         hasFailures: false,
         isInProgress: false,
         progress: 0,
+      };
+
+      workflowRepository.findWithTasks.mockResolvedValue(mockWorkflow as any);
+      taskStatisticsService.calculateTaskStats.mockReturnValue(mockTaskStats);
+
+      const result = await service.getWorkflowStatus(workflowId);
+
+      expect(taskStatisticsService.calculateTaskStats).toHaveBeenCalledWith([]);
+      expect(result).toEqual({
+        workflowId,
+        workflowName: 'Test Workflow',
+        isActive: true,
+        ...mockTaskStats,
         tasks: [],
       });
     });
@@ -472,16 +500,24 @@ describe('WorkflowService', () => {
   describe('calculateTaskStats', () => {
     it('should calculate correct statistics for mixed task statuses', () => {
       const mockTasks = [
-        TaskEntityMockFactory.create({ status: TaskStatus.COMPLETED }),
-        TaskEntityMockFactory.create({ status: TaskStatus.COMPLETED }),
-        TaskEntityMockFactory.create({ status: TaskStatus.FAILED }),
-        TaskEntityMockFactory.create({ status: TaskStatus.PENDING }),
-        TaskEntityMockFactory.create({ status: TaskStatus.PROCESSING }),
+        TaskEntityMockFactory.create({
+          status: TaskStatus.COMPLETED,
+        }),
+        TaskEntityMockFactory.create({
+          status: TaskStatus.FAILED,
+        }),
+        TaskEntityMockFactory.create({
+          status: TaskStatus.PENDING,
+        }),
+        TaskEntityMockFactory.create({
+          status: TaskStatus.PROCESSING,
+        }),
+        TaskEntityMockFactory.create({
+          status: TaskStatus.COMPLETED,
+        }),
       ];
 
-      const stats = (service as any).calculateTaskStats(mockTasks);
-
-      expect(stats).toEqual({
+      const expectedStats = {
         totalTasks: 5,
         completedTasks: 2,
         failedTasks: 1,
@@ -491,19 +527,32 @@ describe('WorkflowService', () => {
         hasFailures: true,
         isInProgress: true,
         progress: 40,
-      });
+      };
+
+      taskStatisticsService.calculateTaskStats.mockReturnValue(expectedStats);
+
+      const stats = taskStatisticsService.calculateTaskStats(mockTasks);
+
+      expect(taskStatisticsService.calculateTaskStats).toHaveBeenCalledWith(
+        mockTasks,
+      );
+      expect(stats).toEqual(expectedStats);
     });
 
     it('should calculate complete workflow statistics', () => {
       const mockTasks = [
-        TaskEntityMockFactory.create({ status: TaskStatus.COMPLETED }),
-        TaskEntityMockFactory.create({ status: TaskStatus.COMPLETED }),
-        TaskEntityMockFactory.create({ status: TaskStatus.COMPLETED }),
+        TaskEntityMockFactory.create({
+          status: TaskStatus.COMPLETED,
+        }),
+        TaskEntityMockFactory.create({
+          status: TaskStatus.COMPLETED,
+        }),
+        TaskEntityMockFactory.create({
+          status: TaskStatus.COMPLETED,
+        }),
       ];
 
-      const stats = (service as any).calculateTaskStats(mockTasks);
-
-      expect(stats).toEqual({
+      const expectedStats = {
         totalTasks: 3,
         completedTasks: 3,
         failedTasks: 0,
@@ -513,13 +562,20 @@ describe('WorkflowService', () => {
         hasFailures: false,
         isInProgress: false,
         progress: 100,
-      });
+      };
+
+      taskStatisticsService.calculateTaskStats.mockReturnValue(expectedStats);
+
+      const stats = taskStatisticsService.calculateTaskStats(mockTasks);
+
+      expect(taskStatisticsService.calculateTaskStats).toHaveBeenCalledWith(
+        mockTasks,
+      );
+      expect(stats).toEqual(expectedStats);
     });
 
     it('should handle empty tasks array', () => {
-      const stats = (service as any).calculateTaskStats([]);
-
-      expect(stats).toEqual({
+      const expectedStats = {
         totalTasks: 0,
         completedTasks: 0,
         failedTasks: 0,
@@ -529,7 +585,14 @@ describe('WorkflowService', () => {
         hasFailures: false,
         isInProgress: false,
         progress: 0,
-      });
+      };
+
+      taskStatisticsService.calculateTaskStats.mockReturnValue(expectedStats);
+
+      const stats = taskStatisticsService.calculateTaskStats([]);
+
+      expect(taskStatisticsService.calculateTaskStats).toHaveBeenCalledWith([]);
+      expect(stats).toEqual(expectedStats);
     });
   });
 });
