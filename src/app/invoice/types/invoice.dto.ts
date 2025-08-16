@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsNotEmpty } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNotEmpty,
+  IsDateString,
+  Matches,
+} from 'class-validator';
 
 export class StartInvoiceWorkflowDto {
   @IsString()
@@ -6,11 +12,11 @@ export class StartInvoiceWorkflowDto {
   customerId: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString()
   dateFrom?: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString()
   dateTo?: string;
 
   @IsOptional()
@@ -25,14 +31,15 @@ export class CreateScheduledInvoiceWorkflowDto {
 
   @IsString()
   @IsNotEmpty()
+  @IsDateString()
   scheduledAt: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString()
   dateFrom?: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString()
   dateTo?: string;
 
   @IsOptional()
@@ -47,14 +54,20 @@ export class CreateRecurringInvoiceWorkflowDto {
 
   @IsString()
   @IsNotEmpty()
+  @Matches(
+    /^(\*|([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])|\*\/([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])) (\*|([0-9]|1[0-9]|2[0-3])|\*\/([0-9]|1[0-9]|2[0-3])) (\*|([1-9]|1[0-9]|2[0-9]|3[0-1])|\*\/([1-9]|1[0-9]|2[0-9]|3[0-1])) (\*|([1-9]|1[0-2])|\*\/([1-9]|1[0-2])) (\*|([0-6])|\*\/([0-6]))$/,
+    {
+      message: 'Invalid cron expression format',
+    },
+  )
   cronExpression: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString()
   dateFrom?: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString()
   dateTo?: string;
 
   @IsOptional()
@@ -73,6 +86,7 @@ export class CreateScheduledEmailWorkflowDto {
 
   @IsString()
   @IsNotEmpty()
+  @IsDateString()
   scheduledAt: string;
 
   @IsOptional()

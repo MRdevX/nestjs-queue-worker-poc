@@ -29,7 +29,6 @@ export class InvoiceService {
     private readonly configService: ConfigService,
   ) {}
 
-  // Main workflow methods
   async startInvoiceWorkflow(
     dto: StartInvoiceWorkflowDto,
   ): Promise<InvoiceWorkflowResponseDto> {
@@ -136,7 +135,6 @@ export class InvoiceService {
     };
   }
 
-  // Workflow coordination methods
   async handleTaskCompletion(taskId: string): Promise<void> {
     const task = await this.taskService.getTaskById(taskId);
     if (!task) {
@@ -186,7 +184,6 @@ export class InvoiceService {
     );
   }
 
-  // Private workflow step handlers
   private async handleFetchOrdersCompletion(taskId: string): Promise<void> {
     const task = await this.taskService.getTaskById(taskId);
     const { customerId, orders } = task.payload;
@@ -265,7 +262,6 @@ export class InvoiceService {
     );
   }
 
-  // Query methods
   async getCustomerInvoiceTasks(
     customerId: string,
   ): Promise<CustomerInvoiceTasksResponseDto> {
@@ -317,7 +313,6 @@ export class InvoiceService {
     };
   }
 
-  // Helper methods
   private countTasksByStatus(tasks: any[]) {
     const counts = {
       total: tasks.length,

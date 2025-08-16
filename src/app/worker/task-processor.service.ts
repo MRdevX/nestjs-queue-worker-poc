@@ -131,7 +131,6 @@ export class TaskProcessorService {
     dateFrom?: string,
     dateTo?: string,
   ) {
-    // Simulate external API call
     await UtilsService.sleep(1000);
 
     const mockOrders = [
@@ -225,7 +224,6 @@ export class TaskProcessorService {
   }
 
   private async getCustomerEmail(customerId: string): Promise<string> {
-    // Simulate customer email lookup
     await UtilsService.sleep(100);
     return `customer-${customerId}@example.com`;
   }

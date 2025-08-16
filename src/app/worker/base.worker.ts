@@ -43,7 +43,6 @@ export class BaseWorker {
   }
 
   protected async processTask(taskId: string): Promise<void> {
-    // Override in subclasses
     throw new Error('processTask must be implemented');
   }
 

@@ -456,9 +456,19 @@ export class DatabaseSeeder {
     this.logger.log('Clearing database...');
 
     try {
-      await this.taskLogRepository.clear();
-      await this.taskRepository.clear();
-      await this.workflowRepository.clear();
+      const queryRunner =
+        this.taskRepository.manager.connection.createQueryRunner();
+
+      await queryRunner.query('SET session_replication_role = replica;');
+
+      await queryRunner.query('TRUNCATE TABLE "task_log_entity" CASCADE;');
+      await queryRunner.query('TRUNCATE TABLE "task_entity" CASCADE;');
+      await queryRunner.query('TRUNCATE TABLE "workflow_entity" CASCADE;');
+
+      await queryRunner.query('SET session_replication_role = DEFAULT;');
+
+      await queryRunner.release();
+
       this.customers = [];
 
       this.logger.log('Database cleared successfully');
