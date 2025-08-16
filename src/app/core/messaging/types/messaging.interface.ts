@@ -11,19 +11,19 @@ export interface IMessagingService {
   publishTask(
     taskType: TaskType,
     taskId: string,
-    options?: MessagingOptions,
+    options?: IMessagingOptions,
   ): Promise<void>;
   emitEvent(
     pattern: string,
     payload: any,
-    options?: MessagingOptions,
+    options?: IMessagingOptions,
   ): Promise<void>;
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   isConnected(): boolean;
 }
 
-export interface MessagingOptions {
+export interface IMessagingOptions {
   delay?: number;
   metadata?: Record<string, any>;
 }

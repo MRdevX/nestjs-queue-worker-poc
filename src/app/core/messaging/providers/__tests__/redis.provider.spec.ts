@@ -34,8 +34,8 @@ describe('RedisProvider', () => {
     mockClient = createMockClient();
     config = createRedisConfig();
 
-    const { ClientProxyFactory } = require('@nestjs/microservices');
-    ClientProxyFactory.create.mockReturnValue(mockClient);
+    const { ClientProxyFactory } = await import('@nestjs/microservices');
+    (ClientProxyFactory.create as jest.Mock).mockReturnValue(mockClient);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

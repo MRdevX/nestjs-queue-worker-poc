@@ -1,8 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import {
-  IMessagingProvider,
-  IMessagingConfig,
-} from '@root/app/core/messaging/types/messaging.interface';
+import { IMessagingProvider } from '@root/app/core/messaging/types/messaging.interface';
 
 export class MessagingProviderMockFactory {
   static create(): jest.Mocked<IMessagingProvider> {

@@ -51,7 +51,7 @@ export class WorkflowService {
   async getWorkflowWithTasks(id: string): Promise<WorkflowEntity | null> {
     try {
       return await this.workflowRepository.findWithTasks(id);
-    } catch (error) {
+    } catch {
       return null;
     }
   }

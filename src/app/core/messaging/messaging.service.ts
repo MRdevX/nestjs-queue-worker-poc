@@ -12,7 +12,7 @@ import {
   IMessagingService,
   IMessagingProvider,
   IMessagingConfig,
-  MessagingOptions,
+  IMessagingOptions,
   IMessagingSetupService,
 } from './types/messaging.interface';
 import { getEventPattern } from './constants/event-patterns.constants';
@@ -49,7 +49,7 @@ export class MessagingService
       await this.setupServiceInstance.setup();
 
       this.logger.log(`${transport} infrastructure setup completed`);
-    } catch (error) {
+    } catch {
       this.logger.warn('Infrastructure setup failed, continuing without setup');
     }
   }
@@ -78,7 +78,7 @@ export class MessagingService
   async publishTask(
     taskType: TaskType,
     taskId: string,
-    options?: MessagingOptions,
+    options?: IMessagingOptions,
   ): Promise<void> {
     const pattern = getEventPattern(taskType);
     const message: ITaskMessage = {
@@ -96,7 +96,7 @@ export class MessagingService
   async emitEvent(
     pattern: string,
     payload: any,
-    options?: MessagingOptions,
+    options?: IMessagingOptions,
   ): Promise<void> {
     const message = {
       ...payload,

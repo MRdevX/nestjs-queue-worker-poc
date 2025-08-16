@@ -5,11 +5,12 @@ import { BaseSetupService } from './base-setup.service';
 @Injectable()
 export class NatsSetupService extends BaseSetupService {
   protected async setup(): Promise<void> {
+    let nc: any = null;
     try {
       this.logSetupStart();
 
       const s2sConfig = this.configService.get('s2s');
-      const nc = await connect({
+      nc = await connect({
         servers: s2sConfig.options.servers || s2sConfig.options.urls,
       });
 
@@ -37,21 +38,41 @@ export class NatsSetupService extends BaseSetupService {
           });
           this.logger.log(`Stream "${stream.name}" created`);
         } catch (error) {
-          if (error.code === 400) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          const errorCode = (error as any)?.code;
+          const errorApiErrorCode = (error as any)?.api_error?.err_code;
+
+          const isStreamExistsError =
+            errorCode === 400 ||
+            errorApiErrorCode === 10058 ||
+            errorMessage.includes('stream name already in use') ||
+            errorMessage.includes('stream already exists') ||
+            errorMessage.includes('name already in use') ||
+            errorMessage.includes('already exists');
+
+          if (isStreamExistsError) {
             this.logger.log(`Stream "${stream.name}" already exists`);
           } else {
             this.logger.warn(
               `Failed to create stream "${stream.name}":`,
-              error.message,
+              errorMessage,
             );
           }
         }
       }
 
-      await nc.close();
       this.logSetupSuccess();
     } catch (error) {
       this.logSetupError(error);
+    } finally {
+      if (nc) {
+        try {
+          await nc.close();
+        } catch (closeError) {
+          this.logger.warn('Failed to close NATS connection:', closeError);
+        }
+      }
     }
   }
 

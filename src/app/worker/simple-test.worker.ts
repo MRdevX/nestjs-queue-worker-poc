@@ -12,7 +12,9 @@ export class SimpleTestWorker {
 
   @EventPattern('simple.test')
   async handleTest(@Payload() data: any) {
-    this.logger.log(`🎉 SIMPLE TEST WORKER RECEIVED MESSAGE: ${JSON.stringify(data)}`);
+    this.logger.log(
+      `🎉 SIMPLE TEST WORKER RECEIVED MESSAGE: ${JSON.stringify(data)}`,
+    );
     this.logger.log('✅ Simple test worker is working!');
   }
 }
