@@ -1528,9 +1528,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/microservices@npm:^11.1.5":
-  version: 11.1.5
-  resolution: "@nestjs/microservices@npm:11.1.5"
+"@nestjs/microservices@npm:^11.1.6":
+  version: 11.1.6
+  resolution: "@nestjs/microservices@npm:11.1.6"
   dependencies:
     iterare: "npm:1.2.1"
     tslib: "npm:2.8.1"
@@ -1567,7 +1567,7 @@ __metadata:
       optional: true
     nats:
       optional: true
-  checksum: 10c0/f5e4a8cb1dce4ca7815ba52fdb52c54c49ef9f263b0b5c769ba37f3d60e3de50fdc0cf0ab6e35f3e6e9c9b02adf4dd9165d96bce52dcdbc6368e1000c6c9a0fc
+  checksum: 10c0/c7405467083ef491d207849b59ea339e090d98599f923ac2a22d1987775c254afdccc7cb182292af2d03110b00af27a70a8c14b28b3024b07aae9386bf5b9114
   languageName: node
   linkType: hard
 
@@ -1788,6 +1788,51 @@ __metadata:
   version: 0.2.9
   resolution: "@pkgr/core@npm:0.2.9"
   checksum: 10c0/ac8e4e8138b1a7a4ac6282873aef7389c352f1f8b577b4850778f5182e4a39a5241facbe48361fec817f56d02b51691b383010843fb08b34a8e8ea3614688fd5
+  languageName: node
+  linkType: hard
+
+"@redis/bloom@npm:5.8.1":
+  version: 5.8.1
+  resolution: "@redis/bloom@npm:5.8.1"
+  peerDependencies:
+    "@redis/client": ^5.8.1
+  checksum: 10c0/dabbf6e393180afc7b56b864e4f754e55c7ee1dc7260d5d3b244c40239a56a2f2f1cef5ca76c10824452a6d8775ab39ef3d913828eaa262610fbcd117e27386c
+  languageName: node
+  linkType: hard
+
+"@redis/client@npm:5.8.1":
+  version: 5.8.1
+  resolution: "@redis/client@npm:5.8.1"
+  dependencies:
+    cluster-key-slot: "npm:1.1.2"
+  checksum: 10c0/6ca1a3c44300dac85062b203c231a758828d88f97e8359eaa8ace9756aceefa514909bd0e66d2cb85af32689389bb5fdfd0cd4fa2a6e4b86656d3fb28c69ba94
+  languageName: node
+  linkType: hard
+
+"@redis/json@npm:5.8.1":
+  version: 5.8.1
+  resolution: "@redis/json@npm:5.8.1"
+  peerDependencies:
+    "@redis/client": ^5.8.1
+  checksum: 10c0/0b333edcb6cb78e7849bf23a953e875a779ce1b90c62e35510fa0888abed1acc41cae6e408525412d26c3e29f7341b194d39df30023ded5af72fa9110e914723
+  languageName: node
+  linkType: hard
+
+"@redis/search@npm:5.8.1":
+  version: 5.8.1
+  resolution: "@redis/search@npm:5.8.1"
+  peerDependencies:
+    "@redis/client": ^5.8.1
+  checksum: 10c0/65aa78ae70e8df18e37c0f0ad710ce7f3646759479fa12972687fa0e4789f06e039d093f27c45ad9ac2e3f1215d1794a7a31c4a7ba0f95846e1254410b81f1be
+  languageName: node
+  linkType: hard
+
+"@redis/time-series@npm:5.8.1":
+  version: 5.8.1
+  resolution: "@redis/time-series@npm:5.8.1"
+  peerDependencies:
+    "@redis/client": ^5.8.1
+  checksum: 10c0/bf69f79af08b9bd179ce93050d44c7a885dabb6c7cc4b5493fa6a625e85e34ec6a14543c2fdfb7aa67f81107f2331edbfc6dd3cba3ab0c767c5afafc77c2c94d
   languageName: node
   linkType: hard
 
@@ -3782,6 +3827,13 @@ __metadata:
   version: 1.0.4
   resolution: "clone@npm:1.0.4"
   checksum: 10c0/2176952b3649293473999a95d7bebfc9dc96410f6cbd3d2595cf12fd401f63a4bf41a7adbfd3ab2ff09ed60cb9870c58c6acdd18b87767366fabfc163700f13b
+  languageName: node
+  linkType: hard
+
+"cluster-key-slot@npm:1.1.2":
+  version: 1.1.2
+  resolution: "cluster-key-slot@npm:1.1.2"
+  checksum: 10c0/d7d39ca28a8786e9e801eeb8c770e3c3236a566625d7299a47bb71113fb2298ce1039596acb82590e598c52dbc9b1f088c8f587803e697cb58e1867a95ff94d3
   languageName: node
   linkType: hard
 
@@ -7321,6 +7373,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nats@npm:^2.29.3":
+  version: 2.29.3
+  resolution: "nats@npm:2.29.3"
+  dependencies:
+    nkeys.js: "npm:1.1.0"
+  checksum: 10c0/9a4c09c4b562e415f28926cc7d3b609ee4a727570c398e90d5d71f1a4c08f84ebf8c6d881eb1d202d39fa071c4779bcd8764b982767135b09826f28386cc55fb
+  languageName: node
+  linkType: hard
+
 "natural-compare@npm:^1.4.0":
   version: 1.4.0
   resolution: "natural-compare@npm:1.4.0"
@@ -7339,6 +7400,15 @@ __metadata:
   version: 2.6.2
   resolution: "neo-async@npm:2.6.2"
   checksum: 10c0/c2f5a604a54a8ec5438a342e1f356dff4bc33ccccdb6dc668d94fe8e5eccfc9d2c2eea6064b0967a767ba63b33763f51ccf2cd2441b461a7322656c1f06b3f5d
+  languageName: node
+  linkType: hard
+
+"nkeys.js@npm:1.1.0":
+  version: 1.1.0
+  resolution: "nkeys.js@npm:1.1.0"
+  dependencies:
+    tweetnacl: "npm:1.0.3"
+  checksum: 10c0/44ff8d61e46d2b345351ed7844d66036a815aeca23927def6ca258e27a18a1678fe5ab161c5cf0b6e3a3993a945d422b71036986d09669b214540c8491478bef
   languageName: node
   linkType: hard
 
@@ -8060,7 +8130,7 @@ __metadata:
     "@nestjs/config": "npm:^4.0.2"
     "@nestjs/core": "npm:^11.1.5"
     "@nestjs/event-emitter": "npm:^3.0.1"
-    "@nestjs/microservices": "npm:^11.1.5"
+    "@nestjs/microservices": "npm:^11.1.6"
     "@nestjs/platform-express": "npm:^11.1.5"
     "@nestjs/schedule": "npm:^6.0.0"
     "@nestjs/schematics": "npm:^11.0.5"
@@ -8088,8 +8158,10 @@ __metadata:
     globals: "npm:^16.3.0"
     helmet: "npm:^8.1.0"
     jest: "npm:^29.7.0"
+    nats: "npm:^2.29.3"
     pg: "npm:^8.16.3"
     prettier: "npm:^3.6.2"
+    redis: "npm:^5.8.1"
     reflect-metadata: "npm:^0.2.2"
     rxjs: "npm:^7.8.2"
     source-map-support: "npm:^0.5.21"
@@ -8162,6 +8234,19 @@ __metadata:
   version: 4.1.2
   resolution: "readdirp@npm:4.1.2"
   checksum: 10c0/60a14f7619dec48c9c850255cd523e2717001b0e179dc7037cfa0895da7b9e9ab07532d324bfb118d73a710887d1e35f79c495fa91582784493e085d18c72c62
+  languageName: node
+  linkType: hard
+
+"redis@npm:^5.8.1":
+  version: 5.8.1
+  resolution: "redis@npm:5.8.1"
+  dependencies:
+    "@redis/bloom": "npm:5.8.1"
+    "@redis/client": "npm:5.8.1"
+    "@redis/json": "npm:5.8.1"
+    "@redis/search": "npm:5.8.1"
+    "@redis/time-series": "npm:5.8.1"
+  checksum: 10c0/e18d083bd6c1090ced7e4af72ba9c459d5e898c9ff02e9d0cf1f71af9672d5734791736fc618f4821b82b5314a418d22f0c677e7703bc3d4bb6c0d639dfb9797
   languageName: node
   linkType: hard
 
@@ -9408,6 +9493,13 @@ __metadata:
   version: 2.8.1
   resolution: "tslib@npm:2.8.1"
   checksum: 10c0/9c4759110a19c53f992d9aae23aac5ced636e99887b51b9e61def52611732872ff7668757d4e4c61f19691e36f4da981cd9485e869b4a7408d689f6bf1f14e62
+  languageName: node
+  linkType: hard
+
+"tweetnacl@npm:1.0.3":
+  version: 1.0.3
+  resolution: "tweetnacl@npm:1.0.3"
+  checksum: 10c0/069d9df51e8ad4a89fbe6f9806c68e06c65be3c7d42f0701cc43dba5f0d6064686b238bbff206c5addef8854e3ce00c643bff59432ea2f2c639feab0ee1a93f9
   languageName: node
   linkType: hard
 

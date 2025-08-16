@@ -1,48 +1,86 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+  Inject,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ClientProxy, ClientProxyFactory } from '@nestjs/microservices';
-import { RmqOptions } from '@nestjs/microservices/interfaces';
 import { TaskType } from '../../task/types/task-type.enum';
 import { ITaskMessage } from './types/task-message.interface';
+import {
+  IMessagingService,
+  IMessagingProvider,
+  IMessagingConfig,
+  IMessagingOptions,
+  IMessagingSetupService,
+} from './types/messaging.interface';
+import { getEventPattern } from './constants/event-patterns.constants';
 
 @Injectable()
-export class MessagingService implements OnModuleDestroy {
+export class MessagingService
+  implements IMessagingService, OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(MessagingService.name);
-  private readonly client: ClientProxy;
+  private provider: IMessagingProvider;
 
-  constructor(private readonly configService: ConfigService) {
-    this.client = this.createClient();
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject('ACTIVE_PROVIDER')
+    private readonly providerInstance: IMessagingProvider,
+    @Inject('ACTIVE_SETUP_SERVICE')
+    private readonly setupServiceInstance: IMessagingSetupService,
+  ) {}
+
+  async onModuleInit() {
+    await this.setupInfrastructure();
+    await this.initializeProvider();
   }
 
-  private createClient(): ClientProxy {
+  async onModuleDestroy() {
+    await this.disconnect();
+  }
+
+  private async setupInfrastructure(): Promise<void> {
+    try {
+      const transport = this.configService.get('s2s.transport');
+      this.logger.log(`Setting up ${transport} infrastructure...`);
+
+      await this.setupServiceInstance.setup();
+
+      this.logger.log(`${transport} infrastructure setup completed`);
+    } catch {
+      this.logger.warn('Infrastructure setup failed, continuing without setup');
+    }
+  }
+
+  private async initializeProvider(): Promise<void> {
+    this.provider = this.providerInstance;
+    await this.connect();
+  }
+
+  private getMessagingConfig(): IMessagingConfig {
     const s2sConfig = this.configService.get('s2s');
-    return ClientProxyFactory.create({
+    return {
       transport: s2sConfig.transport,
-      options: {
-        urls: s2sConfig.options.urls,
-      },
-    } as RmqOptions);
+      options: s2sConfig.options,
+    };
   }
 
-  private getEventPattern(taskType: TaskType): string {
-    const patterns = {
-      [TaskType.HTTP_REQUEST]: 'http.request',
-      [TaskType.DATA_PROCESSING]: 'data.processing',
-      [TaskType.COMPENSATION]: 'compensation',
-      [TaskType.FETCH_ORDERS]: 'fetch.orders',
-      [TaskType.CREATE_INVOICE]: 'create.invoice',
-      [TaskType.GENERATE_PDF]: 'generate.pdf',
-      [TaskType.SEND_EMAIL]: 'send.email',
-    };
-    return patterns[taskType] || 'task.created';
+  async connect(): Promise<void> {
+    await this.provider.connect();
+  }
+
+  async disconnect(): Promise<void> {
+    await this.provider.disconnect();
   }
 
   async publishTask(
     taskType: TaskType,
     taskId: string,
-    options?: { delay?: number; metadata?: Record<string, any> },
+    options?: IMessagingOptions,
   ): Promise<void> {
-    const pattern = this.getEventPattern(taskType);
+    const pattern = getEventPattern(taskType);
     const message: ITaskMessage = {
       taskId,
       taskType,
@@ -58,26 +96,21 @@ export class MessagingService implements OnModuleDestroy {
   async emitEvent(
     pattern: string,
     payload: any,
-    options?: { delay?: number; metadata?: Record<string, any> },
+    options?: IMessagingOptions,
   ): Promise<void> {
     const message = {
       ...payload,
-      delay: options?.delay,
-      metadata: options?.metadata,
+      delay: payload.delay !== undefined ? payload.delay : options?.delay,
+      metadata:
+        payload.metadata !== undefined ? payload.metadata : options?.metadata,
     };
 
     this.logger.log(`Emitting event to: ${pattern}`);
-
-    this.client.emit(pattern, message);
+    await this.provider.emit(pattern, message);
     this.logger.log(`Event emitted to: ${pattern}`);
   }
 
-  async onModuleDestroy() {
-    try {
-      await this.client.close();
-      this.logger.log('Disconnected from RabbitMQ');
-    } catch (error) {
-      this.logger.error('Failed to disconnect from RabbitMQ:', error.stack);
-    }
+  isConnected(): boolean {
+    return this.provider.isConnected();
   }
 }

@@ -1,58 +1,63 @@
 import * as amqp from 'amqplib';
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
+import { BaseSetupService } from './base-setup.service';
+import {
+  QUEUE_NAMES,
+  EXCHANGE_NAMES,
+  ROUTING_KEYS,
+} from './constants/queue-names.constants';
 
 @Injectable()
-export class RabbitMQSetupService implements OnModuleInit {
-  private readonly logger = new Logger(RabbitMQSetupService.name);
-
-  constructor(private readonly configService: ConfigService) {}
-
-  async onModuleInit() {
-    await this.setupRabbitMQ();
-  }
-
-  private async setupRabbitMQ() {
+export class RabbitMQSetupService extends BaseSetupService {
+  protected async setup(): Promise<void> {
     try {
-      this.logger.log('Setting up RabbitMQ exchanges and queues...');
+      this.logSetupStart();
 
       const s2sConfig = this.configService.get('s2s');
       const connection = await amqp.connect(s2sConfig.options.urls[0]);
       const channel = await connection.createChannel();
 
-      await channel.assertExchange('dlx', 'direct', { durable: true });
-      await channel.assertQueue('failed_tasks_queue', { durable: true });
-      await channel.bindQueue('failed_tasks_queue', 'dlx', 'failed');
-      this.logger.log('Dead letter exchange and queue configured');
+      await this.setupDeadLetterExchange(channel);
 
-      const taskQueues = [
-        'http_request_queue',
-        'data_processing_queue',
-        'compensation_queue',
-        'fetch_orders_queue',
-        'create_invoice_queue',
-        'generate_pdf_queue',
-        'send_email_queue',
-      ];
-
-      for (const queueName of taskQueues) {
-        await channel.assertQueue(queueName, {
-          durable: true,
-          deadLetterExchange: 'dlx',
-          deadLetterRoutingKey: 'failed',
-        });
-        this.logger.log(`Queue "${queueName}" declared`);
-      }
+      await this.setupTaskQueues(channel);
 
       await channel.close();
       await connection.close();
-      this.logger.log('RabbitMQ setup completed successfully');
+      this.logSetupSuccess();
     } catch (error) {
-      this.logger.error('Failed to setup RabbitMQ:', error.stack);
-
-      this.logger.warn(
-        'Continuing without RabbitMQ setup - queues may not be properly configured',
-      );
+      this.logSetupError(error);
     }
+  }
+
+  private async setupDeadLetterExchange(channel: amqp.Channel): Promise<void> {
+    await channel.assertExchange(EXCHANGE_NAMES.DEAD_LETTER, 'direct', {
+      durable: true,
+    });
+    await channel.assertQueue(QUEUE_NAMES.FAILED_TASKS, { durable: true });
+    await channel.bindQueue(
+      QUEUE_NAMES.FAILED_TASKS,
+      EXCHANGE_NAMES.DEAD_LETTER,
+      ROUTING_KEYS.FAILED,
+    );
+    this.logger.log('Dead letter exchange and queue configured');
+  }
+
+  private async setupTaskQueues(channel: amqp.Channel): Promise<void> {
+    const taskQueues = Object.values(QUEUE_NAMES).filter(
+      (name) => name !== QUEUE_NAMES.FAILED_TASKS,
+    );
+
+    for (const queueName of taskQueues) {
+      await channel.assertQueue(queueName, {
+        durable: true,
+        deadLetterExchange: EXCHANGE_NAMES.DEAD_LETTER,
+        deadLetterRoutingKey: ROUTING_KEYS.FAILED,
+      });
+      this.logger.log(`Queue "${queueName}" declared`);
+    }
+  }
+
+  protected getServiceName(): string {
+    return 'RabbitMQ exchanges and queues';
   }
 }
