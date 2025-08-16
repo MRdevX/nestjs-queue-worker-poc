@@ -1,6 +1,6 @@
 # Queue Worker PoC - NestJS-based Distributed Task Processing System
 
-A proof-of-concept (PoC) demonstrating a queue/worker system built with NestJS, PostgreSQL, and RabbitMQ. This PoC showcases task processing patterns, workflow orchestration, retry mechanisms, and microservice communication concepts for learning and evaluation purposes.
+A proof-of-concept (PoC) demonstrating a queue/worker system built with NestJS, PostgreSQL, and multiple message brokers (RabbitMQ, NATS, Redis). This PoC showcases task processing patterns, workflow orchestration, retry mechanisms, multi-provider messaging, and microservice communication concepts for learning and evaluation purposes.
 
 ## 🎯 Overview
 
@@ -10,10 +10,12 @@ This Queue Worker PoC demonstrates a distributed task processing system with:
 - **Worker Nodes**: Execute various task types with fault tolerance and optimized patterns
 - **Coordinator**: Orchestrates workflows and manages task dependencies
 - **Database**: PostgreSQL for persistent task state and workflow definitions
-- **Message Broker**: RabbitMQ for reliable asynchronous task distribution
+- **Multi-Provider Messaging**: Support for RabbitMQ, NATS, and Redis with factory pattern
 - **Pattern Optimization**: Uses EventPattern for all tasks with fire-and-forget semantics
+- **Invoice Workflow**: Complete end-to-end invoice processing workflow with scheduling
+- **Comprehensive Testing**: Unit, integration, and end-to-end tests with extensive coverage
 
-**Note**: This is a PoC demonstrating concepts. RabbitMQ microservice transport requires separate microservice applications. A single application cannot act as both server and client simultaneously. For production use, workers should be implemented as separate microservices.
+**Note**: This is a PoC demonstrating concepts. Message broker microservice transport requires separate microservice applications. A single application cannot act as both server and client simultaneously. For production use, workers should be implemented as separate microservices.
 
 For detailed architecture information, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -71,6 +73,15 @@ docker compose up --build -d
 - `POST /api/scheduler/tasks/recurring` - Create recurring task
 - `GET /api/scheduler/tasks/scheduled` - List scheduled tasks
 
+### Invoice Workflow
+
+- `POST /api/invoice/workflow/start` - Start invoice workflow
+- `POST /api/invoice/workflow/scheduled` - Create scheduled invoice workflow
+- `POST /api/invoice/workflow/recurring` - Create recurring invoice workflow
+- `POST /api/invoice/email/scheduled` - Create scheduled email workflow
+- `GET /api/invoice/tasks/:customerId` - Get customer invoice tasks
+- `GET /api/invoice/status/:customerId` - Get invoice workflow status
+
 ### Health
 
 - `GET /api/health` - Application health check
@@ -91,8 +102,43 @@ docker compose up --build -d
 | `RABBITMQ_HOST`     | RabbitMQ host     | `localhost`              |
 | `RABBITMQ_USER`     | RabbitMQ username | `guest`                  |
 | `RABBITMQ_PASSWORD` | RabbitMQ password | `guest`                  |
+| `NATS_SERVERS`      | NATS servers      | `nats://localhost:4222`  |
+| `REDIS_HOST`        | Redis host        | `localhost`              |
+| `REDIS_PORT`        | Redis port        | `6379`                   |
+| `REDIS_PASSWORD`    | Redis password    | `undefined`              |
+| `REDIS_DB`          | Redis database    | `0`                      |
 | `PDF_PROCESSOR_URL` | PDF service URL   | `mock-pdf-processor.com` |
 | `EMAIL_SERVICE_URL` | Email service URL | `mock-email-service.com` |
+
+### Messaging Configuration
+
+The system supports multiple message brokers through a factory pattern:
+
+```typescript
+// S2S Configuration
+s2s: {
+  transport: 'rmq' | 'nats' | 'redis', // Default: 'rmq'
+  options: {
+    // RabbitMQ options
+    urls: ['amqp://localhost:5672'],
+    queue: 'task-queue',
+    queueOptions: {
+      durable: true,
+      deadLetterExchange: 'dlx',
+      deadLetterRoutingKey: 'failed'
+    },
+
+    // NATS options
+    servers: ['nats://localhost:4222'],
+
+    // Redis options
+    host: 'localhost',
+    port: 6379,
+    password: undefined,
+    db: 0
+  }
+}
+```
 
 ### Task Types
 
@@ -146,6 +192,52 @@ curl -X POST http://localhost:3030/api/task \
   }'
 ```
 
+### Invoice Workflow Examples
+
+#### Start Invoice Workflow
+
+```bash
+curl -X POST http://localhost:3030/api/invoice/workflow/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "customer-123",
+    "dateFrom": "2024-01-01",
+    "dateTo": "2024-01-31"
+  }'
+```
+
+#### Create Scheduled Invoice Workflow
+
+```bash
+curl -X POST http://localhost:3030/api/invoice/workflow/scheduled \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "customer-123",
+    "scheduledAt": "2024-02-01T10:00:00Z",
+    "dateFrom": "2024-01-01",
+    "dateTo": "2024-01-31"
+  }'
+```
+
+#### Create Recurring Invoice Workflow
+
+```bash
+curl -X POST http://localhost:3030/api/invoice/workflow/recurring \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "customer-123",
+    "cronExpression": "0 0 1 * *",
+    "dateFrom": "2024-01-01",
+    "dateTo": "2024-01-31"
+  }'
+```
+
+#### Get Invoice Workflow Status
+
+```bash
+curl -X GET http://localhost:3030/api/invoice/status/customer-123
+```
+
 ### Create Workflow
 
 ```json
@@ -173,6 +265,17 @@ curl -X POST http://localhost:3030/api/task \
 
 ## 🧪 Testing
 
+The project includes comprehensive testing with extensive coverage:
+
+### Test Structure
+
+- **Unit Tests**: Individual component testing with mocked dependencies
+- **Integration Tests**: Module-level testing with real database connections
+- **End-to-End Tests**: Full workflow testing with real HTTP requests
+- **Mock Factories**: Reusable mock objects for consistent testing
+
+### Running Tests
+
 ```bash
 # Unit tests
 yarn test
@@ -182,7 +285,50 @@ yarn test:e2e
 
 # Test coverage
 yarn test:cov
+
+# Specific test files
+yarn test src/app/core/messaging
+yarn test:e2e test/invoice-workflow.e2e-spec.ts
 ```
+
+### Test Coverage
+
+- **Messaging Module**: Complete coverage of multi-provider messaging system
+- **Invoice Workflow**: End-to-end testing of complete invoice processing
+- **Task Management**: Comprehensive task lifecycle testing
+- **Error Handling**: Failure scenarios and compensation logic
+- **Concurrency**: Multiple concurrent workflow testing
+
+### E2E Test Features
+
+- **Invoice Workflow Chain**: Complete workflow from order fetch to email delivery
+- **Scheduled Workflows**: Testing of scheduled and recurring task creation
+- **Error Scenarios**: Task failure handling and compensation logic
+- **Concurrent Operations**: Multiple simultaneous workflow processing
+- **Status Monitoring**: Real-time workflow status tracking
+
+## 🏗️ Architecture
+
+### Messaging System
+
+The messaging system supports multiple providers through a factory pattern:
+
+- **BaseProvider**: Abstract base class for all messaging providers
+- **RabbitMQProvider**: RabbitMQ implementation with queue management
+- **NatsProvider**: NATS implementation for high-performance messaging
+- **RedisProvider**: Redis implementation for simple pub/sub
+- **MessagingFactoryService**: Factory service for provider creation
+- **MessagingService**: High-level service for task publishing and event emission
+
+### Invoice Workflow
+
+The invoice workflow system provides:
+
+- **Workflow Orchestration**: Complete invoice processing pipeline
+- **Scheduling**: One-time and recurring workflow scheduling
+- **Status Tracking**: Real-time workflow and task status monitoring
+- **Error Handling**: Automatic retry and compensation mechanisms
+- **Customer Management**: Per-customer workflow isolation
 
 ## 🐳 Deployment
 
@@ -192,13 +338,47 @@ The system is containerized with Docker and includes:
 - **Health checks** for container monitoring
 - **Environment separation** for dev/prod configurations
 - **Kubernetes-ready** deployment manifests
+- **Multi-provider support** for different messaging infrastructures
 
 ## 📖 Documentation
 
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Detailed system architecture and design
 - **[CHANGELOG.md](./CHANGELOG.md)** - Version history and changes
+- **[INVOICE_TESTING_DOCUMENTATION.md](./INVOICE_TESTING_DOCUMENTATION.md)** - Comprehensive invoice workflow testing guide
+- **[INVOICE_TESTING_QUICK_START.md](./INVOICE_TESTING_QUICK_START.md)** - Quick start guide for invoice workflow testing
 - **API Documentation** - See examples above and test files for usage
+- **Test Documentation** - Extensive test coverage with mock factories and helpers
+
+## 🔧 Development
+
+### Project Structure
+
+```
+src/
+├── app/
+│   ├── core/
+│   │   ├── messaging/          # Multi-provider messaging system
+│   │   │   ├── providers/      # Message broker implementations
+│   │   │   ├── services/       # Messaging services
+│   │   │   └── types/          # Messaging interfaces
+│   │   └── ...
+│   ├── invoice/               # Invoice workflow system
+│   └── ...
+test/
+├── mocks/                     # Mock factories and helpers
+├── helpers/                   # Test helper utilities
+└── *.e2e-spec.ts             # End-to-end test suites
+```
+
+### Key Features
+
+- **Multi-Provider Messaging**: Support for RabbitMQ, NATS, and Redis
+- **Factory Pattern**: Clean provider abstraction and instantiation
+- **Comprehensive Testing**: Unit, integration, and e2e test coverage
+- **Invoice Workflow**: Complete business process automation
+- **Scheduling**: Flexible task scheduling and recurring workflows
+- **Error Handling**: Robust failure handling and compensation logic
 
 ---
 
-**This PoC demonstrates queue/worker concepts and patterns for learning and evaluation purposes. It is not intended for production use without significant modifications and additional features.**
+**This PoC demonstrates advanced queue/worker concepts, multi-provider messaging, and comprehensive testing patterns for learning and evaluation purposes. It is not intended for production use without significant modifications and additional features.**
