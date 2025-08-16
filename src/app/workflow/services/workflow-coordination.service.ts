@@ -19,7 +19,7 @@ export class WorkflowCoordinationService {
   ) {}
 
   async handleTaskCompletion(taskId: string): Promise<void> {
-    const task = await this.taskService.getTaskByIdWithWorkflow(taskId);
+    const task = await this.taskService.getTaskById(taskId, ['workflow']);
     if (!task?.workflow) {
       this.logger.debug(
         `Task ${taskId} has no workflow, skipping coordination`,
@@ -48,7 +48,7 @@ export class WorkflowCoordinationService {
   }
 
   async handleTaskFailure(taskId: string, error: Error): Promise<void> {
-    const task = await this.taskService.getTaskByIdWithWorkflow(taskId);
+    const task = await this.taskService.getTaskById(taskId, ['workflow']);
     if (!task?.workflow) {
       this.logger.debug(
         `Task ${taskId} has no workflow, skipping failure handling`,

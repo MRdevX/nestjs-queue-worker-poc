@@ -119,7 +119,7 @@ describe('BaseWorker', () => {
     it('should skip task when not found', async () => {
       const taskId = 'non-existent-task';
 
-      taskService.getTaskById.mockResolvedValue(null);
+      taskService.getTaskById.mockRejectedValue(new Error('Task not found'));
 
       await worker.handleTask({ taskId, taskType: TaskType.HTTP_REQUEST });
 

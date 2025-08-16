@@ -23,6 +23,7 @@ describe('QueueManagerService', () => {
             getTaskById: jest.fn(),
             getPendingTasks: jest.fn(),
             findMany: jest.fn(),
+            findTasks: jest.fn(),
           },
         },
         {
@@ -227,7 +228,7 @@ describe('QueueManagerService', () => {
       ];
 
       taskService.getPendingTasks.mockResolvedValue(pendingTasks as any);
-      taskService.findMany
+      taskService.findTasks
         .mockResolvedValueOnce(processingTasks as any)
         .mockResolvedValueOnce(completedTasks as any)
         .mockResolvedValueOnce(failedTasks as any);
@@ -259,7 +260,7 @@ describe('QueueManagerService', () => {
       );
 
       taskService.getPendingTasks.mockResolvedValue(pendingTasks as any);
-      taskService.findMany
+      taskService.findTasks
         .mockResolvedValueOnce(processingTasks as any)
         .mockResolvedValueOnce(completedTasks as any)
         .mockResolvedValueOnce(failedTasks as any);
@@ -291,7 +292,7 @@ describe('QueueManagerService', () => {
       ];
 
       taskService.getPendingTasks.mockResolvedValue(pendingTasks as any);
-      taskService.findMany
+      taskService.findTasks
         .mockResolvedValueOnce(processingTasks as any)
         .mockResolvedValueOnce(completedTasks as any)
         .mockResolvedValueOnce(failedTasks as any);
@@ -310,7 +311,7 @@ describe('QueueManagerService', () => {
 
     it('should handle empty queue status', async () => {
       taskService.getPendingTasks.mockResolvedValue([]);
-      taskService.findMany
+      taskService.findTasks
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
@@ -350,7 +351,7 @@ describe('QueueManagerService', () => {
       const error = new Error('Database error');
 
       taskService.getPendingTasks.mockResolvedValue(pendingTasks as any);
-      taskService.findMany
+      taskService.findTasks
         .mockResolvedValueOnce([])
         .mockRejectedValueOnce(error)
         .mockResolvedValueOnce([]);
@@ -382,7 +383,7 @@ describe('QueueManagerService', () => {
       );
 
       taskService.getPendingTasks.mockResolvedValue(pendingTasks as any);
-      taskService.findMany
+      taskService.findTasks
         .mockResolvedValueOnce(processingTasks as any)
         .mockResolvedValueOnce(completedTasks as any)
         .mockResolvedValueOnce(failedTasks as any);

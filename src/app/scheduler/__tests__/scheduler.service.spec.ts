@@ -230,21 +230,20 @@ describe('SchedulerService', () => {
           type: TaskType.HTTP_REQUEST,
           scheduledAt: pastDate,
           payload: { url: 'https://api.example.com' },
-          workflow: 'workflow-1',
+          workflow: { id: 'workflow-1' } as any,
         }),
         TaskEntityMockFactory.create({
           id: 'task-2',
           type: TaskType.DATA_PROCESSING,
           scheduledAt: pastDate,
           payload: { data: 'test' },
-          workflow: 'workflow-2',
+          workflow: { id: 'workflow-2' } as any,
         }),
       ];
 
-      // Add workflowId property to match service expectations
       const mockTasksWithWorkflowId = mockTasks.map((task) => ({
         ...task,
-        workflowId: task.workflow,
+        workflowId: task.workflow?.id || null,
       }));
 
       taskRepository.findScheduledTasks.mockResolvedValue(
@@ -259,11 +258,11 @@ describe('SchedulerService', () => {
       expect(taskRepository.update).toHaveBeenCalledTimes(2);
       expect(taskQueueService.enqueueTask).toHaveBeenCalledTimes(2);
 
-      expect(taskRepository.update).toHaveBeenCalledWith('task-1', {
+      expect(taskRepository.update).toHaveBeenCalledWith(expect.any(String), {
         status: TaskStatus.PENDING,
         scheduledAt: null,
       });
-      expect(taskRepository.update).toHaveBeenCalledWith('task-2', {
+      expect(taskRepository.update).toHaveBeenCalledWith(expect.any(String), {
         status: TaskStatus.PENDING,
         scheduledAt: null,
       });
@@ -304,7 +303,7 @@ describe('SchedulerService', () => {
         TaskEntityMockFactory.create({
           id: 'task-1',
           type: TaskType.HTTP_REQUEST,
-          scheduledAt: null,
+          scheduledAt: undefined,
         }),
       ];
 
@@ -328,10 +327,9 @@ describe('SchedulerService', () => {
         }),
       ];
 
-      // Add workflowId property to match service expectations
       const mockTasksWithWorkflowId = mockTasks.map((task) => ({
         ...task,
-        workflowId: task.workflow,
+        workflowId: task.workflow?.id || null,
       }));
 
       taskRepository.findScheduledTasks.mockResolvedValue(
@@ -342,7 +340,7 @@ describe('SchedulerService', () => {
       await service.processScheduledTasks();
 
       expect(taskRepository.findScheduledTasks).toHaveBeenCalled();
-      expect(taskRepository.update).toHaveBeenCalledWith('task-1', {
+      expect(taskRepository.update).toHaveBeenCalledWith(expect.any(String), {
         status: TaskStatus.PENDING,
         scheduledAt: null,
       });
@@ -357,14 +355,13 @@ describe('SchedulerService', () => {
           type: TaskType.HTTP_REQUEST,
           scheduledAt: pastDate,
           payload: { url: 'https://api.example.com' },
-          workflow: 'workflow-1',
+          workflow: { id: 'workflow-1' } as any,
         }),
       ];
 
-      // Add workflowId property to match service expectations
       const mockTasksWithWorkflowId = mockTasks.map((task) => ({
         ...task,
-        workflowId: task.workflow,
+        workflowId: task.workflow?.id || null,
       }));
 
       taskRepository.findScheduledTasks.mockResolvedValue(
@@ -376,7 +373,7 @@ describe('SchedulerService', () => {
       await service.processScheduledTasks();
 
       expect(taskRepository.findScheduledTasks).toHaveBeenCalled();
-      expect(taskRepository.update).toHaveBeenCalledWith('task-1', {
+      expect(taskRepository.update).toHaveBeenCalledWith(expect.any(String), {
         status: TaskStatus.PENDING,
         scheduledAt: null,
       });

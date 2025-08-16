@@ -26,6 +26,6 @@ export class WorkflowResponseService {
   }
 
   createWorkflowStatusResponse(status: any) {
-    return status; // Status responses are already well-formed
+    return status;
   }
 }

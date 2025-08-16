@@ -8,7 +8,7 @@ import {
 @Injectable()
 export class DefaultTransitionStrategy implements IWorkflowTransitionStrategy {
   canHandle(taskType: TaskType): boolean {
-    return true; // Default strategy handles all task types
+    return true;
   }
 
   getNextTransition(

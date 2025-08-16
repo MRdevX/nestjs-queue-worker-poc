@@ -247,13 +247,7 @@ export class DatabaseSeeder {
       ].includes(task.type),
     );
 
-    for (let i = 0; i < Math.min(parentTasks.length, childTasks.length); i++) {
-      const parentTask = parentTasks[i];
-      const childTask = childTasks[i];
-
-      childTask.parentTask = parentTask;
-      await this.taskRepository.save(childTask);
-    }
+    console.log('Parent-child task relationships are no longer supported');
   }
 
   private generatePayload(

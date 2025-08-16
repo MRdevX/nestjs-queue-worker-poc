@@ -238,7 +238,7 @@ export class InvoiceService {
 
     this.logger.log(INVOICE_LOG_MESSAGES.FETCHING_TASKS(customerId));
 
-    const allTasks = await this.taskService.findAll();
+    const allTasks = await this.taskService.findTasks();
     const tasks = allTasks.filter(
       (task) =>
         task.payload &&
@@ -278,7 +278,7 @@ export class InvoiceService {
 
     this.logger.log(INVOICE_LOG_MESSAGES.FETCHING_STATUS(customerId));
 
-    const allTasks = await this.taskService.findAll();
+    const allTasks = await this.taskService.findTasks();
     const tasks = allTasks.filter(
       (task) =>
         task.payload &&

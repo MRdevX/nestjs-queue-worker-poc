@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TaskService } from '../task/task.service';
+import { TaskStatus } from '../task/types/task-status.enum';
 import { TaskType } from '../task/types/task-type.enum';
 import { TaskQueueService } from './task-queue.service';
 import { IQueueStatus } from './types/queue.types';
@@ -29,9 +30,9 @@ export class QueueManagerService {
     try {
       const [pending, processing, completed, failed] = await Promise.all([
         this.taskService.getPendingTasks(),
-        this.taskService.findMany({ status: 'processing' }),
-        this.taskService.findMany({ status: 'completed' }),
-        this.taskService.findMany({ status: 'failed' }),
+        this.taskService.findTasks({ status: TaskStatus.PROCESSING }),
+        this.taskService.findTasks({ status: TaskStatus.COMPLETED }),
+        this.taskService.findTasks({ status: TaskStatus.FAILED }),
       ]);
 
       return {
