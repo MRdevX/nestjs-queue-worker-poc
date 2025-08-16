@@ -474,7 +474,18 @@ export class DatabaseSeeder {
       this.logger.log('Database cleared successfully');
     } catch (error) {
       this.logger.error('Database clearing failed:', error);
-      throw error;
+
+      try {
+        this.logger.log('Trying DELETE fallback...');
+        await this.taskLogRepository.delete({});
+        await this.taskRepository.delete({});
+        await this.workflowRepository.delete({});
+        this.customers = [];
+        this.logger.log('Database cleared using DELETE fallback');
+      } catch (deleteError) {
+        this.logger.error('DELETE fallback also failed:', deleteError);
+        throw error;
+      }
     }
   }
 }
