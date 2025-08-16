@@ -4,94 +4,76 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { TaskRepository } from './task.repository';
-import { TaskLogRepository } from './task-log.repository';
 import { TaskType } from './types/task-type.enum';
 import { TaskEntity } from './task.entity';
 import { TaskStatus } from './types/task-status.enum';
-import { LogLevel } from './types/log-level.enum';
+import { TaskFiltersDto } from './types/task.dto';
 
 @Injectable()
 export class TaskService {
-  constructor(
-    private taskRepo: TaskRepository,
-    private logRepo: TaskLogRepository,
-  ) {}
+  constructor(private taskRepository: TaskRepository) {}
+
+  private validateTaskId(taskId: string): void {
+    if (!taskId?.trim()) {
+      throw new BadRequestException('Task ID is required');
+    }
+  }
+
+  private async findTaskOrThrow(taskId: string): Promise<TaskEntity> {
+    this.validateTaskId(taskId);
+    const task = await this.taskRepository.findById(taskId);
+    if (!task) {
+      throw new NotFoundException(`Task with id ${taskId} not found`);
+    }
+    return task;
+  }
 
   async createTask(
     type: TaskType,
-    payload: any,
+    payload: Record<string, any>,
     workflowId?: string,
-    retryConfig?: {
-      maxRetries?: number;
-      retryDelay?: number;
-      maxRetryDelay?: number;
-    },
   ): Promise<TaskEntity> {
     if (!type || !payload) {
       throw new BadRequestException('Task type and payload are required');
     }
 
-    const taskData: any = {
+    const taskData = {
       type,
       payload,
       status: TaskStatus.PENDING,
       workflow: workflowId ? { id: workflowId } : undefined,
     };
 
-    if (retryConfig) {
-      if (retryConfig.maxRetries !== undefined) {
-        taskData.maxRetries = retryConfig.maxRetries;
-      }
-      if (retryConfig.retryDelay !== undefined) {
-        taskData.retryDelay = retryConfig.retryDelay;
-      }
-      if (retryConfig.maxRetryDelay !== undefined) {
-        taskData.maxRetryDelay = retryConfig.maxRetryDelay;
-      }
-    }
-
-    const task = await this.taskRepo.create(taskData);
-
-    await this.logRepo.createLogEntry(task.id, LogLevel.INFO, 'Task created');
-
-    return task;
+    return this.taskRepository.create(taskData);
   }
 
   async updateTaskStatus(
     taskId: string,
     status: TaskStatus,
     error?: string,
-  ): Promise<TaskEntity | null> {
-    if (!taskId || !status) {
-      throw new BadRequestException('Task ID and status are required');
+  ): Promise<TaskEntity> {
+    if (!status) {
+      throw new BadRequestException('Status is required');
     }
 
-    await this.taskRepo.updateTaskStatus(taskId, status, error);
+    const task = await this.findTaskOrThrow(taskId);
+    await this.taskRepository.updateTaskStatus(taskId, status, error);
 
-    const logLevel =
-      status === TaskStatus.FAILED ? LogLevel.ERROR : LogLevel.INFO;
-    const message = error
-      ? `Task ${status.toLowerCase()}: ${error}`
-      : `Task status updated to ${status}`;
-
-    await this.logRepo.createLogEntry(taskId, logLevel, message);
-
-    return this.taskRepo.findById(taskId);
+    const updatedTask = await this.taskRepository.findById(taskId);
+    if (!updatedTask) {
+      throw new NotFoundException(
+        `Task with id ${taskId} not found after update`,
+      );
+    }
+    return updatedTask;
   }
 
   async handleFailure(taskId: string, error: Error): Promise<void> {
-    if (!taskId) {
-      throw new BadRequestException('Task ID is required');
-    }
+    const task = await this.findTaskOrThrow(taskId);
 
-    const task = await this.taskRepo.findById(taskId);
-    if (!task) {
-      throw new NotFoundException(`Task with id ${taskId} not found`);
-    }
+    await this.taskRepository.incrementRetryCount(taskId);
+    const updatedTask = await this.taskRepository.findById(taskId);
 
-    await this.taskRepo.incrementRetryCount(taskId);
-
-    const updatedTask = await this.taskRepo.findById(taskId);
     if (!updatedTask) {
       throw new NotFoundException(
         `Task with id ${taskId} not found after retry increment`,
@@ -106,85 +88,50 @@ export class TaskService {
     await this.updateTaskStatus(taskId, newStatus, error.message);
   }
 
-  async cancelTask(taskId: string): Promise<TaskEntity | null> {
-    if (!taskId) {
-      throw new BadRequestException('Task ID is required');
-    }
-
-    const task = await this.taskRepo.findById(taskId);
-    if (!task) {
-      throw new NotFoundException(`Task with id ${taskId} not found`);
-    }
+  async cancelTask(taskId: string): Promise<TaskEntity> {
+    const task = await this.findTaskOrThrow(taskId);
 
     if (task.status !== TaskStatus.PENDING) {
       throw new BadRequestException('Only pending tasks can be cancelled');
     }
 
-    await this.logRepo.createLogEntry(
-      taskId,
-      LogLevel.INFO,
-      'Task cancelled by user',
-    );
-
     return this.updateTaskStatus(taskId, TaskStatus.CANCELLED);
   }
 
+  async getTaskById(taskId: string, relations?: string[]): Promise<TaskEntity> {
+    this.validateTaskId(taskId);
+
+    if (relations?.length) {
+      const task = await this.taskRepository.findByIdWithRelations(taskId, relations);
+      if (!task) {
+        throw new NotFoundException(`Task with id ${taskId} not found`);
+      }
+      return task;
+    }
+
+    return this.findTaskOrThrow(taskId);
+  }
+
+  async findTasks(filters?: TaskFiltersDto): Promise<TaskEntity[]> {
+    const where: Record<string, any> = {};
+
+    if (filters?.status) where.status = filters.status;
+    if (filters?.type) where.type = filters.type;
+    if (filters?.workflowId) where.workflow = { id: filters.workflowId };
+
+    return this.taskRepository.findMany(where);
+  }
+
   async getPendingTasks(limit = 100): Promise<TaskEntity[]> {
-    return this.taskRepo.findPendingTasks(limit);
-  }
-
-  async findMany(where: any): Promise<TaskEntity[]> {
-    return this.taskRepo.findMany(where);
-  }
-
-  async findAll(options?: any): Promise<TaskEntity[]> {
-    return this.taskRepo.findAll(options);
-  }
-
-  async getTaskById(
-    taskId: string,
-    options?: { relations?: string[] },
-  ): Promise<TaskEntity | null> {
-    if (!taskId) {
-      throw new BadRequestException('Task ID is required');
-    }
-
-    if (options?.relations) {
-      return this.taskRepo.findByIdWithRelations(taskId, options.relations);
-    }
-
-    return this.taskRepo.findById(taskId);
-  }
-
-  async getTaskByIdWithWorkflow(taskId: string): Promise<TaskEntity | null> {
-    if (!taskId) {
-      throw new BadRequestException('Task ID is required');
-    }
-    return this.taskRepo.findByIdWithRelations(taskId, ['workflow']);
-  }
-
-  async getTaskByIdWithLogs(taskId: string): Promise<TaskEntity | null> {
-    if (!taskId) {
-      throw new BadRequestException('Task ID is required');
-    }
-    return this.taskRepo.findByIdWithRelations(taskId, ['logs']);
+    return this.taskRepository.findPendingTasks(limit);
   }
 
   async updateTaskPayload(
     taskId: string,
-    payload: any,
-  ): Promise<TaskEntity | null> {
-    if (!taskId) {
-      throw new BadRequestException('Task ID is required');
-    }
-
-    await this.taskRepo.update(taskId, { payload });
-    await this.logRepo.createLogEntry(
-      taskId,
-      LogLevel.INFO,
-      'Task payload updated',
-    );
-
-    return this.taskRepo.findById(taskId);
+    payload: Record<string, any>,
+  ): Promise<TaskEntity> {
+    this.validateTaskId(taskId);
+    await this.taskRepository.update(taskId, { payload });
+    return this.findTaskOrThrow(taskId);
   }
 }

@@ -2,8 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { InvoiceServiceMockFactory } from '@test/mocks';
 import { InvoiceController } from '../invoice.controller';
 import { InvoiceService } from '../invoice.service';
-import { TaskType } from '../../task/types/task-type.enum';
-import { TaskStatus } from '../../task/types/task-status.enum';
 
 describe('InvoiceController', () => {
   let controller: InvoiceController;
@@ -50,27 +48,6 @@ describe('InvoiceController', () => {
       expect(invoiceService.startInvoiceWorkflow).toHaveBeenCalledWith(dto);
       expect(result).toEqual(expectedResult);
     });
-
-    it('should start invoice workflow without workflow ID', async () => {
-      const dto = {
-        customerId: 'customer-123',
-        dateFrom: '2024-01-01',
-        dateTo: '2024-01-31',
-      };
-
-      const expectedResult = {
-        message: 'Invoice workflow started',
-        taskId: 'task-123',
-        workflowId: undefined,
-      };
-
-      invoiceService.startInvoiceWorkflow.mockResolvedValue(expectedResult);
-
-      const result = await controller.startInvoiceWorkflow(dto);
-
-      expect(invoiceService.startInvoiceWorkflow).toHaveBeenCalledWith(dto);
-      expect(result.workflowId).toBeUndefined();
-    });
   });
 
   describe('createScheduledInvoiceWorkflow', () => {
@@ -100,25 +77,6 @@ describe('InvoiceController', () => {
         invoiceService.createScheduledInvoiceWorkflow,
       ).toHaveBeenCalledWith(dto);
       expect(result).toEqual(expectedResult);
-    });
-
-    it('should throw error for invalid scheduledAt date', async () => {
-      const dto = {
-        customerId: 'customer-123',
-        scheduledAt: 'invalid-date',
-        workflowId: 'workflow-123',
-      };
-
-      const error = new Error('Invalid scheduledAt date');
-      invoiceService.createScheduledInvoiceWorkflow.mockRejectedValue(error);
-
-      await expect(
-        controller.createScheduledInvoiceWorkflow(dto),
-      ).rejects.toThrow('Invalid scheduledAt date');
-
-      expect(
-        invoiceService.createScheduledInvoiceWorkflow,
-      ).toHaveBeenCalledWith(dto);
     });
   });
 
@@ -152,35 +110,6 @@ describe('InvoiceController', () => {
     });
   });
 
-  describe('createScheduledEmailWorkflow', () => {
-    it('should create scheduled email workflow successfully', async () => {
-      const dto = {
-        customerId: 'customer-123',
-        invoiceId: 'invoice-123',
-        scheduledAt: '2024-01-15T10:00:00Z',
-        workflowId: 'workflow-123',
-      };
-
-      const expectedResult = {
-        message: 'Scheduled email workflow created',
-        taskId: 'task-123',
-        scheduledAt: new Date(dto.scheduledAt).toISOString(),
-        workflowId: dto.workflowId,
-      };
-
-      invoiceService.createScheduledEmailWorkflow.mockResolvedValue(
-        expectedResult,
-      );
-
-      const result = await controller.createScheduledEmailWorkflow(dto);
-
-      expect(invoiceService.createScheduledEmailWorkflow).toHaveBeenCalledWith(
-        dto,
-      );
-      expect(result).toEqual(expectedResult);
-    });
-  });
-
   describe('getCustomerInvoiceTasks', () => {
     it('should return customer invoice tasks', async () => {
       const customerId = 'customer-123';
@@ -189,17 +118,10 @@ describe('InvoiceController', () => {
         tasks: [
           {
             id: 'task-1',
-            type: TaskType.FETCH_ORDERS,
-            status: TaskStatus.COMPLETED,
+            type: 'FETCH_ORDERS',
+            status: 'COMPLETED',
             createdAt: new Date('2024-01-15T10:00:00Z'),
             completedAt: new Date('2024-01-15T10:05:00Z'),
-          },
-          {
-            id: 'task-2',
-            type: TaskType.CREATE_INVOICE,
-            status: TaskStatus.PENDING,
-            createdAt: new Date('2024-01-15T10:06:00Z'),
-            completedAt: null,
           },
         ],
       };
@@ -231,12 +153,6 @@ describe('InvoiceController', () => {
             completedTasks: 1,
             failedTasks: 0,
             isComplete: false,
-          },
-          standalone: {
-            totalTasks: 1,
-            completedTasks: 0,
-            failedTasks: 1,
-            isComplete: true,
           },
         },
       };

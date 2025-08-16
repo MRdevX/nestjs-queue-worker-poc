@@ -22,12 +22,6 @@ export class TaskEntity extends BaseModel {
   @Column({ default: 3 })
   maxRetries: number;
 
-  @Column({ default: 2000 })
-  retryDelay: number;
-
-  @Column({ default: 30000 })
-  maxRetryDelay: number;
-
   @Column({ nullable: true })
   error: string;
 
@@ -35,12 +29,6 @@ export class TaskEntity extends BaseModel {
     onDelete: 'CASCADE',
   })
   workflow: WorkflowEntity;
-
-  @ManyToOne(() => TaskEntity, (task) => task.children, { nullable: true })
-  parentTask: TaskEntity;
-
-  @OneToMany(() => TaskEntity, (task) => task.parentTask)
-  children: TaskEntity[];
 
   @OneToMany(() => TaskLogEntity, (log) => log.task)
   logs: TaskLogEntity[];

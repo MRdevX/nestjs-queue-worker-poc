@@ -8,7 +8,6 @@ export * from './service.mock';
 export * from './messaging.mock';
 
 export type { IBaseEntityMockData as BaseEntityMockData } from './base-entity.mock';
-export type { ITaskEntityMockData as TaskEntityMockData } from './task-entity.mock';
 export type { IWorkflowEntityMockData as WorkflowEntityMockData } from './workflow-entity.mock';
 export type { IOrderMockData as OrderMockData } from './invoice.mock';
 export type { IInvoiceMockData as InvoiceMockData } from './invoice.mock';

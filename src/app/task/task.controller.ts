@@ -8,9 +8,10 @@ import {
   Query,
 } from '@nestjs/common';
 import { TaskService } from './task.service';
-import { MessagingService } from '../core/messaging/messaging.service';
+import { MessagingService } from '../core/messaging/services/messaging.service';
 import { TaskType } from './types/task-type.enum';
 import { TaskStatus } from './types/task-status.enum';
+import { CreateTaskDto, TaskFiltersDto } from './types/task.dto';
 
 @Controller('tasks')
 export class TaskController {
@@ -20,7 +21,7 @@ export class TaskController {
   ) {}
 
   @Post()
-  async createTask(@Body() createTaskDto: { type: TaskType; payload: any }) {
+  async createTask(@Body() createTaskDto: CreateTaskDto) {
     const task = await this.taskService.createTask(
       createTaskDto.type,
       createTaskDto.payload,
@@ -44,18 +45,8 @@ export class TaskController {
   }
 
   @Get()
-  async getAllTasks(
-    @Query('status') status?: TaskStatus,
-    @Query('type') type?: TaskType,
-    @Query('workflowId') workflowId?: string,
-  ) {
-    const where: any = {};
-
-    if (status) where.status = status;
-    if (type) where.type = type;
-    if (workflowId) where.workflow = { id: workflowId };
-
-    const tasks = await this.taskService.findMany(where);
+  async getTasks(@Query() filters: TaskFiltersDto) {
+    const tasks = await this.taskService.findTasks(filters);
 
     return {
       tasks,
@@ -63,51 +54,18 @@ export class TaskController {
     };
   }
 
-  private getEventPattern(taskType: TaskType): string {
-    switch (taskType) {
-      case TaskType.HTTP_REQUEST:
-        return 'http.request';
-      case TaskType.FETCH_ORDERS:
-        return 'fetch.orders';
-      case TaskType.CREATE_INVOICE:
-        return 'create.invoice';
-      case TaskType.GENERATE_PDF:
-        return 'generate.pdf';
-      case TaskType.SEND_EMAIL:
-        return 'send.email';
-      case TaskType.COMPENSATION:
-        return 'compensation';
-      case TaskType.DATA_PROCESSING:
-        return 'data.processing';
-      default:
-        return 'task.created';
-    }
-  }
-
   @Get(':id')
-  async getTask(@Param('id') id: string) {
-    const task = await this.taskService.getTaskById(id);
-    if (!task) {
-      throw new NotFoundException('Task not found');
-    }
-    return task;
-  }
+  async getTask(
+    @Param('id') id: string,
+    @Query('relations') relations?: string,
+  ) {
+    const relationArray = relations ? relations.split(',') : undefined;
+    const task = await this.taskService.getTaskById(id, relationArray);
 
-  @Get(':id/with-logs')
-  async getTaskWithLogs(@Param('id') id: string) {
-    const task = await this.taskService.getTaskByIdWithLogs(id);
     if (!task) {
       throw new NotFoundException('Task not found');
     }
-    return task;
-  }
 
-  @Get(':id/with-workflow')
-  async getTaskWithWorkflow(@Param('id') id: string) {
-    const task = await this.taskService.getTaskByIdWithWorkflow(id);
-    if (!task) {
-      throw new NotFoundException('Task not found');
-    }
     return task;
   }
 
@@ -168,5 +126,19 @@ export class TaskController {
     );
 
     return { message: 'Compensation task created and queued' };
+  }
+
+  private getEventPattern(taskType: TaskType): string {
+    const patterns = {
+      [TaskType.HTTP_REQUEST]: 'http.request',
+      [TaskType.FETCH_ORDERS]: 'fetch.orders',
+      [TaskType.CREATE_INVOICE]: 'create.invoice',
+      [TaskType.GENERATE_PDF]: 'generate.pdf',
+      [TaskType.SEND_EMAIL]: 'send.email',
+      [TaskType.COMPENSATION]: 'compensation',
+      [TaskType.DATA_PROCESSING]: 'data.processing',
+    };
+
+    return patterns[taskType] || 'task.created';
   }
 }

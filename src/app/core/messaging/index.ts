@@ -1,6 +1,6 @@
 export { MessagingModule } from './messaging.module';
 
-export { MessagingService } from './messaging.service';
+export { MessagingService } from './services/messaging.service';
 
 export * from './providers';
 

@@ -7,8 +7,7 @@ export class TaskServiceMockFactory {
     return {
       createTask: jest.fn(),
       getTaskById: jest.fn(),
-      findMany: jest.fn(),
-      findAll: jest.fn(),
+      findTasks: jest.fn(),
       updateTaskStatus: jest.fn(),
       handleFailure: jest.fn(),
       getPendingTasks: jest.fn(),
@@ -25,15 +24,14 @@ export class TaskServiceMockFactory {
             type,
             payload,
             status: TaskStatus.PENDING,
-            workflow: workflowId ? { id: workflowId } : null,
+            workflow: workflowId ? ({ id: workflowId } as any) : undefined,
           }),
         );
       },
     );
 
     mock.getTaskById.mockResolvedValue(null);
-    mock.findMany.mockResolvedValue([]);
-    mock.findAll.mockResolvedValue([]);
+    mock.findTasks.mockResolvedValue([]);
     mock.updateTaskStatus.mockResolvedValue(null);
     mock.handleFailure.mockResolvedValue(undefined);
     mock.getPendingTasks.mockResolvedValue([]);
@@ -94,7 +92,7 @@ export class SchedulerServiceMockFactory {
             payload,
             status: TaskStatus.PENDING,
             scheduledAt,
-            workflow: workflowId ? { id: workflowId } : null,
+            workflow: workflowId ? ({ id: workflowId } as any) : undefined,
           }),
         );
       },
@@ -112,7 +110,7 @@ export class SchedulerServiceMockFactory {
             type,
             payload: { ...payload, cronExpression, isRecurring: true },
             status: TaskStatus.PENDING,
-            workflow: workflowId ? { id: workflowId } : null,
+            workflow: workflowId ? ({ id: workflowId } as any) : undefined,
           }),
         );
       },

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TaskType } from '@root/app/task/types/task-type.enum';
-import { MessagingService } from '../messaging.service';
+import { MessagingService } from '../services/messaging.service';
 import { MessagingModuleMockFactory } from '../../../../../test/mocks';
 
 describe('MessagingService', () => {

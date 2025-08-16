@@ -4,16 +4,13 @@ import { BaseRepositoryMockFactory } from '@test/mocks';
 import { TaskEntityMockFactory } from '@test/mocks';
 import { TaskService } from '../task.service';
 import { TaskRepository } from '../task.repository';
-import { TaskLogRepository } from '../task-log.repository';
 import { TaskType } from '../types/task-type.enum';
 import { TaskStatus } from '../types/task-status.enum';
-import { LogLevel } from '../types/log-level.enum';
 import { TaskEntity } from '../task.entity';
 
 describe('TaskService', () => {
   let service: TaskService;
   let taskRepository: jest.Mocked<TaskRepository>;
-  let taskLogRepository: jest.Mocked<TaskLogRepository>;
 
   beforeEach(async () => {
     const baseMock = BaseRepositoryMockFactory.createWithDefaults();
@@ -33,19 +30,11 @@ describe('TaskService', () => {
             create: jest.fn(),
           },
         },
-        {
-          provide: TaskLogRepository,
-          useValue: {
-            ...baseMock,
-            createLogEntry: jest.fn(),
-          },
-        },
       ],
     }).compile();
 
     service = module.get<TaskService>(TaskService);
     taskRepository = module.get(TaskRepository);
-    taskLogRepository = module.get(TaskLogRepository);
   });
 
   afterEach(() => {
@@ -64,7 +53,6 @@ describe('TaskService', () => {
       });
 
       taskRepository.create.mockResolvedValue(mockTask as TaskEntity);
-      taskLogRepository.createLogEntry.mockResolvedValue({} as any);
 
       const result = await service.createTask(taskData.type, taskData.payload);
 
@@ -74,11 +62,6 @@ describe('TaskService', () => {
         status: TaskStatus.PENDING,
         workflow: undefined,
       });
-      expect(taskLogRepository.createLogEntry).toHaveBeenCalledWith(
-        mockTask.id,
-        LogLevel.INFO,
-        'Task created',
-      );
       expect(result).toEqual(mockTask);
     });
 
@@ -94,7 +77,6 @@ describe('TaskService', () => {
       });
 
       taskRepository.create.mockResolvedValue(mockTask as TaskEntity);
-      taskLogRepository.createLogEntry.mockResolvedValue({} as any);
 
       await service.createTask(taskData.type, taskData.payload, workflowId);
 
@@ -114,7 +96,7 @@ describe('TaskService', () => {
 
     it('should throw BadRequestException when payload is missing', async () => {
       await expect(
-        service.createTask(TaskType.HTTP_REQUEST, null),
+        service.createTask(TaskType.HTTP_REQUEST, null as any),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -130,7 +112,6 @@ describe('TaskService', () => {
 
       taskRepository.updateTaskStatus.mockResolvedValue();
       taskRepository.findById.mockResolvedValue(mockTask as TaskEntity);
-      taskLogRepository.createLogEntry.mockResolvedValue({} as any);
 
       const result = await service.updateTaskStatus(taskId, newStatus);
 
@@ -138,11 +119,6 @@ describe('TaskService', () => {
         taskId,
         newStatus,
         undefined,
-      );
-      expect(taskLogRepository.createLogEntry).toHaveBeenCalledWith(
-        taskId,
-        LogLevel.INFO,
-        'Task status updated to completed',
       );
       expect(result).toEqual(mockTask);
     });
@@ -158,7 +134,6 @@ describe('TaskService', () => {
 
       taskRepository.updateTaskStatus.mockResolvedValue();
       taskRepository.findById.mockResolvedValue(mockTask as TaskEntity);
-      taskLogRepository.createLogEntry.mockResolvedValue({} as any);
 
       const result = await service.updateTaskStatus(taskId, newStatus, error);
 
@@ -166,11 +141,6 @@ describe('TaskService', () => {
         taskId,
         newStatus,
         error,
-      );
-      expect(taskLogRepository.createLogEntry).toHaveBeenCalledWith(
-        taskId,
-        LogLevel.ERROR,
-        'Task failed: Something went wrong',
       );
       expect(result).toEqual(mockTask);
     });
@@ -182,8 +152,9 @@ describe('TaskService', () => {
     });
 
     it('should throw BadRequestException when status is missing', async () => {
+      const taskId = 'task-123';
       await expect(
-        service.updateTaskStatus('task-123', null as any),
+        service.updateTaskStatus(taskId, null as any),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -198,12 +169,9 @@ describe('TaskService', () => {
         maxRetries: 3,
       });
 
-      taskRepository.findById
-        .mockResolvedValueOnce(mockTask as TaskEntity)
-        .mockResolvedValueOnce(mockTask as TaskEntity);
+      taskRepository.findById.mockResolvedValue(mockTask as TaskEntity);
       taskRepository.incrementRetryCount.mockResolvedValue();
       taskRepository.updateTaskStatus.mockResolvedValue();
-      taskLogRepository.createLogEntry.mockResolvedValue({} as any);
 
       await service.handleFailure(taskId, error);
 
@@ -224,12 +192,9 @@ describe('TaskService', () => {
         maxRetries: 3,
       });
 
-      taskRepository.findById
-        .mockResolvedValueOnce(mockTask as TaskEntity)
-        .mockResolvedValueOnce(mockTask as TaskEntity);
+      taskRepository.findById.mockResolvedValue(mockTask as TaskEntity);
       taskRepository.incrementRetryCount.mockResolvedValue();
       taskRepository.updateTaskStatus.mockResolvedValue();
-      taskLogRepository.createLogEntry.mockResolvedValue({} as any);
 
       await service.handleFailure(taskId, error);
 
@@ -280,16 +245,10 @@ describe('TaskService', () => {
 
       taskRepository.findById.mockResolvedValue(mockTask as TaskEntity);
       taskRepository.updateTaskStatus.mockResolvedValue();
-      taskLogRepository.createLogEntry.mockResolvedValue({} as any);
 
       const result = await service.cancelTask(taskId);
 
       expect(taskRepository.findById).toHaveBeenCalledWith(taskId);
-      expect(taskLogRepository.createLogEntry).toHaveBeenCalledWith(
-        taskId,
-        LogLevel.INFO,
-        'Task cancelled by user',
-      );
       expect(taskRepository.updateTaskStatus).toHaveBeenCalledWith(
         taskId,
         TaskStatus.CANCELLED,
@@ -387,18 +346,20 @@ describe('TaskService', () => {
     });
   });
 
-  describe('findMany', () => {
+  describe('findTasks', () => {
     it('should return tasks matching criteria', async () => {
-      const where = { status: TaskStatus.FAILED };
+      const filters = { status: TaskStatus.FAILED };
       const mockTasks = TaskEntityMockFactory.createArray(2, {
         status: TaskStatus.FAILED,
       });
 
       taskRepository.findMany.mockResolvedValue(mockTasks as TaskEntity[]);
 
-      const result = await service.findMany(where);
+      const result = await service.findTasks(filters);
 
-      expect(taskRepository.findMany).toHaveBeenCalledWith(where);
+      expect(taskRepository.findMany).toHaveBeenCalledWith({
+        status: TaskStatus.FAILED,
+      });
       expect(result).toEqual(mockTasks);
     });
   });
@@ -425,7 +386,7 @@ describe('TaskService', () => {
         mockTask as TaskEntity,
       );
 
-      const result = await service.getTaskById(taskId, { relations });
+      const result = await service.getTaskById(taskId, relations);
 
       expect(taskRepository.findByIdWithRelations).toHaveBeenCalledWith(
         taskId,
@@ -441,53 +402,27 @@ describe('TaskService', () => {
     });
   });
 
-  describe('getTaskByIdWithWorkflow', () => {
-    it('should return task with workflow relation', async () => {
+  describe('updateTaskPayload', () => {
+    it('should update task payload successfully', async () => {
       const taskId = 'task-123';
+      const newPayload = { updated: 'data' };
       const mockTask = TaskEntityMockFactory.create({ id: taskId });
 
-      taskRepository.findByIdWithRelations.mockResolvedValue(
-        mockTask as TaskEntity,
-      );
+      taskRepository.update.mockResolvedValue(mockTask as TaskEntity);
+      taskRepository.findById.mockResolvedValue(mockTask as TaskEntity);
 
-      const result = await service.getTaskByIdWithWorkflow(taskId);
+      const result = await service.updateTaskPayload(taskId, newPayload);
 
-      expect(taskRepository.findByIdWithRelations).toHaveBeenCalledWith(
-        taskId,
-        ['workflow'],
-      );
+      expect(taskRepository.update).toHaveBeenCalledWith(taskId, {
+        payload: newPayload,
+      });
       expect(result).toEqual(mockTask);
     });
 
     it('should throw BadRequestException when taskId is missing', async () => {
-      await expect(service.getTaskByIdWithWorkflow('')).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-  });
-
-  describe('getTaskByIdWithLogs', () => {
-    it('should return task with logs relation', async () => {
-      const taskId = 'task-123';
-      const mockTask = TaskEntityMockFactory.create({ id: taskId });
-
-      taskRepository.findByIdWithRelations.mockResolvedValue(
-        mockTask as TaskEntity,
-      );
-
-      const result = await service.getTaskByIdWithLogs(taskId);
-
-      expect(taskRepository.findByIdWithRelations).toHaveBeenCalledWith(
-        taskId,
-        ['logs'],
-      );
-      expect(result).toEqual(mockTask);
-    });
-
-    it('should throw BadRequestException when taskId is missing', async () => {
-      await expect(service.getTaskByIdWithLogs('')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.updateTaskPayload('', { data: 'test' }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

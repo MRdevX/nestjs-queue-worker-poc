@@ -52,9 +52,6 @@ export abstract class BaseProvider implements IMessagingProvider {
 
     try {
       this.client.emit(pattern, payload);
-      this.logger.debug(
-        `Event emitted to ${this.getTransportName()}: ${pattern}`,
-      );
     } catch (error) {
       this.logger.error(
         `Failed to emit event to ${this.getTransportName()}: ${pattern}`,

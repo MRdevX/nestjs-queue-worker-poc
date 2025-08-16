@@ -1,39 +1,13 @@
 import { Module } from '@nestjs/common';
-import { DataWorker } from './data.worker';
-import { HttpWorker } from './http.worker';
-import { CompensationWorker } from './compensation.worker';
-import { FetchOrdersWorker } from './fetch-orders.worker';
-import { CreateInvoiceWorker } from './create-invoice.worker';
-import { GeneratePdfWorker } from './generate-pdf.worker';
-import { SendEmailWorker } from './send-email.worker';
-import { SimpleTestWorker } from './simple-test.worker';
-import { SimpleEventEmitterWorker } from './simple-event-emitter.worker';
+import { UnifiedWorker } from './unified.worker';
+import { TaskProcessorService } from './task-processor.service';
 import { TaskModule } from '../task/task.module';
 import { WorkflowModule } from '../workflow/workflow.module';
+import { InvoiceModule } from '../invoice/invoice.module';
 
 @Module({
-  imports: [TaskModule, WorkflowModule],
-  providers: [
-    DataWorker,
-    HttpWorker,
-    CompensationWorker,
-    FetchOrdersWorker,
-    CreateInvoiceWorker,
-    GeneratePdfWorker,
-    SendEmailWorker,
-    SimpleTestWorker,
-    SimpleEventEmitterWorker,
-  ],
-  exports: [
-    DataWorker,
-    HttpWorker,
-    CompensationWorker,
-    FetchOrdersWorker,
-    CreateInvoiceWorker,
-    GeneratePdfWorker,
-    SendEmailWorker,
-    SimpleTestWorker,
-    SimpleEventEmitterWorker,
-  ],
+  imports: [TaskModule, WorkflowModule, InvoiceModule],
+  providers: [UnifiedWorker, TaskProcessorService],
+  exports: [UnifiedWorker, TaskProcessorService],
 })
 export class WorkerModule {}

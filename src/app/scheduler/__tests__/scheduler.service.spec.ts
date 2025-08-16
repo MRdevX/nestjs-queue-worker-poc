@@ -2,7 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TaskEntityMockFactory } from '@test/mocks';
 import { SchedulerService } from '../scheduler.service';
 import { TaskService } from '../../task/task.service';
-import { MessagingService } from '../../core/messaging/messaging.service';
+import { TaskQueueService } from '../../queue/task-queue.service';
+import { MessagingService } from '../../core/messaging/services/messaging.service';
 import { TaskRepository } from '../../task/task.repository';
 import { TaskType } from '../../task/types/task-type.enum';
 import { TaskStatus } from '../../task/types/task-status.enum';
@@ -10,7 +11,7 @@ import { TaskStatus } from '../../task/types/task-status.enum';
 describe('SchedulerService', () => {
   let service: SchedulerService;
   let taskService: jest.Mocked<TaskService>;
-  let messagingService: jest.Mocked<MessagingService>;
+  let taskQueueService: jest.Mocked<TaskQueueService>;
   let taskRepository: jest.Mocked<TaskRepository>;
 
   beforeEach(async () => {
@@ -21,6 +22,12 @@ describe('SchedulerService', () => {
           provide: TaskService,
           useValue: {
             createTask: jest.fn(),
+          },
+        },
+        {
+          provide: TaskQueueService,
+          useValue: {
+            enqueueTask: jest.fn(),
           },
         },
         {
@@ -41,7 +48,7 @@ describe('SchedulerService', () => {
 
     service = module.get<SchedulerService>(SchedulerService);
     taskService = module.get(TaskService);
-    messagingService = module.get(MessagingService);
+    taskQueueService = module.get(TaskQueueService);
     taskRepository = module.get(TaskRepository);
   });
 
@@ -222,40 +229,53 @@ describe('SchedulerService', () => {
           id: 'task-1',
           type: TaskType.HTTP_REQUEST,
           scheduledAt: pastDate,
+          payload: { url: 'https://api.example.com' },
+          workflow: { id: 'workflow-1' } as any,
         }),
         TaskEntityMockFactory.create({
           id: 'task-2',
           type: TaskType.DATA_PROCESSING,
           scheduledAt: pastDate,
+          payload: { data: 'test' },
+          workflow: { id: 'workflow-2' } as any,
         }),
       ];
 
-      taskRepository.findScheduledTasks.mockResolvedValue(mockTasks as any);
+      const mockTasksWithWorkflowId = mockTasks.map((task) => ({
+        ...task,
+        workflowId: task.workflow?.id || null,
+      }));
+
+      taskRepository.findScheduledTasks.mockResolvedValue(
+        mockTasksWithWorkflowId as any,
+      );
       taskRepository.update.mockResolvedValue(mockTasks[0] as any);
-      messagingService.publishTask.mockResolvedValue(undefined);
+      taskQueueService.enqueueTask.mockResolvedValue('task-id');
 
       await service.processScheduledTasks();
 
       expect(taskRepository.findScheduledTasks).toHaveBeenCalled();
       expect(taskRepository.update).toHaveBeenCalledTimes(2);
-      expect(messagingService.publishTask).toHaveBeenCalledTimes(2);
+      expect(taskQueueService.enqueueTask).toHaveBeenCalledTimes(2);
 
-      expect(taskRepository.update).toHaveBeenCalledWith('task-1', {
+      expect(taskRepository.update).toHaveBeenCalledWith(expect.any(String), {
         status: TaskStatus.PENDING,
         scheduledAt: null,
       });
-      expect(taskRepository.update).toHaveBeenCalledWith('task-2', {
+      expect(taskRepository.update).toHaveBeenCalledWith(expect.any(String), {
         status: TaskStatus.PENDING,
         scheduledAt: null,
       });
 
-      expect(messagingService.publishTask).toHaveBeenCalledWith(
+      expect(taskQueueService.enqueueTask).toHaveBeenCalledWith(
         TaskType.HTTP_REQUEST,
-        'task-1',
+        { url: 'https://api.example.com' },
+        'workflow-1',
       );
-      expect(messagingService.publishTask).toHaveBeenCalledWith(
+      expect(taskQueueService.enqueueTask).toHaveBeenCalledWith(
         TaskType.DATA_PROCESSING,
-        'task-2',
+        { data: 'test' },
+        'workflow-2',
       );
     });
 
@@ -275,7 +295,7 @@ describe('SchedulerService', () => {
 
       expect(taskRepository.findScheduledTasks).toHaveBeenCalled();
       expect(taskRepository.update).not.toHaveBeenCalled();
-      expect(messagingService.publishTask).not.toHaveBeenCalled();
+      expect(taskQueueService.enqueueTask).not.toHaveBeenCalled();
     });
 
     it('should handle tasks without scheduledAt', async () => {
@@ -283,7 +303,7 @@ describe('SchedulerService', () => {
         TaskEntityMockFactory.create({
           id: 'task-1',
           type: TaskType.HTTP_REQUEST,
-          scheduledAt: null,
+          scheduledAt: undefined,
         }),
       ];
 
@@ -293,7 +313,7 @@ describe('SchedulerService', () => {
 
       expect(taskRepository.findScheduledTasks).toHaveBeenCalled();
       expect(taskRepository.update).not.toHaveBeenCalled();
-      expect(messagingService.publishTask).not.toHaveBeenCalled();
+      expect(taskQueueService.enqueueTask).not.toHaveBeenCalled();
     });
 
     it('should handle errors during task processing', async () => {
@@ -303,17 +323,28 @@ describe('SchedulerService', () => {
           id: 'task-1',
           type: TaskType.HTTP_REQUEST,
           scheduledAt: pastDate,
+          payload: { url: 'https://api.example.com' },
         }),
       ];
 
-      taskRepository.findScheduledTasks.mockResolvedValue(mockTasks as any);
+      const mockTasksWithWorkflowId = mockTasks.map((task) => ({
+        ...task,
+        workflowId: task.workflow?.id || null,
+      }));
+
+      taskRepository.findScheduledTasks.mockResolvedValue(
+        mockTasksWithWorkflowId as any,
+      );
       taskRepository.update.mockRejectedValue(new Error('Database error'));
 
       await service.processScheduledTasks();
 
       expect(taskRepository.findScheduledTasks).toHaveBeenCalled();
-      expect(taskRepository.update).toHaveBeenCalled();
-      expect(messagingService.publishTask).not.toHaveBeenCalled();
+      expect(taskRepository.update).toHaveBeenCalledWith(expect.any(String), {
+        status: TaskStatus.PENDING,
+        scheduledAt: null,
+      });
+      expect(taskQueueService.enqueueTask).not.toHaveBeenCalled();
     });
 
     it('should handle errors during task publishing', async () => {
@@ -323,32 +354,46 @@ describe('SchedulerService', () => {
           id: 'task-1',
           type: TaskType.HTTP_REQUEST,
           scheduledAt: pastDate,
+          payload: { url: 'https://api.example.com' },
+          workflow: { id: 'workflow-1' } as any,
         }),
       ];
 
-      taskRepository.findScheduledTasks.mockResolvedValue(mockTasks as any);
-      taskRepository.update.mockResolvedValue(mockTasks[0] as any);
-      messagingService.publishTask.mockRejectedValue(
-        new Error('Messaging error'),
+      const mockTasksWithWorkflowId = mockTasks.map((task) => ({
+        ...task,
+        workflowId: task.workflow?.id || null,
+      }));
+
+      taskRepository.findScheduledTasks.mockResolvedValue(
+        mockTasksWithWorkflowId as any,
       );
+      taskRepository.update.mockResolvedValue(mockTasks[0] as any);
+      taskQueueService.enqueueTask.mockRejectedValue(new Error('Queue error'));
 
       await service.processScheduledTasks();
 
       expect(taskRepository.findScheduledTasks).toHaveBeenCalled();
-      expect(taskRepository.update).toHaveBeenCalled();
-      expect(messagingService.publishTask).toHaveBeenCalled();
+      expect(taskRepository.update).toHaveBeenCalledWith(expect.any(String), {
+        status: TaskStatus.PENDING,
+        scheduledAt: null,
+      });
+      expect(taskQueueService.enqueueTask).toHaveBeenCalledWith(
+        TaskType.HTTP_REQUEST,
+        { url: 'https://api.example.com' },
+        'workflow-1',
+      );
     });
 
     it('should handle errors when finding scheduled tasks', async () => {
       taskRepository.findScheduledTasks.mockRejectedValue(
-        new Error('Database connection failed'),
+        new Error('Database error'),
       );
 
       await service.processScheduledTasks();
 
       expect(taskRepository.findScheduledTasks).toHaveBeenCalled();
       expect(taskRepository.update).not.toHaveBeenCalled();
-      expect(messagingService.publishTask).not.toHaveBeenCalled();
+      expect(taskQueueService.enqueueTask).not.toHaveBeenCalled();
     });
   });
 });

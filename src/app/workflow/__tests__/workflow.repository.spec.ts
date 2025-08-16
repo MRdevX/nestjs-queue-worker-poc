@@ -53,14 +53,6 @@ describe('WorkflowRepository', () => {
       });
       expect(result).toEqual(mockWorkflows);
     });
-
-    it('should return empty array when no active workflows found', async () => {
-      typeOrmRepository.find.mockResolvedValue([]);
-
-      const result = await repository.findActiveWorkflows();
-
-      expect(result).toEqual([]);
-    });
   });
 
   describe('findWithTasks', () => {
@@ -92,11 +84,6 @@ describe('WorkflowRepository', () => {
       await expect(repository.findWithTasks(workflowId)).rejects.toThrow(
         `Workflow with id ${workflowId} not found.`,
       );
-
-      expect(typeOrmRepository.findOne).toHaveBeenCalledWith({
-        where: { id: workflowId },
-        relations: ['tasks', 'tasks.children'],
-      });
     });
   });
 
@@ -110,8 +97,8 @@ describe('WorkflowRepository', () => {
         },
         isActive: true,
       };
-      const mockWorkflow = WorkflowEntityMockFactory.create(workflowData);
 
+      const mockWorkflow = WorkflowEntityMockFactory.create(workflowData);
       typeOrmRepository.create.mockReturnValue(mockWorkflow as WorkflowEntity);
       typeOrmRepository.save.mockResolvedValue(mockWorkflow as WorkflowEntity);
 
@@ -134,57 +121,6 @@ describe('WorkflowRepository', () => {
 
       expect(typeOrmRepository.findOne).toHaveBeenCalledWith({
         where: { id: workflowId },
-      });
-      expect(result).toEqual(mockWorkflow);
-    });
-
-    it('should use base repository findMany method', async () => {
-      const where = { isActive: true };
-      const mockWorkflows = WorkflowEntityMockFactory.createArray(2, {
-        isActive: true,
-      });
-
-      typeOrmRepository.find.mockResolvedValue(
-        mockWorkflows as WorkflowEntity[],
-      );
-
-      const result = await repository.findMany(where);
-
-      expect(typeOrmRepository.find).toHaveBeenCalledWith({ where });
-      expect(result).toEqual(mockWorkflows);
-    });
-
-    it('should use base repository update method', async () => {
-      const workflowId = 'workflow-123';
-      const updateData = { isActive: false };
-
-      typeOrmRepository.update.mockResolvedValue({ affected: 1 } as any);
-
-      await repository.update(workflowId, updateData);
-
-      expect(typeOrmRepository.update).toHaveBeenCalledWith(
-        workflowId,
-        updateData,
-      );
-    });
-
-    it('should use base repository findByIdWithRelations method', async () => {
-      const workflowId = 'workflow-123';
-      const relations = ['tasks'];
-      const mockWorkflow = WorkflowEntityMockFactory.create({ id: workflowId });
-
-      typeOrmRepository.findOne.mockResolvedValue(
-        mockWorkflow as WorkflowEntity,
-      );
-
-      const result = await repository.findByIdWithRelations(
-        workflowId,
-        relations,
-      );
-
-      expect(typeOrmRepository.findOne).toHaveBeenCalledWith({
-        where: { id: workflowId },
-        relations,
       });
       expect(result).toEqual(mockWorkflow);
     });

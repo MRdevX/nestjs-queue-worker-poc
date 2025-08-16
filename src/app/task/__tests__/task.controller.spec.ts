@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TaskEntityMockFactory } from '@test/mocks';
 import { TaskController } from '../task.controller';
 import { TaskService } from '../task.service';
-import { MessagingService } from '../../core/messaging/messaging.service';
+import { MessagingService } from '../../core/messaging/services/messaging.service';
 import { TaskType } from '../types/task-type.enum';
 import { TaskStatus } from '../types/task-status.enum';
 
@@ -22,6 +22,7 @@ describe('TaskController', () => {
             getTaskById: jest.fn(),
             updateTaskStatus: jest.fn(),
             cancelTask: jest.fn(),
+            findTasks: jest.fn(),
           },
         },
         {
@@ -112,6 +113,23 @@ describe('TaskController', () => {
     });
   });
 
+  describe('getTasks', () => {
+    it('should return tasks with filters', async () => {
+      const filters = { status: TaskStatus.PENDING };
+      const mockTasks = TaskEntityMockFactory.createArray(2, { status: TaskStatus.PENDING });
+
+      taskService.findTasks.mockResolvedValue(mockTasks as any);
+
+      const result = await controller.getTasks(filters);
+
+      expect(taskService.findTasks).toHaveBeenCalledWith(filters);
+      expect(result).toEqual({
+        tasks: mockTasks,
+        total: mockTasks.length,
+      });
+    });
+  });
+
   describe('getTask', () => {
     it('should return task by id', async () => {
       const taskId = 'task-123';
@@ -121,20 +139,31 @@ describe('TaskController', () => {
 
       const result = await controller.getTask(taskId);
 
-      expect(taskService.getTaskById).toHaveBeenCalledWith(taskId);
+      expect(taskService.getTaskById).toHaveBeenCalledWith(taskId, undefined);
+      expect(result).toEqual(mockTask);
+    });
+
+    it('should return task with relations', async () => {
+      const taskId = 'task-123';
+      const relations = 'workflow,logs';
+      const mockTask = TaskEntityMockFactory.create({ id: taskId });
+
+      taskService.getTaskById.mockResolvedValue(mockTask as any);
+
+      const result = await controller.getTask(taskId, relations);
+
+      expect(taskService.getTaskById).toHaveBeenCalledWith(taskId, ['workflow', 'logs']);
       expect(result).toEqual(mockTask);
     });
 
     it('should throw NotFoundException when task is not found', async () => {
       const taskId = 'non-existent-task';
 
-      taskService.getTaskById.mockResolvedValue(null);
+      taskService.getTaskById.mockRejectedValue(new Error('Task not found'));
 
-      await expect(controller.getTask(taskId)).rejects.toThrow(
-        'Task not found',
-      );
+      await expect(controller.getTask(taskId)).rejects.toThrow('Task not found');
 
-      expect(taskService.getTaskById).toHaveBeenCalledWith(taskId);
+      expect(taskService.getTaskById).toHaveBeenCalledWith(taskId, undefined);
     });
   });
 
@@ -173,11 +202,9 @@ describe('TaskController', () => {
     it('should throw error when task is not found', async () => {
       const taskId = 'non-existent-task';
 
-      taskService.getTaskById.mockResolvedValue(null);
+      taskService.getTaskById.mockRejectedValue(new Error('Task not found'));
 
-      await expect(controller.retryTask(taskId)).rejects.toThrow(
-        'Task not found',
-      );
+      await expect(controller.retryTask(taskId)).rejects.toThrow('Task not found');
 
       expect(taskService.getTaskById).toHaveBeenCalledWith(taskId);
       expect(taskService.updateTaskStatus).not.toHaveBeenCalled();
@@ -292,11 +319,9 @@ describe('TaskController', () => {
     it('should throw error when task is not found', async () => {
       const taskId = 'non-existent-task';
 
-      taskService.getTaskById.mockResolvedValue(null);
+      taskService.getTaskById.mockRejectedValue(new Error('Task not found'));
 
-      await expect(controller.compensateTask(taskId)).rejects.toThrow(
-        'Task not found',
-      );
+      await expect(controller.compensateTask(taskId)).rejects.toThrow('Task not found');
 
       expect(taskService.getTaskById).toHaveBeenCalledWith(taskId);
       expect(taskService.createTask).not.toHaveBeenCalled();

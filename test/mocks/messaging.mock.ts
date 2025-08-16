@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { IMessagingProvider } from '@root/app/core/messaging/types/messaging.interface';
+import { MessagingFactoryService } from '@root/app/core/messaging/services/messaging-factory.service';
 
 export class MessagingProviderMockFactory {
   static create(): jest.Mocked<IMessagingProvider> {
@@ -103,6 +104,10 @@ export class MessagingModuleMockFactory {
     const mockSetupService =
       MessagingSetupServiceMockFactory.createWithDefaults();
     const mockConfigService = ConfigServiceMockFactory.create();
+    const mockFactoryService = {
+      createProvider: jest.fn().mockReturnValue(mockProvider),
+      createSetupService: jest.fn().mockReturnValue(mockSetupService),
+    };
 
     return {
       providers: [
@@ -118,11 +123,16 @@ export class MessagingModuleMockFactory {
           provide: ConfigService,
           useValue: mockConfigService,
         },
+        {
+          provide: MessagingFactoryService,
+          useValue: mockFactoryService,
+        },
       ],
       mocks: {
         provider: mockProvider,
         setupService: mockSetupService,
         configService: mockConfigService,
+        factoryService: mockFactoryService,
       },
     };
   }
