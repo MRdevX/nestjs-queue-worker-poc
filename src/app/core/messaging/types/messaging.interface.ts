@@ -11,22 +11,34 @@ export interface IMessagingService {
   publishTask(
     taskType: TaskType,
     taskId: string,
-    options?: { delay?: number; metadata?: Record<string, any> },
+    options?: MessagingOptions,
   ): Promise<void>;
   emitEvent(
     pattern: string,
     payload: any,
-    options?: { delay?: number; metadata?: Record<string, any> },
+    options?: MessagingOptions,
   ): Promise<void>;
   connect(): Promise<void>;
   disconnect(): Promise<void>;
+  isConnected(): boolean;
 }
 
+export interface MessagingOptions {
+  delay?: number;
+  metadata?: Record<string, any>;
+}
+
+export type TransportType = 'rmq' | 'nats' | 'redis';
+
 export interface IMessagingConfig {
-  transport: 'rmq' | 'nats';
+  transport: TransportType;
   options: {
     urls?: string[];
     servers?: string[];
+    host?: string;
+    port?: number;
+    password?: string;
+    db?: number;
     queue?: string;
     queueOptions?: {
       durable?: boolean;
@@ -35,4 +47,9 @@ export interface IMessagingConfig {
     };
     [key: string]: any;
   };
+}
+
+export interface IMessagingSetupService {
+  setup(): Promise<void>;
+  getServiceName(): string;
 }

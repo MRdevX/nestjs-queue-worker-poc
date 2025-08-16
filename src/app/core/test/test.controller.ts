@@ -1,15 +1,11 @@
 import { Controller, Post, Logger } from '@nestjs/common';
 import { MessagingService } from '../messaging/messaging.service';
-import { EventEmitterService } from '../messaging/event-emitter.service';
 
 @Controller('test')
 export class TestController {
   private readonly logger = new Logger(TestController.name);
 
-  constructor(
-    private readonly messagingService: MessagingService,
-    private readonly eventEmitterService: EventEmitterService,
-  ) {}
+  constructor(private readonly messagingService: MessagingService) {}
 
   @Post('simple')
   async testSimpleWorker() {
@@ -24,7 +20,6 @@ export class TestController {
     this.logger.log(`📤 Emitting test message: ${JSON.stringify(testMessage)}`);
 
     await this.messagingService.emitEvent('simple.test', testMessage);
-    await this.eventEmitterService.emitEvent('simple.test', testMessage);
 
     this.logger.log('✅ Test message emitted');
 

@@ -1,10 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RabbitMQProvider } from '../rabbitmq.provider';
-import {
-  createMockClient,
-  createRabbitMQConfig,
-  mockClientProxyFactory,
-} from '../../__tests__/test-helpers';
+import { IMessagingConfig } from '../../types/messaging.interface';
 
 jest.mock('@nestjs/microservices', () => ({
   ClientProxyFactory: {
@@ -15,11 +11,32 @@ jest.mock('@nestjs/microservices', () => ({
 describe('RabbitMQProvider', () => {
   let provider: RabbitMQProvider;
   let mockClient: jest.Mocked<any>;
-  let config: any;
+  let config: IMessagingConfig;
+
+  const createMockClient = (): jest.Mocked<any> =>
+    ({
+      connect: jest.fn(),
+      close: jest.fn(),
+      emit: jest.fn(),
+    }) as any;
+
+  const createRabbitMQConfig = (): IMessagingConfig => ({
+    transport: 'rmq',
+    options: {
+      urls: ['amqp://localhost:5672'],
+      queue: 'test-queue',
+      queueOptions: {
+        durable: true,
+      },
+    },
+  });
 
   beforeEach(async () => {
-    mockClient = mockClientProxyFactory();
+    mockClient = createMockClient();
     config = createRabbitMQConfig();
+
+    const { ClientProxyFactory } = require('@nestjs/microservices');
+    ClientProxyFactory.create.mockReturnValue(mockClient);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

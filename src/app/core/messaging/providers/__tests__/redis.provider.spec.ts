@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NatsProvider } from '../nats.provider';
+import { RedisProvider } from '../redis.provider';
 import { IMessagingConfig } from '../../types/messaging.interface';
 
 jest.mock('@nestjs/microservices', () => ({
@@ -8,8 +8,8 @@ jest.mock('@nestjs/microservices', () => ({
   },
 }));
 
-describe('NatsProvider', () => {
-  let provider: NatsProvider;
+describe('RedisProvider', () => {
+  let provider: RedisProvider;
   let mockClient: jest.Mocked<any>;
   let config: IMessagingConfig;
 
@@ -20,17 +20,19 @@ describe('NatsProvider', () => {
       emit: jest.fn(),
     }) as any;
 
-  const createNatsConfig = (): IMessagingConfig => ({
-    transport: 'nats',
+  const createRedisConfig = (): IMessagingConfig => ({
+    transport: 'redis',
     options: {
-      servers: ['nats://localhost:4222'],
-      queue: 'test-queue',
+      host: 'localhost',
+      port: 6379,
+      password: undefined,
+      db: 0,
     },
   });
 
   beforeEach(async () => {
     mockClient = createMockClient();
-    config = createNatsConfig();
+    config = createRedisConfig();
 
     const { ClientProxyFactory } = require('@nestjs/microservices');
     ClientProxyFactory.create.mockReturnValue(mockClient);
@@ -38,13 +40,13 @@ describe('NatsProvider', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         {
-          provide: NatsProvider,
-          useFactory: () => new NatsProvider(config),
+          provide: RedisProvider,
+          useFactory: () => new RedisProvider(config),
         },
       ],
     }).compile();
 
-    provider = module.get<NatsProvider>(NatsProvider);
+    provider = module.get<RedisProvider>(RedisProvider);
   });
 
   afterEach(() => {
@@ -108,7 +110,7 @@ describe('NatsProvider', () => {
       await provider.disconnect();
 
       await expect(provider.emit('test', {})).rejects.toThrow(
-        'NATS client is not connected',
+        'Redis client is not connected',
       );
     });
 

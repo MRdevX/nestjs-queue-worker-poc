@@ -5,6 +5,7 @@ export * from './task-entity.mock';
 export * from './workflow-entity.mock';
 export * from './invoice.mock';
 export * from './service.mock';
+export * from './messaging.mock';
 
 export type { IBaseEntityMockData as BaseEntityMockData } from './base-entity.mock';
 export type { ITaskEntityMockData as TaskEntityMockData } from './task-entity.mock';
@@ -28,3 +29,8 @@ export {
   ConfigServiceMockFactory,
   InvoiceServiceMockFactory,
 } from './service.mock';
+export {
+  MessagingProviderMockFactory,
+  MessagingSetupServiceMockFactory,
+  MessagingModuleMockFactory,
+} from './messaging.mock';

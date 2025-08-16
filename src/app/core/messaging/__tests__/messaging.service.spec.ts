@@ -1,49 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
 import { TaskType } from '@root/app/task/types/task-type.enum';
 import { MessagingService } from '../messaging.service';
-import { IMessagingProvider } from '../types/messaging.interface';
-import { MessagingProviderFactory } from '../providers/messaging-provider.factory';
-
-jest.mock('../providers/messaging-provider.factory');
+import { MessagingModuleMockFactory } from '../../../../../test/mocks';
 
 describe('MessagingService', () => {
   let service: MessagingService;
-  let mockProvider: jest.Mocked<IMessagingProvider>;
+  let mockProvider: any;
 
   beforeEach(async () => {
-    mockProvider = {
-      connect: jest.fn(),
-      disconnect: jest.fn(),
-      emit: jest.fn(),
-      isConnected: jest.fn().mockReturnValue(true),
-    };
-
-    (MessagingProviderFactory.createProvider as jest.Mock).mockReturnValue(
-      mockProvider,
-    );
+    const { providers, mocks } = MessagingModuleMockFactory.createProviders();
+    mockProvider = mocks.provider;
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        MessagingService,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn().mockReturnValue({
-              transport: 'rmq',
-              options: {
-                urls: ['amqp://localhost:5672'],
-                queue: 'task-queue',
-                queueOptions: {
-                  durable: true,
-                  deadLetterExchange: 'dlx',
-                  deadLetterRoutingKey: 'failed',
-                },
-              },
-            }),
-          },
-        },
-      ],
+      providers: [MessagingService, ...providers],
     }).compile();
 
     service = module.get<MessagingService>(MessagingService);
@@ -56,19 +25,6 @@ describe('MessagingService', () => {
   describe('onModuleInit', () => {
     it('should create provider and connect on module init', async () => {
       await service.onModuleInit();
-
-      expect(MessagingProviderFactory.createProvider).toHaveBeenCalledWith({
-        transport: 'rmq',
-        options: {
-          urls: ['amqp://localhost:5672'],
-          queue: 'task-queue',
-          queueOptions: {
-            durable: true,
-            deadLetterExchange: 'dlx',
-            deadLetterRoutingKey: 'failed',
-          },
-        },
-      });
       expect(mockProvider.connect).toHaveBeenCalled();
     });
   });
@@ -138,36 +94,6 @@ describe('MessagingService', () => {
         delay: undefined,
         metadata: undefined,
       });
-    });
-  });
-
-  describe('getEventPattern', () => {
-    beforeEach(async () => {
-      await service.onModuleInit();
-    });
-
-    it('should return correct pattern for HTTP_REQUEST', () => {
-      const pattern = (service as any).getEventPattern(TaskType.HTTP_REQUEST);
-      expect(pattern).toBe('http.request');
-    });
-
-    it('should return correct pattern for DATA_PROCESSING', () => {
-      const pattern = (service as any).getEventPattern(
-        TaskType.DATA_PROCESSING,
-      );
-      expect(pattern).toBe('data.processing');
-    });
-
-    it('should return correct pattern for FETCH_ORDERS', () => {
-      const pattern = (service as any).getEventPattern(TaskType.FETCH_ORDERS);
-      expect(pattern).toBe('fetch.orders');
-    });
-
-    it('should return default pattern for unknown task type', () => {
-      const pattern = (service as any).getEventPattern(
-        'UNKNOWN_TYPE' as TaskType,
-      );
-      expect(pattern).toBe('task.created');
     });
   });
 

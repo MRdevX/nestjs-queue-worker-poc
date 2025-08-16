@@ -3,6 +3,7 @@ import {
   Logger,
   OnModuleDestroy,
   OnModuleInit,
+  Inject,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TaskType } from '../../task/types/task-type.enum';
@@ -11,8 +12,9 @@ import {
   IMessagingService,
   IMessagingProvider,
   IMessagingConfig,
+  MessagingOptions,
 } from './types/messaging.interface';
-import { MessagingProviderFactory } from './providers/messaging-provider.factory';
+import { getEventPattern } from './constants/event-patterns.constants';
 
 @Injectable()
 export class MessagingService
@@ -21,29 +23,46 @@ export class MessagingService
   private readonly logger = new Logger(MessagingService.name);
   private provider: IMessagingProvider;
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject('ACTIVE_PROVIDER') private readonly ProviderClass: any,
+    @Inject('ACTIVE_SETUP_SERVICE') private readonly SetupServiceClass: any,
+  ) {}
 
   async onModuleInit() {
-    const config = this.getMessagingConfig();
-    this.provider = MessagingProviderFactory.createProvider(config);
-    await this.connect();
+    await this.setupInfrastructure();
+    await this.initializeProvider();
   }
 
   async onModuleDestroy() {
     await this.disconnect();
   }
 
+  private async setupInfrastructure(): Promise<void> {
+    try {
+      const transport = this.configService.get('s2s.transport');
+      this.logger.log(`Setting up ${transport} infrastructure...`);
+
+      const setupService = new this.SetupServiceClass(this.configService);
+      await setupService.setup();
+
+      this.logger.log(`${transport} infrastructure setup completed`);
+    } catch (error) {
+      this.logger.warn('Infrastructure setup failed, continuing without setup');
+    }
+  }
+
+  private async initializeProvider(): Promise<void> {
+    const config = this.getMessagingConfig();
+    this.provider = new this.ProviderClass(config);
+    await this.connect();
+  }
+
   private getMessagingConfig(): IMessagingConfig {
     const s2sConfig = this.configService.get('s2s');
     return {
-      transport: s2sConfig.transport === 'nats' ? 'nats' : 'rmq',
-      options: {
-        urls: s2sConfig.options.urls,
-        servers: s2sConfig.options.servers,
-        queue: s2sConfig.options.queue,
-        queueOptions: s2sConfig.options.queueOptions,
-        ...s2sConfig.options,
-      },
+      transport: s2sConfig.transport,
+      options: s2sConfig.options,
     };
   }
 
@@ -55,25 +74,12 @@ export class MessagingService
     await this.provider.disconnect();
   }
 
-  private getEventPattern(taskType: TaskType): string {
-    const patterns = {
-      [TaskType.HTTP_REQUEST]: 'http.request',
-      [TaskType.DATA_PROCESSING]: 'data.processing',
-      [TaskType.COMPENSATION]: 'compensation',
-      [TaskType.FETCH_ORDERS]: 'fetch.orders',
-      [TaskType.CREATE_INVOICE]: 'create.invoice',
-      [TaskType.GENERATE_PDF]: 'generate.pdf',
-      [TaskType.SEND_EMAIL]: 'send.email',
-    };
-    return patterns[taskType] || 'task.created';
-  }
-
   async publishTask(
     taskType: TaskType,
     taskId: string,
-    options?: { delay?: number; metadata?: Record<string, any> },
+    options?: MessagingOptions,
   ): Promise<void> {
-    const pattern = this.getEventPattern(taskType);
+    const pattern = getEventPattern(taskType);
     const message: ITaskMessage = {
       taskId,
       taskType,
@@ -89,7 +95,7 @@ export class MessagingService
   async emitEvent(
     pattern: string,
     payload: any,
-    options?: { delay?: number; metadata?: Record<string, any> },
+    options?: MessagingOptions,
   ): Promise<void> {
     const message = {
       ...payload,
